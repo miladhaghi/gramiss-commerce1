@@ -61,6 +61,9 @@ jobs:
       - name: Install backend dependencies
         run: npm install --prefix apps/backend --no-audit --no-fund
 
+      - name: Validate catalog migration data
+        run: npm run --prefix apps/backend catalog:validate
+
       - name: Build backend
         run: npm run --prefix apps/backend build
 
