@@ -15,7 +15,6 @@ export const COMPARE_STORAGE_KEY = "gramiss:compare";
 export const CART_STORAGE_KEY = "gramiss:cart-count";
 
 export type ShippingMethod = "standard" | "express";
-
 export type CartProduct = {
   id: string;
   name: string;
@@ -27,15 +26,14 @@ export type CartProduct = {
   unitPrice?: number;
   priceValue?: number;
   color?: string;
+  colors?: readonly string[];
   sizes?: readonly string[];
 };
 
 export type CartSelection = {
-color?: string;
-colors?: readonly string[];
-sizes?: readonly string[];
+  color?: string;
+  size?: string;
 };
-
 export type CartItem = Omit<CartProduct, "color" | "sizes"> & {
   lineId: string;
   quantity: number;
