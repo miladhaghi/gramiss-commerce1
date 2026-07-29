@@ -23,17 +23,17 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
+      - name: Install storefront dependencies
+        run: npm install --prefix apps/storefront --no-audit --no-fund
 
       - name: Lint storefront
-        run: npm run lint:storefront
+        run: npm run --prefix apps/storefront lint
 
       - name: Type-check storefront
-        run: npm run typecheck:storefront
+        run: npm run --prefix apps/storefront typecheck
 
       - name: Build storefront
-        run: npm run build:storefront
+        run: npm run --prefix apps/storefront build
 
   backend:
     runs-on: ubuntu-latest
@@ -56,8 +56,8 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
+      - name: Install backend dependencies
+        run: npm install --prefix apps/backend --no-audit --no-fund
 
       - name: Build backend
-        run: npm run build:backend
+        run: npm run --prefix apps/backend build
