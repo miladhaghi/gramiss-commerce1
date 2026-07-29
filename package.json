@@ -1,0 +1,21 @@
+{
+  "name": "gramiss-commerce",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:storefront": "npm --workspace @gramiss/storefront run dev",
+    "build:storefront": "npm --workspace @gramiss/storefront run build",
+    "lint:storefront": "npm --workspace @gramiss/storefront run lint",
+    "typecheck:storefront": "npm --workspace @gramiss/storefront run typecheck",
+    "dev:backend": "npm --workspace @gramiss/backend run dev",
+    "build:backend": "npm --workspace @gramiss/backend run build",
+    "dev": "npm run dev:backend",
+    "build": "npm run build:backend && npm run build:storefront"
+  },
+  "engines": {
+    "node": ">=22.13.0 <25"
+  }
+}

@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  storefront:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      NEXT_PUBLIC_COMMERCE_MODE: demo
+      NEXT_PUBLIC_ROBOTS_INDEX: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --no-audit --no-fund
+      - run: npm run lint:storefront
+      - run: npm run typecheck:storefront
+      - run: npm run build:storefront
+
+  backend:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgres://gramiss:gramiss@localhost:5432/gramiss
+      REDIS_URL: redis://localhost:6379
+      STORE_CORS: http://localhost:3000
+      ADMIN_CORS: http://localhost:9000
+      AUTH_CORS: http://localhost:3000,http://localhost:9000
+      JWT_SECRET: ci-only-secret-ci-only-secret-123
+      COOKIE_SECRET: ci-only-secret-ci-only-secret-456
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install --no-audit --no-fund
+      - run: npm run build:backend

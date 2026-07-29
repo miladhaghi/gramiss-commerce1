@@ -1,0 +1,336 @@
+{
+  "products": [
+    {
+      "handle": "daily-sneaker",
+      "title": "کتونی شهری مینیمال",
+      "subtitle": "DAILY SNEAKER",
+      "category": "کتونی",
+      "category_key": "sneakers",
+      "badge": "جدید",
+      "currency_code": "irr",
+      "display_unit": "تومان",
+      "price_toman": 3890000,
+      "color_values": [
+        "سفید"
+      ],
+      "size_values": [
+        "M",
+        "L",
+        "XL"
+      ],
+      "material": "چرم",
+      "in_stock": true,
+      "image": "/assets/product-shoe.png",
+      "metadata": {
+        "gramiss_badge": "جدید",
+        "gramiss_artwork": "shoe",
+        "gramiss_newest_rank": 12,
+        "gramiss_discounted": false
+      }
+    },
+    {
+      "handle": "essential-tshirt",
+      "title": "تیشرت پنبه‌ای اسنشیال",
+      "subtitle": "ESSENTIAL T-SHIRT",
+      "category": "تیشرت",
+      "category_key": "t-shirts",
+      "badge": "پرفروش",
+      "currency_code": "irr",
+      "display_unit": "تومان",
+      "price_toman": 1490000,
+      "color_values": [
+        "مشکی"
+      ],
+      "size_values": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "material": "پنبه",
+      "in_stock": true,
+      "image": "/assets/product-shirt.png",
+      "metadata": {
+        "gramiss_badge": "پرفروش",
+        "gramiss_artwork": "shirt",
+        "gramiss_newest_rank": 11,
+        "gramiss_discounted": true
+      }
+    },
+    {
+      "handle": "sky-blue-cap",
+      "title": "کلاه آبی آسمانی",
+      "subtitle": "SKY BLUE DAILY CAP",
+      "category": "کلاه",
+      "category_key": "caps",
+      "badge": "جدید",
+      "currency_code": "irr",
+      "display_unit": "تومان",
+      "price_toman": 1290000,
+      "color_values": [
+        "آبی آسمانی",
+        "مشکی",
+        "خاکی",
+        "خاکستری روشن"
+      ],
+      "size_values": [
+        "Free Size",
+        "Adjustable"
+      ],
+      "material": "کتان ترکیبی سبک",
+      "in_stock": true,
+      "image": "/assets/product-cap.png",
+      "metadata": {
+        "gramiss_badge": "جدید",
+        "gramiss_artwork": "cap",
+        "gramiss_newest_rank": 10,
+        "gramiss_discounted": false
+      }
+    },
+    {
+      "handle": "crossbody-bag",
+      "title": "کیف دوشی روزمره",
+      "subtitle": "CROSSBODY BAG",
+      "category": "کیف",
+      "category_key": "bags",
+      "badge": "جدید",
+      "currency_code": "irr",
+      "display_unit": "تومان",
+      "price_toman": 2690000,
+      "color_values": [
+        "خاکی"
+      ],
+      "size_values": [
+        "M"
+      ],
+      "material": "چرم",
+      "in_stock": true,
+      "image": "/assets/product-bag.png",
+      "metadata": {
+        "gramiss_badge": "جدید",
+        "gramiss_artwork": "bag",
+        "gramiss_newest_rank": 9,
+        "gramiss_discounted": false
+      }
+    },
+    {
+      "handle": "classic-white",
+      "title": "کتونی سفید کلاسیک",
+      "subtitle": "CLASSIC WHITE",
+      "category": "کتونی",
+      "category_key": "sneakers",
+      "badge": "",
+      "currency_code": "irr",
+      "display_unit": "تومان",
+      "price_toman": 4290000,
+      "color_values": [
+        "سفید"
+      ],
+      "size_values": [
+        "M",
+        "L"
+      ],
+      "material": "چرم",
+      "in_stock": true,
+      "image": "/assets/product-shoe.png",
+      "metadata": {
+        "gramiss_badge": "",
+        "gramiss_artwork": "shoe",
+        "gramiss_newest_rank": 8,
+        "gramiss_discounted": false
+      }
+    },
+    {
+      "handle": "relaxed-black",
+      "title": "تیشرت مشکی آزاد",
+      "subtitle": "RELAXED BLACK",
+      "category": "تیشرت",
+      "category_key": "t-shirts",
+      "badge": "",
+      "currency_code": "irr",
+      "display_unit": "تومان",
+      "price_toman": 1690000,
+      "color_values": [
+        "مشکی"
+      ],
+      "size_values": [
+        "S",
+        "M",
+        "L",
+        "XL"
+      ],
+      "material": "پنبه",
+      "in_stock": true,
+      "image": "/assets/product-shirt.png",
+      "metadata": {
+        "gramiss_badge": "",
+        "gramiss_artwork": "shirt",
+        "gramiss_newest_rank": 7,
+        "gramiss_discounted": false
+      }
+    },
+    {
+      "handle": "sand-cap",
+      "title": "کلاه خاکی مینیمال",
+      "subtitle": "SAND CAP",
+      "category": "کلاه",
+      "category_key": "caps",
+      "badge": "",
+      "currency_code": "irr",
+      "display_unit": "تومان",
+      "price_toman": 940000,
+      "color_values": [
+        "خاکی"
+      ],
+      "size_values": [
+        "M",
+        "L"
+      ],
+      "material": "پلی‌استر",
+      "in_stock": true,
+      "image": "/assets/product-cap.png",
+      "metadata": {
+        "gramiss_badge": "",
+        "gramiss_artwork": "cap",
+        "gramiss_newest_rank": 6,
+        "gramiss_discounted": false
+      }
+    },
+    {
+      "handle": "city-bag",
+      "title": "کیف شهری مشکی",
+      "subtitle": "CITY BAG",
+      "category": "کیف",
+      "category_key": "bags",
+      "badge": "پرفروش",
+      "currency_code": "irr",
+      "display_unit": "تومان",
+      "price_toman": 2990000,
+      "color_values": [
+        "مشکی"
+      ],
+      "size_values": [
+        "M"
+      ],
+      "material": "چرم",
+      "in_stock": true,
+      "image": "/assets/product-bag.png",
+      "metadata": {
+        "gramiss_badge": "پرفروش",
+        "gramiss_artwork": "bag",
+        "gramiss_newest_rank": 5,
+        "gramiss_discounted": true
+      }
+    },
+    {
+      "handle": "daily-socks-3pk",
+      "title": "جوراب سه‌تایی روزمره",
+      "subtitle": "DAILY SOCKS 3PK",
+      "category": "جوراب",
+      "category_key": "socks",
+      "badge": "",
+      "currency_code": "irr",
+      "display_unit": "تومان",
+      "price_toman": 690000,
+      "color_values": [
+        "سفید"
+      ],
+      "size_values": [
+        "M",
+        "L"
+      ],
+      "material": "پنبه",
+      "in_stock": true,
+      "image": "/assets/product-shirt.png",
+      "metadata": {
+        "gramiss_badge": "",
+        "gramiss_artwork": "socks",
+        "gramiss_newest_rank": 4,
+        "gramiss_discounted": false
+      }
+    },
+    {
+      "handle": "core-socks-2pk",
+      "title": "جوراب نخی دوتایی",
+      "subtitle": "CORE SOCKS 2PK",
+      "category": "جوراب",
+      "category_key": "socks",
+      "badge": "جدید",
+      "currency_code": "irr",
+      "display_unit": "تومان",
+      "price_toman": 590000,
+      "color_values": [
+        "مشکی"
+      ],
+      "size_values": [
+        "M",
+        "L",
+        "XL"
+      ],
+      "material": "پنبه",
+      "in_stock": true,
+      "image": "/assets/product-shirt.png",
+      "metadata": {
+        "gramiss_badge": "جدید",
+        "gramiss_artwork": "socks",
+        "gramiss_newest_rank": 3,
+        "gramiss_discounted": true
+      }
+    },
+    {
+      "handle": "signature-cap",
+      "title": "کلاه امضای Gramiss",
+      "subtitle": "SIGNATURE CAP",
+      "category": "کلاه",
+      "category_key": "caps",
+      "badge": "",
+      "currency_code": "irr",
+      "display_unit": "تومان",
+      "price_toman": 1090000,
+      "color_values": [
+        "مشکی"
+      ],
+      "size_values": [
+        "M",
+        "L"
+      ],
+      "material": "پلی‌استر",
+      "in_stock": false,
+      "image": "/assets/product-cap.png",
+      "metadata": {
+        "gramiss_badge": "",
+        "gramiss_artwork": "cap",
+        "gramiss_newest_rank": 2,
+        "gramiss_discounted": false
+      }
+    },
+    {
+      "handle": "city-tshirt",
+      "title": "تیشرت شهری سفید",
+      "subtitle": "CITY T-SHIRT",
+      "category": "تیشرت",
+      "category_key": "t-shirts",
+      "badge": "محدود",
+      "currency_code": "irr",
+      "display_unit": "تومان",
+      "price_toman": 1790000,
+      "color_values": [
+        "سفید"
+      ],
+      "size_values": [
+        "S",
+        "M",
+        "L"
+      ],
+      "material": "پنبه",
+      "in_stock": true,
+      "image": "/assets/product-shirt.png",
+      "metadata": {
+        "gramiss_badge": "محدود",
+        "gramiss_artwork": "shirt",
+        "gramiss_newest_rank": 1,
+        "gramiss_discounted": false
+      }
+    }
+  ]
+}
