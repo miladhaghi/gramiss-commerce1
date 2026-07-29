@@ -1,0 +1,15 @@
+.git
+.github
+
+**/node_modules
+**/.next
+**/.medusa
+**/dist
+**/coverage
+
+**/.env
+**/.env.*
+!**/.env.example
+
+*.log
+.DS_Store
