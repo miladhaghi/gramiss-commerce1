@@ -1,27 +1,38 @@
-FROM node:22-alpine AS deps
+FROM node:22-bookworm-slim AS deps
 WORKDIR /app
-COPY package.json ./
-COPY apps/storefront/package.json apps/storefront/package.json
-COPY apps/backend/package.json apps/backend/package.json
-RUN npm install --no-audit --no-fund
+COPY apps/storefront/package.json ./apps/storefront/package.json
+RUN npm install --prefix apps/storefront --no-audit --no-fund
 
-FROM node:22-alpine AS builder
+FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-RUN npm run build:storefront
+ARG NEXT_PUBLIC_SITE_URL=http://localhost:3000
+ARG NEXT_PUBLIC_COMMERCE_MODE=demo
+ARG NEXT_PUBLIC_MEDUSA_BACKEND_URL=http://localhost:9000
+ARG NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=
+ARG NEXT_PUBLIC_ROBOTS_INDEX=false
+ARG NEXT_PUBLIC_SOCIAL_IMAGE=/assets/hero-stage.png
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_COMMERCE_MODE=$NEXT_PUBLIC_COMMERCE_MODE
+ENV NEXT_PUBLIC_MEDUSA_BACKEND_URL=$NEXT_PUBLIC_MEDUSA_BACKEND_URL
+ENV NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=$NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+ENV NEXT_PUBLIC_ROBOTS_INDEX=$NEXT_PUBLIC_ROBOTS_INDEX
+ENV NEXT_PUBLIC_SOCIAL_IMAGE=$NEXT_PUBLIC_SOCIAL_IMAGE
+COPY --from=deps /app/apps/storefront/node_modules ./apps/storefront/node_modules
+COPY apps/storefront ./apps/storefront
+RUN npm run --prefix apps/storefront build
 
-FROM node:22-alpine AS runner
+FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
-COPY --from=builder /app/apps/storefront/public ./apps/storefront/public
+RUN groupadd --system --gid 1001 nodejs \
+  && useradd --system --uid 1001 --gid nodejs nextjs
+COPY --from=builder --chown=nextjs:nodejs /app/apps/storefront/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/storefront/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/apps/storefront/.next/static ./apps/storefront/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/storefront/.next/static ./.next/static
 USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-CMD ["node", "apps/storefront/server.js"]
+CMD ["node", "server.js"]
