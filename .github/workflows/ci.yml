@@ -12,6 +12,8 @@ jobs:
     env:
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
       NEXT_PUBLIC_COMMERCE_MODE: demo
+      NEXT_PUBLIC_MEDUSA_BACKEND_URL: http://localhost:9000
+      NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY: ""
       NEXT_PUBLIC_ROBOTS_INDEX: "false"
 
     steps:
@@ -61,3 +63,25 @@ jobs:
 
       - name: Build backend
         run: npm run --prefix apps/backend build
+
+  docker-storefront:
+    needs: storefront
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build storefront image
+        run: docker build --file Dockerfile.storefront --tag gramiss-storefront:ci .
+
+  docker-backend:
+    needs: backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build --file Dockerfile.backend --tag gramiss-backend:ci .
