@@ -10,7 +10,8 @@
     "lint": "medusa lint",
     "db:migrate": "medusa db:migrate",
     "db:setup": "medusa db:setup --db gramiss --no-interactive",
-    "user": "medusa user"
+    "user": "medusa user",
+    "catalog:validate": "node ./scripts/validate-catalog.mjs"
   },
   "dependencies": {
     "@medusajs/admin-sdk": "2.18.0",
