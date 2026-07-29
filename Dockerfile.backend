@@ -1,5 +1,19 @@
 FROM node:22-bookworm-slim AS builder
 WORKDIR /app/apps/backend
+ARG DATABASE_URL=postgres://gramiss:gramiss@localhost:5432/gramiss
+ARG REDIS_URL=redis://localhost:6379
+ARG STORE_CORS=http://localhost:3000
+ARG ADMIN_CORS=http://localhost:9000
+ARG AUTH_CORS=http://localhost:3000,http://localhost:9000
+ARG JWT_SECRET=build-only-secret-build-only-secret-123
+ARG COOKIE_SECRET=build-only-secret-build-only-secret-456
+ENV DATABASE_URL=$DATABASE_URL
+ENV REDIS_URL=$REDIS_URL
+ENV STORE_CORS=$STORE_CORS
+ENV ADMIN_CORS=$ADMIN_CORS
+ENV AUTH_CORS=$AUTH_CORS
+ENV JWT_SECRET=$JWT_SECRET
+ENV COOKIE_SECRET=$COOKIE_SECRET
 COPY apps/backend/package.json ./package.json
 RUN npm install --no-audit --no-fund
 COPY apps/backend ./
