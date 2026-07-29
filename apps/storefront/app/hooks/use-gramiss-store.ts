@@ -31,8 +31,9 @@ export type CartProduct = {
 };
 
 export type CartSelection = {
-  color?: string;
-  size?: string;
+color?: string;
+colors?: readonly string[];
+sizes?: readonly string[];
 };
 
 export type CartItem = Omit<CartProduct, "color" | "sizes"> & {
