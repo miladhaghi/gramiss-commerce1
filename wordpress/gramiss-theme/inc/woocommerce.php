@@ -12,7 +12,10 @@ add_action( 'after_setup_theme', 'gramiss_woocommerce_setup' );
 add_filter( 'loop_shop_columns', static fn(): int => 3 );
 add_filter( 'loop_shop_per_page', static fn(): int => 9 );
 
-function gramiss_shop_product_query( WC_Query $query ): void {
+function gramiss_shop_product_query( $query ): void {
+    if ( ! $query instanceof WP_Query ) {
+        return;
+    }
     if ( is_admin() || ! ( is_shop() || is_product_taxonomy() ) ) {
         return;
     }
