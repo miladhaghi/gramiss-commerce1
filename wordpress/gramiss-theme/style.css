@@ -3,7 +3,7 @@ Theme Name: Gramiss
 Theme URI: https://gramiss.ir
 Author: Gramiss
 Description: Custom RTL WooCommerce theme for Gramiss.
-Version: 0.1.0
+Version: 0.2.0
 Text Domain: gramiss
 Requires at least: 6.5
 Requires PHP: 8.1
@@ -22,9 +22,8 @@ body {
   margin: 0;
   background: var(--gramiss-bg);
   color: var(--gramiss-text);
-  font-family: Estedad, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: Estedad, Tahoma, sans-serif;
 }
-
 *, *::before, *::after { box-sizing: border-box; }
 img { max-width: 100%; height: auto; }
 a { color: inherit; text-decoration: none; }
