@@ -22,7 +22,7 @@ function gramiss_setup(): void {
     add_theme_support( 'wc-product-gallery-lightbox' );
     add_theme_support( 'wc-product-gallery-slider' );
 
-    add_image_size( 'gramiss-hero', 1200, 1400, false );
+    add_image_size( 'gramiss-hero', 1800, 1020, false );
     add_image_size( 'gramiss-product-card', 720, 900, false );
     add_image_size( 'gramiss-category', 900, 900, false );
 
@@ -57,6 +57,12 @@ function gramiss_assets(): void {
         array( 'gramiss-theme' ),
         gramiss_asset_version( '/assets/css/gramiss-1.css', $ver )
     );
+    wp_enqueue_style(
+        'gramiss-interactive-hero',
+        get_template_directory_uri() . '/assets/css/interactive-hero.css',
+        array( 'gramiss-v1' ),
+        gramiss_asset_version( '/assets/css/interactive-hero.css', $ver )
+    );
 
     wp_enqueue_script(
         'gramiss-theme',
@@ -70,6 +76,13 @@ function gramiss_assets(): void {
         get_template_directory_uri() . '/assets/js/gramiss-1.js',
         array( 'gramiss-theme' ),
         gramiss_asset_version( '/assets/js/gramiss-1.js', $ver ),
+        true
+    );
+    wp_enqueue_script(
+        'gramiss-interactive-hero',
+        get_template_directory_uri() . '/assets/js/interactive-hero.js',
+        array( 'gramiss-v1' ),
+        gramiss_asset_version( '/assets/js/interactive-hero.js', $ver ),
         true
     );
 
@@ -164,6 +177,33 @@ function gramiss_home_hero_image(): string {
 }
 
 /**
+ * Resolve a WooCommerce product-category URL using several possible slugs/names.
+ * Falls back to a filtered shop URL until the real category exists.
+ *
+ * @param array<int,string> $candidates Possible slugs or names.
+ * @param string            $fallback_slug Query-string fallback.
+ */
+function gramiss_product_category_url( array $candidates, string $fallback_slug ): string {
+    if ( taxonomy_exists( 'product_cat' ) ) {
+        foreach ( $candidates as $candidate ) {
+            $term = get_term_by( 'slug', sanitize_title( $candidate ), 'product_cat' );
+            if ( ! $term ) {
+                $term = get_term_by( 'name', $candidate, 'product_cat' );
+            }
+            if ( $term && ! is_wp_error( $term ) ) {
+                $url = get_term_link( $term );
+                if ( ! is_wp_error( $url ) ) {
+                    return (string) $url;
+                }
+            }
+        }
+    }
+
+    $shop_url = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : home_url( '/shop/' );
+    return add_query_arg( 'product_cat', $fallback_slug, $shop_url );
+}
+
+/**
  * Return real WooCommerce categories and fill missing slots with launch categories.
  *
  * @return array<int,array<string,string>>
@@ -245,8 +285,9 @@ function gramiss_customize_register( WP_Customize_Manager $wp_customize ): void 
             $wp_customize,
             'gramiss_hero_image',
             array(
-                'label'   => __( 'تصویر اصلی Hero', 'gramiss' ),
-                'section' => 'gramiss_home',
+                'label'       => __( 'تصویر Hero تعاملی', 'gramiss' ),
+                'description' => __( 'یک تصویر افقی 16:9 با شش گروه کلاه، کیف، جوراب، تیشرت، کتونی و شلوار.', 'gramiss' ),
+                'section'     => 'gramiss_home',
             )
         )
     );
