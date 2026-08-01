@@ -177,6 +177,32 @@ function gramiss_home_hero_image(): string {
 }
 
 /**
+ * A canonical shop URL that keeps Gramiss filters intact on plain permalinks.
+ *
+ * @param array<string,string> $args Optional query arguments.
+ */
+function gramiss_filterable_shop_url( array $args = array() ): string {
+    $url = add_query_arg( 'post_type', 'product', home_url( '/' ) );
+    return $args ? add_query_arg( $args, $url ) : $url;
+}
+
+/**
+ * Launch categories used before matching WooCommerce terms are published.
+ *
+ * @return array<string,string>
+ */
+function gramiss_launch_categories(): array {
+    return array(
+        'caps'     => 'کلاه',
+        't-shirts' => 'تیشرت',
+        'pants'    => 'شلوار',
+        'bags'     => 'کیف',
+        'socks'    => 'جوراب',
+        'sneakers' => 'کتونی',
+    );
+}
+
+/**
  * Resolve a WooCommerce product-category URL using several possible slugs/names.
  * Falls back to a filtered shop URL until the real category exists.
  *
@@ -199,8 +225,7 @@ function gramiss_product_category_url( array $candidates, string $fallback_slug 
         }
     }
 
-    $shop_url = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : home_url( '/shop/' );
-    return add_query_arg( 'product_cat', $fallback_slug, $shop_url );
+    return gramiss_filterable_shop_url( array( 'gramiss_category' => $fallback_slug ) );
 }
 
 /**
@@ -248,7 +273,6 @@ function gramiss_home_categories( int $limit = 5 ): array {
         }
     }
 
-    $shop_url = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : home_url( '/shop/' );
     foreach ( $fallback as $item ) {
         if ( count( $results ) >= $limit ) {
             break;
@@ -263,7 +287,7 @@ function gramiss_home_categories( int $limit = 5 ): array {
         }
 
         $item['image'] = '';
-        $item['url']   = add_query_arg( 'product_cat', $item['slug'], $shop_url );
+        $item['url']   = gramiss_filterable_shop_url( array( 'gramiss_category' => $item['slug'] ) );
         $results[]     = $item;
     }
 

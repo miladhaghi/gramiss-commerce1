@@ -23,11 +23,18 @@ function gramiss_shop_product_query( $query ): void {
     $tax_query  = (array) $query->get( 'tax_query' );
     $meta_query = (array) $query->get( 'meta_query' );
 
-    if ( ! empty( $_GET['product_cat'] ) ) {
+    $selected_category = '';
+    if ( ! empty( $_GET['gramiss_category'] ) ) {
+        $selected_category = sanitize_title( wp_unslash( $_GET['gramiss_category'] ) );
+    } elseif ( ! empty( $_GET['product_cat'] ) ) {
+        $selected_category = sanitize_title( wp_unslash( $_GET['product_cat'] ) );
+    }
+
+    if ( $selected_category ) {
         $tax_query[] = array(
             'taxonomy' => 'product_cat',
             'field'    => 'slug',
-            'terms'    => sanitize_title( wp_unslash( $_GET['product_cat'] ) ),
+            'terms'    => $selected_category,
         );
     }
 

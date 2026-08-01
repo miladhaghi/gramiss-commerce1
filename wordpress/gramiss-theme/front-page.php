@@ -73,10 +73,10 @@ $hero_objects = array(
 
         <div class="g1-hero-media">
             <?php if ( $hero_img ) : ?>
-                <div class="g1-interactive-hero" data-g1-interactive-hero>
+                <div class="g1-interactive-hero" data-g1-interactive-hero style="<?php echo esc_attr( '--hero-image:url("' . esc_url_raw( $hero_img ) . '")' ); ?>">
                     <div class="g1-interactive-stage">
                         <div class="g1-interactive-shadow" aria-hidden="true"></div>
-                        <div class="g1-interactive-art" style="<?php echo esc_attr( '--hero-image:url("' . esc_url_raw( $hero_img ) . '")' ); ?>">
+                        <div class="g1-interactive-art">
                             <img class="g1-interactive-base" src="<?php echo esc_url( $hero_img ); ?>" alt="مجموعه معلق Gramiss شامل کلاه، تیشرت، شلوار، کیف، جوراب و کتونی" fetchpriority="high" decoding="async">
                             <span class="g1-interactive-glow" aria-hidden="true"></span>
 

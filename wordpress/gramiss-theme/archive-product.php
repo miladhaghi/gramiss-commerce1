@@ -9,9 +9,12 @@ defined( 'ABSPATH' ) || exit;
 
 get_header();
 
-$shop_url        = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : home_url( '/shop/' );
+$shop_url        = gramiss_filterable_shop_url();
 $current_orderby = isset( $_GET['orderby'] ) ? wc_clean( wp_unslash( $_GET['orderby'] ) ) : 'date';
-$current_cat     = isset( $_GET['product_cat'] ) ? sanitize_title( wp_unslash( $_GET['product_cat'] ) ) : '';
+$current_cat     = isset( $_GET['gramiss_category'] )
+    ? sanitize_title( wp_unslash( $_GET['gramiss_category'] ) )
+    : ( isset( $_GET['product_cat'] ) ? sanitize_title( wp_unslash( $_GET['product_cat'] ) ) : '' );
+$launch_categories = gramiss_launch_categories();
 $categories      = get_terms(
     array(
         'taxonomy'   => 'product_cat',
@@ -24,6 +27,14 @@ if ( is_wp_error( $categories ) ) {
     $categories = array();
 }
 
+$current_cat_label = $current_cat && isset( $launch_categories[ $current_cat ] ) ? $launch_categories[ $current_cat ] : '';
+foreach ( $categories as $category ) {
+    if ( $current_cat === $category->slug ) {
+        $current_cat_label = $category->name;
+        break;
+    }
+}
+
 $filter_taxonomies = array(
     'color'    => array( 'taxonomy' => 'pa_color', 'title' => 'رنگ', 'summary' => 'رنگ‌های موجود' ),
     'size'     => array( 'taxonomy' => 'pa_size', 'title' => 'سایز', 'summary' => 'S، M، L، XL' ),
@@ -31,14 +42,16 @@ $filter_taxonomies = array(
 );
 
 $active_filter_count = 0;
-foreach ( array( 'product_cat', 'min_price', 'max_price', 'filter_color', 'filter_size', 'filter_material', 'in_stock', 'on_sale' ) as $filter_key ) {
+foreach ( array( 'gramiss_category', 'product_cat', 'min_price', 'max_price', 'filter_color', 'filter_size', 'filter_material', 'in_stock', 'on_sale' ) as $filter_key ) {
     if ( ! empty( $_GET[ $filter_key ] ) ) {
         ++$active_filter_count;
     }
 }
 
 function gramiss_render_shop_filters( string $instance, array $categories, array $filter_taxonomies, string $shop_url ): void {
-    $selected_cat = isset( $_GET['product_cat'] ) ? sanitize_title( wp_unslash( $_GET['product_cat'] ) ) : '';
+    $selected_cat = isset( $_GET['gramiss_category'] )
+        ? sanitize_title( wp_unslash( $_GET['gramiss_category'] ) )
+        : ( isset( $_GET['product_cat'] ) ? sanitize_title( wp_unslash( $_GET['product_cat'] ) ) : '' );
     $min_price    = isset( $_GET['min_price'] ) ? absint( $_GET['min_price'] ) : '';
     $max_price    = isset( $_GET['max_price'] ) ? absint( $_GET['max_price'] ) : '';
     $orderby      = isset( $_GET['orderby'] ) ? wc_clean( wp_unslash( $_GET['orderby'] ) ) : 'date';
@@ -54,7 +67,7 @@ function gramiss_render_shop_filters( string $instance, array $categories, array
             <p class="shop-filter-summary"><?php esc_html_e( 'محصولات را براساس دسته محدود کن', 'gramiss' ); ?></p>
             <div class="shop-filter-options"><div class="shop-filter-choice-list">
                 <?php foreach ( $categories as $category ) : ?>
-                    <label><input type="radio" name="product_cat" value="<?php echo esc_attr( $category->slug ); ?>" <?php checked( $selected_cat, $category->slug ); ?>><span><?php echo esc_html( $category->name ); ?></span></label>
+                    <label><input type="radio" name="gramiss_category" value="<?php echo esc_attr( $category->slug ); ?>" <?php checked( $selected_cat, $category->slug ); ?>><span><?php echo esc_html( $category->name ); ?></span></label>
                 <?php endforeach; ?>
             </div></div>
         </section>
@@ -140,8 +153,8 @@ function gramiss_render_shop_sample_cards(): void {
 }
 ?>
 <main class="shop-page" id="top" data-node-id="30:2">
-<section class="shop-intro" aria-labelledby="shop-title"><div class="shop-intro-copy" dir="rtl"><p class="shop-kicker" dir="ltr">SHOP / COLLECTION</p><h1 id="shop-title"><?php woocommerce_page_title(); ?></h1><p>محصولات منتخب <bdi dir="ltr">Gramiss</bdi> با تمرکز بر کیفیت، دوام و استایل روزمره.</p></div><nav class="shop-breadcrumb" aria-label="مسیر صفحه" dir="rtl"><a href="<?php echo esc_url( home_url( '/' ) ); ?>">خانه</a><span aria-hidden="true">/</span><span aria-current="page">فروشگاه</span></nav></section>
-<section class="shop-quick-categories" aria-labelledby="quick-title"><h2 id="quick-title">دسته‌بندی سریع</h2><div class="shop-quick-scroll" aria-label="فیلتر سریع دسته‌بندی‌ها"><a class="<?php echo '' === $current_cat ? 'is-active' : ''; ?>" href="<?php echo esc_url( $shop_url ); ?>">همه</a><?php foreach ( array_slice( $categories, 0, 7 ) as $category ) : ?><a class="<?php echo $current_cat === $category->slug ? 'is-active' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'product_cat', $category->slug, $shop_url ) ); ?>"><?php echo esc_html( $category->name ); ?></a><?php endforeach; ?><?php if ( empty( $categories ) ) : foreach ( array( 'کتونی', 'تیشرت', 'کلاه', 'کیف', 'جوراب' ) as $label ) : ?><span><?php echo esc_html( $label ); ?></span><?php endforeach; endif; ?></div></section>
+<section class="shop-intro" aria-labelledby="shop-title"><div class="shop-intro-copy" dir="rtl"><p class="shop-kicker" dir="ltr">SHOP / COLLECTION</p><h1 id="shop-title"><?php echo esc_html( $current_cat_label ?: woocommerce_page_title( false ) ); ?></h1><p>محصولات منتخب <bdi dir="ltr">Gramiss</bdi> با تمرکز بر کیفیت، دوام و استایل روزمره.</p></div><nav class="shop-breadcrumb" aria-label="مسیر صفحه" dir="rtl"><a href="<?php echo esc_url( home_url( '/' ) ); ?>">خانه</a><span aria-hidden="true">/</span><span aria-current="page"><?php echo esc_html( $current_cat_label ?: 'فروشگاه' ); ?></span></nav></section>
+<section class="shop-quick-categories" aria-labelledby="quick-title"><h2 id="quick-title">دسته‌بندی سریع</h2><div class="shop-quick-scroll" aria-label="فیلتر سریع دسته‌بندی‌ها"><a class="<?php echo '' === $current_cat ? 'is-active' : ''; ?>" href="<?php echo esc_url( $shop_url ); ?>">همه</a><?php foreach ( array_slice( $categories, 0, 7 ) as $category ) : ?><a class="<?php echo $current_cat === $category->slug ? 'is-active' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'gramiss_category', $category->slug, $shop_url ) ); ?>"><?php echo esc_html( $category->name ); ?></a><?php endforeach; ?><?php if ( empty( $categories ) ) : foreach ( $launch_categories as $slug => $label ) : ?><a class="<?php echo $current_cat === $slug ? 'is-active' : ''; ?>" href="<?php echo esc_url( add_query_arg( 'gramiss_category', $slug, $shop_url ) ); ?>"><?php echo esc_html( $label ); ?></a><?php endforeach; endif; ?></div></section>
 <section class="shop-catalog" aria-label="محصولات فروشگاه"><div class="shop-catalog-toolbar"><p class="shop-product-count" role="status" dir="rtl"><?php echo esc_html( sprintf( '%s محصول', number_format_i18n( (int) wc_get_loop_prop( 'total' ) ) ) ); ?></p><div class="shop-desktop-controls"><form class="shop-sort" method="get" action="<?php echo esc_url( $shop_url ); ?>"><select name="orderby" aria-label="مرتب‌سازی محصولات" onchange="this.form.submit()"><option value="date" <?php selected( $current_orderby, 'date' ); ?>>مرتب‌سازی: جدیدترین</option><option value="price" <?php selected( $current_orderby, 'price' ); ?>>قیمت: کم به زیاد</option><option value="price-desc" <?php selected( $current_orderby, 'price-desc' ); ?>>قیمت: زیاد به کم</option><option value="popularity" <?php selected( $current_orderby, 'popularity' ); ?>>محبوب‌ترین</option></select><span aria-hidden="true">⌄</span></form><div class="shop-grid-toggle" aria-label="تعداد ستون‌های محصولات"><button type="button" class="is-active" data-grid="3" aria-label="نمای سه ستونه" aria-pressed="true">▦</button><button type="button" data-grid="4" aria-label="نمای چهار ستونه" aria-pressed="false">▦</button></div></div><div class="shop-mobile-controls"><form class="shop-sort is-mobile" method="get" action="<?php echo esc_url( $shop_url ); ?>"><select name="orderby" aria-label="مرتب‌سازی محصولات" onchange="this.form.submit()"><option value="date">جدیدترین</option><option value="price">ارزان‌ترین</option><option value="price-desc">گران‌ترین</option></select><span aria-hidden="true">⌄</span></form><button type="button" class="shop-mobile-filter-trigger" aria-haspopup="dialog" aria-expanded="false"><span aria-hidden="true">☷</span><span>فیلتر<?php echo $active_filter_count ? ' (' . esc_html( $active_filter_count ) . ')' : ''; ?></span></button></div></div><div class="shop-catalog-layout"><aside class="shop-desktop-filter" aria-label="فیلتر محصولات"><?php gramiss_render_shop_filters( 'desktop', $categories, $filter_taxonomies, $shop_url ); ?></aside><div class="shop-results"><div class="shop-active-filters" dir="rtl"><h2>فیلترهای فعال</h2><div class="shop-active-filter-list"><?php if ( $active_filter_count ) : ?><span class="shop-active-filter-chip is-primary"><?php echo esc_html( sprintf( '%d فیلتر فعال', $active_filter_count ) ); ?></span><a class="shop-active-filter-chip clear-all" href="<?php echo esc_url( $shop_url ); ?>">حذف همه</a><?php else : ?><span class="shop-no-active-filter">بدون فیلتر فعال</span><?php endif; ?></div></div><div class="shop-product-grid columns-3" aria-live="polite"><?php if ( woocommerce_product_loop() ) : while ( have_posts() ) : the_post(); $product = wc_get_product( get_the_ID() ); if ( $product ) { gramiss_render_shop_product_card( $product ); } endwhile; else : gramiss_render_shop_sample_cards(); endif; ?></div></div></div></section>
 <section class="shop-smart-cta" aria-labelledby="smart-cta-title"><div dir="rtl"><h2 id="smart-cta-title">هنوز مطمئن نیستی؟</h2><p>به چند سؤال کوتاه پاسخ بده تا <bdi dir="ltr">Gramiss</bdi> مناسب‌ترین گزینه را براساس استایل و نیازت پیشنهاد دهد.</p></div><a class="button button-secondary" href="<?php echo esc_url( home_url( '/#journal' ) ); ?>">شروع راهنمای هوشمند</a></section>
 <nav class="shop-pagination" aria-label="صفحه‌بندی محصولات"><?php echo wp_kses_post( paginate_links( array( 'total' => max( 1, (int) wc_get_loop_prop( 'total_pages' ) ), 'current' => max( 1, (int) wc_get_loop_prop( 'current_page' ) ), 'prev_text' => '←', 'next_text' => '→', 'type' => 'plain' ) ) ); ?></nav>
