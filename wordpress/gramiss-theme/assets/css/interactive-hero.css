@@ -1,7 +1,42 @@
 /* Gramiss interactive fashion hero */
+.g1-hero:has(.g1-interactive-hero) {
+  min-height: 0;
+}
+
+.g1-hero:has(.g1-interactive-hero) .g1-hero-copy {
+  padding: clamp(42px, 3.6vw, 52px) clamp(38px, 4vw, 58px) clamp(36px, 3.2vw, 46px);
+}
+
+.g1-hero:has(.g1-interactive-hero) .g1-kicker {
+  margin-bottom: 14px;
+}
+
+.g1-hero:has(.g1-interactive-hero) h1 {
+  max-width: 620px;
+  font-size: clamp(44px, 3.8vw, 58px);
+  line-height: 1.24;
+}
+
+.g1-hero:has(.g1-interactive-hero) .g1-hero-lead {
+  margin: 18px 0 24px;
+  font-size: 14px;
+  line-height: 1.95;
+}
+
+.g1-hero:has(.g1-interactive-hero) .g1-proof {
+  margin-top: 28px;
+  padding-top: 18px;
+  gap: 16px;
+}
+
 .g1-hero-media {
   overflow: hidden;
   background: linear-gradient(145deg, #e8ded2 0%, #8e8986 52%, #25282e 100%);
+}
+
+.g1-hero-media:has(.g1-interactive-hero) {
+  min-height: 0;
+  aspect-ratio: 1672 / 941;
 }
 
 .g1-hero-media:has(.g1-interactive-hero)::before,
@@ -300,8 +335,31 @@
 }
 
 @media (max-width: 760px) {
+  .g1-hero:has(.g1-interactive-hero) .g1-hero-copy {
+    padding: 34px 22px 26px !important;
+  }
+
+  .g1-hero:has(.g1-interactive-hero) .g1-kicker {
+    margin-bottom: 12px;
+  }
+
+  .g1-hero:has(.g1-interactive-hero) h1 {
+    font-size: clamp(36px, 10vw, 48px) !important;
+    line-height: 1.28;
+  }
+
+  .g1-hero:has(.g1-interactive-hero) .g1-hero-lead {
+    margin: 16px 0 22px;
+  }
+
+  .g1-hero:has(.g1-interactive-hero) .g1-proof {
+    margin-top: 26px !important;
+    padding-top: 18px;
+  }
+
   .g1-hero-media:has(.g1-interactive-hero) {
     min-height: clamp(240px, 62vw, 330px) !important;
+    aspect-ratio: auto;
   }
 
   .g1-interactive-hero {
