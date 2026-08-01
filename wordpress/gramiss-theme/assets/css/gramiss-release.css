@@ -159,8 +159,20 @@ body.gramiss-next-staging::after {
   display: grid;
   place-items: center;
   background: rgba(255,255,255,.72);
-  font: 600 15px/1 Inter, Arial, sans-serif;
+  font: 600 11px/1 Inter, Arial, sans-serif;
   transition: .22s var(--gr-ease);
+}
+
+/* Keep directional glyphs quieter without shrinking their usable controls. */
+.shop-pagination .prev,
+.shop-pagination .next {
+  font-size: 11px !important;
+}
+
+.shop-filter-heading > span[aria-hidden="true"],
+.shop-sort > span[aria-hidden="true"] {
+  font-size: 10px;
+  line-height: 1;
 }
 .g1-product-card:hover .g1-product-arrow {
   background: var(--gr-ink);
@@ -303,7 +315,7 @@ body.gramiss-next-staging::after {
   .g1-product-media { border-radius: 17px !important; }
   .g1-product-info h3 { font-size: 13px !important; }
   .g1-product-meta { font-size: 8px !important; }
-  .g1-product-arrow { width: 31px; height: 31px; }
+  .g1-product-arrow { width: 31px; height: 31px; font-size: 10px; }
 
   .g1-smart { grid-template-columns: 1fr !important; min-height: auto !important; }
   .g1-smart-copy { padding: 44px 24px !important; }
