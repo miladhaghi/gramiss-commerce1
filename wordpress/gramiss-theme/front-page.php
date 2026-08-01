@@ -16,36 +16,42 @@ $categories   = gramiss_home_categories( 5 );
 $hero_objects = array(
     array(
         'class'  => 'is-hat',
+        'depth'  => '1.18',
         'number' => '01',
         'label'  => 'کلاه',
         'url'    => gramiss_product_category_url( array( 'caps', 'cap', 'کلاه' ), 'caps' ),
     ),
     array(
         'class'  => 'is-shirt',
+        'depth'  => '0.82',
         'number' => '02',
         'label'  => 'تیشرت',
         'url'    => gramiss_product_category_url( array( 't-shirts', 'tshirt', 'تی‌شرت', 'تیشرت' ), 't-shirts' ),
     ),
     array(
         'class'  => 'is-pants',
+        'depth'  => '0.96',
         'number' => '03',
         'label'  => 'شلوار',
         'url'    => gramiss_product_category_url( array( 'pants', 'trousers', 'شلوار' ), 'pants' ),
     ),
     array(
         'class'  => 'is-bag',
+        'depth'  => '1.12',
         'number' => '04',
         'label'  => 'کیف',
         'url'    => gramiss_product_category_url( array( 'bags', 'bag', 'کیف' ), 'bags' ),
     ),
     array(
         'class'  => 'is-socks',
+        'depth'  => '1.24',
         'number' => '05',
         'label'  => 'جوراب',
         'url'    => gramiss_product_category_url( array( 'socks', 'sock', 'جوراب' ), 'socks' ),
     ),
     array(
         'class'  => 'is-sneakers',
+        'depth'  => '1.32',
         'number' => '06',
         'label'  => 'کتونی',
         'url'    => gramiss_product_category_url( array( 'sneakers', 'shoes', 'کتونی', 'کفش' ), 'sneakers' ),
@@ -81,7 +87,10 @@ $hero_objects = array(
                             <span class="g1-interactive-glow" aria-hidden="true"></span>
 
                             <?php foreach ( $hero_objects as $object ) : ?>
-                                <a class="g1-hero-object <?php echo esc_attr( $object['class'] ); ?>" href="<?php echo esc_url( $object['url'] ); ?>" aria-label="مشاهده دسته‌بندی <?php echo esc_attr( $object['label'] ); ?>">
+                                <a class="g1-hero-object <?php echo esc_attr( $object['class'] ); ?>" href="<?php echo esc_url( $object['url'] ); ?>" data-depth="<?php echo esc_attr( $object['depth'] ); ?>" aria-label="مشاهده دسته‌بندی <?php echo esc_attr( $object['label'] ); ?>">
+                                    <span class="g1-object-visual" aria-hidden="true">
+                                        <img class="g1-object-image" src="<?php echo esc_url( $hero_img ); ?>" alt="" decoding="async">
+                                    </span>
                                     <span class="g1-object-label" aria-hidden="true">
                                         <small><?php echo esc_html( $object['number'] ); ?></small>
                                         <strong><?php echo esc_html( $object['label'] ); ?></strong>
@@ -89,7 +98,7 @@ $hero_objects = array(
                                 </a>
                             <?php endforeach; ?>
                         </div>
-                        <div class="g1-interaction-hint" aria-hidden="true">حرکت بده و دسته را انتخاب کن</div>
+                        <div class="g1-interaction-hint" aria-hidden="true">با موس نزدیک شو و دسته را انتخاب کن</div>
                     </div>
                 </div>
             <?php else : ?>
