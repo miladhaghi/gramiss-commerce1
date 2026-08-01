@@ -1,0 +1,1647 @@
+/* Gramiss Shop — isolated visual layer for the WooCommerce catalog. */
+:root {
+  --shop-ink: #10141d;
+  --shop-ink-soft: #202938;
+  --shop-blue: #577cad;
+  --shop-blue-deep: #29496f;
+  --shop-blue-pale: #dce8f6;
+  --shop-warm: #eee7db;
+  --shop-paper: #f7f6f2;
+  --shop-card: rgba(255, 255, 255, 0.78);
+  --shop-line: rgba(16, 20, 29, 0.1);
+  --shop-line-strong: rgba(16, 20, 29, 0.18);
+  --shop-muted: #69717e;
+  --shop-shadow: 0 24px 70px rgba(23, 34, 51, 0.09);
+  --shop-shadow-hover: 0 30px 74px rgba(23, 34, 51, 0.15);
+  --shop-radius: 24px;
+  --shop-radius-lg: 36px;
+  --shop-ease: cubic-bezier(0.2, 0.75, 0.2, 1);
+}
+
+body.gramiss-next-staging.post-type-archive-product,
+body.gramiss-next-staging.tax-product_cat,
+body.gramiss-next-staging.tax-product_tag,
+body.gramiss-next-staging.woocommerce-shop {
+  background: radial-gradient(
+      circle at 8% 4%,
+      rgba(173, 199, 231, 0.48),
+      transparent 28rem
+    ),
+    radial-gradient(
+      circle at 92% 16%,
+      rgba(232, 215, 191, 0.58),
+      transparent 30rem
+    ),
+    linear-gradient(145deg, #edf2f8 0%, #f6f3ed 44%, #eef1f5 100%);
+  background-attachment: fixed;
+}
+
+body.gramiss-next-staging .shop-page {
+  position: relative;
+  isolation: isolate;
+  padding: 30px 0 8px;
+  overflow: clip;
+}
+
+body.gramiss-next-staging .shop-page::before,
+body.gramiss-next-staging .shop-page::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(3px);
+}
+
+body.gramiss-next-staging .shop-page::before {
+  width: 520px;
+  height: 520px;
+  inset: 520px -260px auto auto;
+  background: radial-gradient(
+    circle,
+    rgba(115, 155, 207, 0.2),
+    transparent 68%
+  );
+}
+
+body.gramiss-next-staging .shop-page::after {
+  width: 580px;
+  height: 580px;
+  inset: 1450px auto auto -320px;
+  background: radial-gradient(
+    circle,
+    rgba(219, 191, 153, 0.18),
+    transparent 68%
+  );
+}
+
+body.gramiss-next-staging .shop-page > section,
+body.gramiss-next-staging .shop-page > nav.shop-pagination {
+  width: min(calc(100% - 64px), 1280px);
+  margin-inline: auto;
+}
+
+/* Editorial shop masthead. */
+body.gramiss-next-staging .shop-intro {
+  min-height: 350px;
+  padding: 48px 54px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: var(--shop-radius-lg);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 40px;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(
+      circle at 17% 18%,
+      rgba(112, 153, 207, 0.48),
+      transparent 27rem
+    ),
+    radial-gradient(
+      circle at 86% 90%,
+      rgba(213, 183, 142, 0.21),
+      transparent 26rem
+    ),
+    linear-gradient(125deg, #121821 0%, #1d2d42 52%, #324b69 100%);
+  color: #fff;
+  box-shadow: 0 34px 100px rgba(24, 39, 59, 0.2);
+}
+
+body.gramiss-next-staging .shop-intro::before {
+  content: "G";
+  position: absolute;
+  inset: -84px auto auto -24px;
+  color: rgba(255, 255, 255, 0.038);
+  font:
+    800 430px/1 Inter,
+    Arial,
+    sans-serif;
+  letter-spacing: -0.08em;
+  pointer-events: none;
+}
+
+body.gramiss-next-staging .shop-intro::after {
+  content: "";
+  width: 310px;
+  aspect-ratio: 1;
+  position: absolute;
+  inset: -122px -62px auto auto;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 48px rgba(255, 255, 255, 0.025),
+    0 0 0 96px rgba(255, 255, 255, 0.018);
+  pointer-events: none;
+}
+
+body.gramiss-next-staging .shop-intro-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 720px;
+}
+
+body.gramiss-next-staging .shop-kicker {
+  margin: 0 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.68);
+  font:
+    650 10px/1 Inter,
+    Arial,
+    sans-serif;
+  letter-spacing: 0.18em;
+}
+
+body.gramiss-next-staging .shop-kicker span {
+  width: 28px;
+  height: 1px;
+  background: #8fb2df;
+}
+
+body.gramiss-next-staging .shop-intro h1 {
+  max-width: 760px;
+  margin: 0;
+  font-size: clamp(44px, 6vw, 76px);
+  font-weight: 760;
+  line-height: 1.2;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
+body.gramiss-next-staging .shop-intro-copy > p:not(.shop-kicker) {
+  max-width: 610px;
+  margin: 20px 0 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  line-height: 2;
+}
+
+body.gramiss-next-staging .shop-intro-signals {
+  margin-top: 28px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+body.gramiss-next-staging .shop-intro-signals span {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 10px;
+  backdrop-filter: blur(12px);
+}
+
+body.gramiss-next-staging .shop-intro-signals i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #8fb2df;
+  box-shadow: 0 0 0 4px rgba(143, 178, 223, 0.1);
+}
+
+body.gramiss-next-staging .shop-breadcrumb {
+  position: relative;
+  z-index: 1;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: rgba(255, 255, 255, 0.065);
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 10px;
+  white-space: nowrap;
+  backdrop-filter: blur(14px);
+}
+
+body.gramiss-next-staging .shop-breadcrumb a {
+  color: #fff;
+  transition: opacity 0.2s ease;
+}
+
+body.gramiss-next-staging .shop-breadcrumb a:hover {
+  opacity: 0.72;
+}
+
+/* Compact, icon-led category navigator. */
+body.gramiss-next-staging .shop-quick-categories {
+  margin-top: 22px;
+  padding: 25px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.54);
+  box-shadow: 0 18px 52px rgba(27, 39, 55, 0.07);
+  backdrop-filter: blur(24px) saturate(120%);
+}
+
+body.gramiss-next-staging .shop-quick-heading {
+  margin-bottom: 19px;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+body.gramiss-next-staging .shop-quick-heading p {
+  margin: 0 0 7px;
+  color: var(--shop-blue);
+  font:
+    650 9px/1 Inter,
+    Arial,
+    sans-serif;
+  letter-spacing: 0.14em;
+}
+
+body.gramiss-next-staging .shop-quick-heading h2 {
+  margin: 0;
+  font-size: 25px;
+  line-height: 1.35;
+}
+
+body.gramiss-next-staging .shop-quick-heading > span {
+  color: var(--shop-muted);
+  font-size: 10px;
+}
+
+body.gramiss-next-staging .shop-quick-scroll {
+  display: grid;
+  grid-template-columns: repeat(11, minmax(88px, 1fr));
+  gap: 8px;
+}
+
+body.gramiss-next-staging .shop-quick-scroll > a {
+  min-width: 0;
+  min-height: 88px;
+  padding: 11px 10px;
+  border: 1px solid var(--shop-line);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.52);
+  color: var(--shop-ink);
+  transition:
+    transform 0.24s var(--shop-ease),
+    border-color 0.24s ease,
+    background 0.24s ease,
+    box-shadow 0.24s ease;
+}
+
+body.gramiss-next-staging .shop-quick-scroll > a:hover {
+  z-index: 1;
+  border-color: rgba(75, 112, 159, 0.32);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 14px 26px rgba(35, 49, 67, 0.09);
+  transform: translateY(-3px);
+}
+
+body.gramiss-next-staging .shop-quick-scroll > a.is-active {
+  border-color: var(--shop-ink);
+  background: var(--shop-ink);
+  color: #fff;
+  box-shadow: 0 15px 30px rgba(16, 20, 29, 0.16);
+}
+
+body.gramiss-next-staging .shop-quick-icon {
+  width: 30px;
+  height: 30px;
+  flex: 0 0 30px;
+  border: 1px solid currentColor;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  opacity: 0.76;
+}
+
+body.gramiss-next-staging .shop-quick-icon svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.45;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+body.gramiss-next-staging .shop-quick-icon-all svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.35;
+}
+
+body.gramiss-next-staging .shop-quick-label {
+  min-width: 0;
+  display: block;
+}
+
+body.gramiss-next-staging .shop-quick-label strong,
+body.gramiss-next-staging .shop-quick-label small {
+  max-width: 100%;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.gramiss-next-staging .shop-quick-label strong {
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+body.gramiss-next-staging .shop-quick-label small {
+  margin-top: 3px;
+  color: var(--shop-muted);
+  font:
+    600 7px/1 Inter,
+    Arial,
+    sans-serif;
+  letter-spacing: 0.08em;
+}
+
+body.gramiss-next-staging .shop-quick-scroll > a.is-active small {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Catalog shell and controls. */
+body.gramiss-next-staging .shop-catalog {
+  margin-top: 24px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.74);
+  border-radius: 30px;
+  background: rgba(247, 247, 245, 0.74);
+  box-shadow: var(--shop-shadow);
+  backdrop-filter: blur(25px) saturate(118%);
+}
+
+body.gramiss-next-staging .shop-catalog-toolbar {
+  min-height: 68px;
+  margin-bottom: 18px;
+  padding: 11px 13px 11px 18px;
+  border: 1px solid var(--shop-line);
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+body.gramiss-next-staging .shop-product-count {
+  margin: 0;
+  color: var(--shop-muted);
+  font-size: 11px;
+}
+
+body.gramiss-next-staging .shop-product-count::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-inline-end: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  background: var(--shop-blue);
+  box-shadow: 0 0 0 5px rgba(87, 124, 173, 0.1);
+  vertical-align: middle;
+}
+
+body.gramiss-next-staging .shop-desktop-controls,
+body.gramiss-next-staging .shop-mobile-controls {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+body.gramiss-next-staging .shop-mobile-controls {
+  display: none;
+}
+
+body.gramiss-next-staging .shop-sort {
+  min-width: 190px;
+  height: 44px;
+  position: relative;
+}
+
+body.gramiss-next-staging .shop-sort select {
+  width: 100%;
+  height: 100%;
+  padding: 0 15px 0 34px;
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--shop-ink-soft);
+  font-size: 10px;
+  outline: none;
+}
+
+body.gramiss-next-staging .shop-sort > span[aria-hidden="true"] {
+  position: absolute;
+  inset: 50% auto auto 13px;
+  color: var(--shop-muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+body.gramiss-next-staging .shop-grid-toggle {
+  height: 44px;
+  padding: 4px;
+  border: 1px solid var(--shop-line);
+  border-radius: 12px;
+  display: flex;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+body.gramiss-next-staging .shop-grid-toggle button {
+  width: 36px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #9299a3;
+  font-size: 14px;
+}
+
+body.gramiss-next-staging .shop-grid-toggle button.is-active {
+  background: var(--shop-ink);
+  color: #fff;
+}
+
+body.gramiss-next-staging .shop-catalog-layout {
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+/* Filter card. */
+body.gramiss-next-staging .shop-desktop-filter {
+  position: sticky;
+  top: 118px;
+}
+
+body.gramiss-next-staging .shop-filter-panel {
+  padding: 21px;
+  border: 1px solid var(--shop-line);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 16px 36px rgba(27, 39, 55, 0.055);
+}
+
+body.gramiss-next-staging .shop-filter-title {
+  padding-bottom: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+body.gramiss-next-staging .shop-filter-title h2 {
+  margin: 0;
+  font-size: 19px;
+}
+
+body.gramiss-next-staging .shop-filter-title a {
+  color: var(--shop-blue);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+body.gramiss-next-staging .shop-filter-section {
+  padding: 17px 0;
+  border-top: 1px solid var(--shop-line);
+}
+
+body.gramiss-next-staging .shop-filter-heading {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: transparent;
+  color: var(--shop-ink);
+  font-size: 12px;
+  font-weight: 750;
+  text-align: right;
+}
+
+body.gramiss-next-staging .shop-filter-heading > span[aria-hidden="true"] {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--shop-line);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--shop-muted);
+  transition: transform 0.2s ease;
+}
+
+body.gramiss-next-staging
+  .shop-filter-section.is-open
+  .shop-filter-heading
+  > span[aria-hidden="true"] {
+  transform: rotate(180deg);
+}
+
+body.gramiss-next-staging .shop-filter-summary {
+  margin: 4px 0 0;
+  color: #9197a1;
+  font-size: 9px;
+}
+
+body.gramiss-next-staging .shop-filter-options {
+  padding-top: 13px;
+}
+
+body.gramiss-next-staging .shop-filter-choice-list {
+  max-height: 190px;
+  display: grid;
+  gap: 7px;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+body.gramiss-next-staging .shop-filter-choice-list label,
+body.gramiss-next-staging .shop-filter-switch {
+  min-height: 34px;
+  padding: 5px 8px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #4f5865;
+  font-size: 10px;
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+body.gramiss-next-staging .shop-filter-choice-list label:hover,
+body.gramiss-next-staging .shop-filter-switch:hover {
+  background: rgba(87, 124, 173, 0.07);
+}
+
+body.gramiss-next-staging .shop-filter-choice-list input,
+body.gramiss-next-staging .shop-filter-switch input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--shop-ink);
+}
+
+body.gramiss-next-staging .shop-price-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+body.gramiss-next-staging .shop-price-fields label span {
+  margin-bottom: 5px;
+  display: block;
+  color: var(--shop-muted);
+  font-size: 9px;
+}
+
+body.gramiss-next-staging .shop-price-fields input {
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 0 9px;
+  border: 1px solid var(--shop-line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--shop-ink);
+  font-size: 9px;
+  outline: none;
+}
+
+body.gramiss-next-staging .shop-price-fields input:focus,
+body.gramiss-next-staging .shop-sort select:focus {
+  border-color: var(--shop-blue);
+  box-shadow: 0 0 0 3px rgba(87, 124, 173, 0.11);
+}
+
+body.gramiss-next-staging .shop-size-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+body.gramiss-next-staging .shop-size-choices label {
+  position: relative;
+}
+
+body.gramiss-next-staging .shop-size-choices input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+body.gramiss-next-staging .shop-size-choices span {
+  min-width: 38px;
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--shop-line);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--shop-ink-soft);
+  font:
+    600 9px/1 Inter,
+    Arial,
+    sans-serif;
+  cursor: pointer;
+}
+
+body.gramiss-next-staging .shop-size-choices input:checked + span {
+  border-color: var(--shop-ink);
+  background: var(--shop-ink);
+  color: #fff;
+}
+
+body.gramiss-next-staging .shop-filter-apply {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 7px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--shop-ink), #27384e);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 750;
+  box-shadow: 0 12px 24px rgba(16, 20, 29, 0.14);
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+body.gramiss-next-staging .shop-filter-apply:hover {
+  box-shadow: 0 16px 30px rgba(16, 20, 29, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Results and product cards. */
+body.gramiss-next-staging .shop-results {
+  min-width: 0;
+}
+
+body.gramiss-next-staging .shop-active-filters {
+  min-height: 48px;
+  margin-bottom: 12px;
+  padding: 5px 7px 5px 13px;
+  border: 1px solid var(--shop-line);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.52);
+}
+
+body.gramiss-next-staging .shop-active-filters h2 {
+  margin: 0;
+  font-size: 11px;
+}
+
+body.gramiss-next-staging .shop-active-filter-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+body.gramiss-next-staging .shop-active-filter-chip,
+body.gramiss-next-staging .shop-no-active-filter {
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 8px;
+}
+
+body.gramiss-next-staging .shop-active-filter-chip.is-primary {
+  background: var(--shop-blue-pale);
+  color: var(--shop-blue-deep);
+}
+
+body.gramiss-next-staging .shop-active-filter-chip.clear-all {
+  border: 1px solid var(--shop-line);
+  background: #fff;
+}
+
+body.gramiss-next-staging .shop-no-active-filter {
+  color: #9298a1;
+}
+
+body.gramiss-next-staging .shop-product-grid {
+  display: grid;
+  gap: 14px;
+}
+
+body.gramiss-next-staging .shop-product-grid.columns-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+body.gramiss-next-staging .shop-product-grid.columns-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+body.gramiss-next-staging .shop-product-card {
+  min-width: 0;
+  padding: 9px 9px 14px;
+  border: 1px solid rgba(16, 20, 29, 0.085);
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 11px 28px rgba(25, 38, 55, 0.055);
+  transition:
+    transform 0.32s var(--shop-ease),
+    box-shadow 0.32s var(--shop-ease),
+    border-color 0.32s ease;
+}
+
+body.gramiss-next-staging .shop-product-card:hover {
+  border-color: rgba(61, 91, 130, 0.2);
+  box-shadow: var(--shop-shadow-hover);
+  transform: translateY(-6px);
+}
+
+body.gramiss-next-staging .shop-product-media {
+  aspect-ratio: 0.92;
+  min-height: 0;
+  border-radius: 15px;
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(
+      circle at 50% 36%,
+      rgba(255, 255, 255, 0.96),
+      transparent 44%
+    ),
+    linear-gradient(145deg, #e9edf1 0%, #f4f1ea 100%);
+}
+
+body.gramiss-next-staging .shop-product-media::after {
+  content: "";
+  position: absolute;
+  inset: auto 15% 8% 15%;
+  height: 9%;
+  border-radius: 50%;
+  background: rgba(30, 42, 58, 0.12);
+  filter: blur(13px);
+  transform: scaleX(0.74);
+  transition:
+    transform 0.36s var(--shop-ease),
+    opacity 0.36s ease;
+}
+
+body.gramiss-next-staging .shop-product-card:hover .shop-product-media::after {
+  opacity: 0.72;
+  transform: scaleX(0.92);
+}
+
+body.gramiss-next-staging .shop-artwork {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+body.gramiss-next-staging .shop-artwork img {
+  width: 86% !important;
+  height: 86% !important;
+  margin: 0 !important;
+  object-fit: contain;
+  filter: drop-shadow(0 18px 18px rgba(21, 30, 43, 0.13));
+  transition: transform 0.48s var(--shop-ease);
+}
+
+body.gramiss-next-staging .shop-product-card:hover .shop-artwork img {
+  transform: translateY(-4px) scale(1.035);
+}
+
+body.gramiss-next-staging .shop-product-badge {
+  position: absolute;
+  z-index: 3;
+  inset: 12px 12px auto auto;
+  min-height: 27px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--shop-ink);
+  font-size: 8px;
+  font-weight: 750;
+  backdrop-filter: blur(12px);
+}
+
+body.gramiss-next-staging .shop-wishlist,
+body.gramiss-next-staging .shop-compare {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  position: absolute;
+  z-index: 4;
+  inset-inline-start: 18px;
+  background: rgba(255, 255, 255, 0.76);
+  color: var(--shop-ink-soft);
+  box-shadow: 0 7px 16px rgba(20, 29, 41, 0.08);
+  backdrop-filter: blur(12px);
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+body.gramiss-next-staging .shop-wishlist {
+  top: 18px;
+}
+body.gramiss-next-staging .shop-compare {
+  top: 58px;
+}
+
+body.gramiss-next-staging .shop-wishlist:hover,
+body.gramiss-next-staging .shop-compare:hover,
+body.gramiss-next-staging .shop-wishlist.is-active,
+body.gramiss-next-staging .shop-compare.is-active {
+  background: var(--shop-ink);
+  color: #fff;
+  transform: scale(1.06);
+}
+
+body.gramiss-next-staging .shop-wishlist svg,
+body.gramiss-next-staging .shop-compare svg {
+  width: 16px;
+  height: 16px;
+}
+
+body.gramiss-next-staging .shop-product-copy {
+  min-height: 88px;
+  padding: 14px 5px 8px;
+  display: block;
+}
+
+body.gramiss-next-staging .shop-product-copy > span {
+  color: var(--shop-blue);
+  font-size: 8px;
+}
+
+body.gramiss-next-staging .shop-product-copy > span a {
+  color: inherit;
+}
+
+body.gramiss-next-staging .shop-product-copy strong {
+  margin-top: 3px;
+  display: block;
+  overflow: hidden;
+  color: var(--shop-ink);
+  font-size: 14px;
+  line-height: 1.65;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.gramiss-next-staging .shop-product-copy small {
+  margin-top: 4px;
+  display: block;
+  overflow: hidden;
+  color: #a0a5ad;
+  font:
+    600 7px/1 Inter,
+    Arial,
+    sans-serif;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.gramiss-next-staging .shop-product-buy {
+  min-height: 42px;
+  padding: 8px 5px 0;
+  border-top: 1px solid var(--shop-line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+}
+
+body.gramiss-next-staging .shop-product-buy b,
+body.gramiss-next-staging .shop-product-buy .price {
+  color: var(--shop-ink) !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  white-space: nowrap;
+}
+
+body.gramiss-next-staging .shop-product-buy del {
+  margin-inline-end: 3px;
+  color: #a1a6ae;
+  font-size: 8px;
+  opacity: 0.76;
+}
+
+body.gramiss-next-staging .shop-add-button {
+  min-width: 64px;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--shop-line-strong);
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--shop-ink);
+  font-size: 8px;
+  font-weight: 750;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+body.gramiss-next-staging .shop-add-button:hover {
+  background: var(--shop-ink);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+body.gramiss-next-staging .shop-add-button.is-disabled {
+  opacity: 0.58;
+}
+
+/* Editorial CTAs. */
+body.gramiss-next-staging .shop-smart-cta,
+body.gramiss-next-staging .shop-buying-guide,
+body.gramiss-next-staging .shop-newsletter {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 36px;
+}
+
+body.gramiss-next-staging .shop-smart-cta {
+  min-height: 210px;
+  margin-top: 24px;
+  padding: 36px 42px;
+  border: 1px solid rgba(255, 255, 255, 0.56);
+  border-radius: 30px;
+  background: radial-gradient(
+      circle at 14% 28%,
+      rgba(163, 193, 230, 0.34),
+      transparent 20rem
+    ),
+    linear-gradient(120deg, #dce7f4, #f3ede4 70%);
+  box-shadow: var(--shop-shadow);
+}
+
+body.gramiss-next-staging .shop-smart-cta::after,
+body.gramiss-next-staging .shop-buying-guide::after {
+  content: "G";
+  position: absolute;
+  inset: auto auto -90px 18px;
+  color: rgba(16, 20, 29, 0.035);
+  font:
+    800 250px/1 Inter,
+    Arial,
+    sans-serif;
+  pointer-events: none;
+}
+
+body.gramiss-next-staging .shop-smart-cta h2,
+body.gramiss-next-staging .shop-buying-guide h2,
+body.gramiss-next-staging .shop-newsletter h2 {
+  margin: 0;
+  font-size: clamp(27px, 3.2vw, 42px);
+  line-height: 1.45;
+  text-wrap: balance;
+}
+
+body.gramiss-next-staging .shop-smart-cta p,
+body.gramiss-next-staging .shop-buying-guide p,
+body.gramiss-next-staging .shop-newsletter p {
+  max-width: 690px;
+  margin: 9px 0 0;
+  color: var(--shop-muted);
+  font-size: 11px;
+  line-height: 1.95;
+}
+
+body.gramiss-next-staging .shop-smart-cta > *,
+body.gramiss-next-staging .shop-buying-guide > *,
+body.gramiss-next-staging .shop-newsletter > * {
+  position: relative;
+  z-index: 1;
+}
+
+body.gramiss-next-staging .shop-smart-cta .button,
+body.gramiss-next-staging .shop-buying-guide .button {
+  min-width: 176px;
+  min-height: 48px;
+  border-radius: 999px;
+  font-size: 10px;
+}
+
+body.gramiss-next-staging .shop-smart-cta .button-secondary {
+  border-color: var(--shop-ink);
+  background: var(--shop-ink);
+  color: #fff;
+}
+
+body.gramiss-next-staging .shop-pagination {
+  min-height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+body.gramiss-next-staging .shop-pagination .page-numbers {
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(16, 20, 29, 0.1);
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--shop-muted);
+  font-size: 9px;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+body.gramiss-next-staging .shop-pagination .page-numbers:hover,
+body.gramiss-next-staging .shop-pagination .page-numbers.current {
+  border-color: var(--shop-ink);
+  background: var(--shop-ink);
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+body.gramiss-next-staging .shop-buying-guide {
+  min-height: 250px;
+  padding: 42px;
+  border-radius: 30px;
+  background: radial-gradient(
+      circle at 86% 20%,
+      rgba(98, 139, 192, 0.35),
+      transparent 23rem
+    ),
+    linear-gradient(125deg, #111821 0%, #20324a 100%);
+  color: #fff;
+  box-shadow: 0 30px 76px rgba(19, 30, 45, 0.17);
+}
+
+body.gramiss-next-staging .shop-buying-guide::after {
+  color: rgba(255, 255, 255, 0.035);
+}
+
+body.gramiss-next-staging .shop-buying-guide p {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+body.gramiss-next-staging .shop-buying-guide .button-primary {
+  border-color: rgba(255, 255, 255, 0.88);
+  background: #fff;
+  color: var(--shop-ink);
+}
+
+body.gramiss-next-staging .shop-newsletter {
+  min-height: 230px;
+  margin-top: 24px;
+  padding: 38px 42px;
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  border-radius: 30px;
+  grid-template-columns: minmax(0, 0.95fr) minmax(360px, 0.75fr);
+  background: rgba(255, 255, 255, 0.61);
+  box-shadow: var(--shop-shadow);
+  backdrop-filter: blur(22px);
+}
+
+body.gramiss-next-staging .shop-newsletter::before {
+  content: "";
+  width: 360px;
+  height: 360px;
+  position: absolute;
+  inset: -210px auto auto -100px;
+  border-radius: 50%;
+  background: rgba(111, 151, 204, 0.14);
+}
+
+body.gramiss-next-staging .newsletter-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+body.gramiss-next-staging .newsletter-form input {
+  width: 100%;
+  min-width: 0;
+  height: 52px;
+  padding: 0 16px;
+  border: 1px solid var(--shop-line);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--shop-ink);
+  outline: none;
+}
+
+body.gramiss-next-staging .newsletter-form input:focus {
+  border-color: var(--shop-blue);
+  box-shadow: 0 0 0 3px rgba(87, 124, 173, 0.11);
+}
+
+body.gramiss-next-staging .newsletter-form button {
+  min-width: 104px;
+  border: 0;
+  border-radius: 13px;
+  background: var(--shop-ink);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+body.gramiss-next-staging .newsletter-status {
+  margin-top: 7px !important;
+  font-size: 8px !important;
+}
+
+/* Mobile filter layer and feedback. */
+body.gramiss-next-staging .shop-filter-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  visibility: hidden;
+  opacity: 0;
+  background: rgba(9, 13, 19, 0.52);
+  transition:
+    opacity 0.22s ease,
+    visibility 0.22s ease;
+  backdrop-filter: blur(7px);
+}
+
+body.gramiss-next-staging .shop-filter-overlay.is-open {
+  visibility: visible;
+  opacity: 1;
+}
+
+body.gramiss-next-staging .filter-drawer {
+  width: min(90vw, 400px);
+  height: 100%;
+  margin-inline-start: auto;
+  padding: 19px;
+  overflow-y: auto;
+  background: linear-gradient(155deg, #eef3f8, #f6f2ea);
+  transform: translateX(105%);
+  transition: transform 0.28s var(--shop-ease);
+}
+
+body.gramiss-next-staging .shop-filter-overlay.is-open .filter-drawer {
+  transform: translateX(0);
+}
+
+body.gramiss-next-staging .filter-drawer-heading {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+body.gramiss-next-staging .filter-drawer-heading h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+body.gramiss-next-staging .filter-drawer-close {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid var(--shop-line);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--shop-ink);
+  font-size: 22px;
+}
+
+body.gramiss-next-staging .gramiss-shop-toast {
+  max-width: min(calc(100vw - 32px), 360px);
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  position: fixed;
+  z-index: 1700;
+  inset: auto 50% 24px auto;
+  background: rgba(16, 20, 29, 0.9);
+  color: #fff;
+  font-size: 10px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(50%, 20px);
+  transition:
+    opacity 0.22s ease,
+    transform 0.22s var(--shop-ease);
+  backdrop-filter: blur(16px);
+}
+
+body.gramiss-next-staging .gramiss-shop-toast.is-visible {
+  opacity: 1;
+  transform: translate(50%, 0);
+}
+
+@media (max-width: 1180px) {
+  body.gramiss-next-staging .shop-quick-scroll {
+    display: flex;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: inline mandatory;
+    scrollbar-width: none;
+  }
+
+  body.gramiss-next-staging .shop-quick-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  body.gramiss-next-staging .shop-quick-scroll > a {
+    min-width: 105px;
+    scroll-snap-align: start;
+  }
+
+  body.gramiss-next-staging .shop-catalog-layout {
+    grid-template-columns: 246px minmax(0, 1fr);
+  }
+
+  body.gramiss-next-staging .shop-product-grid.columns-4 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 920px) {
+  body.gramiss-next-staging .shop-page > section,
+  body.gramiss-next-staging .shop-page > nav.shop-pagination {
+    width: min(calc(100% - 40px), 1280px);
+  }
+
+  body.gramiss-next-staging .shop-intro {
+    min-height: 320px;
+    padding: 40px;
+  }
+
+  body.gramiss-next-staging .shop-desktop-controls,
+  body.gramiss-next-staging .shop-desktop-filter {
+    display: none;
+  }
+  body.gramiss-next-staging .shop-mobile-controls {
+    display: flex;
+  }
+
+  body.gramiss-next-staging .shop-mobile-filter-trigger {
+    min-height: 44px;
+    padding: 0 15px;
+    border: 1px solid var(--shop-line);
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--shop-ink);
+    color: #fff;
+    font-size: 10px;
+  }
+
+  body.gramiss-next-staging .shop-catalog-layout {
+    display: block;
+  }
+
+  body.gramiss-next-staging .shop-newsletter {
+    grid-template-columns: 1fr;
+    gap: 25px;
+  }
+
+  body.gramiss-next-staging .shop-product-grid.columns-3,
+  body.gramiss-next-staging .shop-product-grid.columns-4 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  body.gramiss-next-staging.post-type-archive-product,
+  body.gramiss-next-staging.tax-product_cat,
+  body.gramiss-next-staging.tax-product_tag,
+  body.gramiss-next-staging.woocommerce-shop {
+    background-attachment: scroll;
+  }
+
+  body.gramiss-next-staging .shop-page {
+    padding-top: 15px;
+  }
+
+  body.gramiss-next-staging .shop-page > section,
+  body.gramiss-next-staging .shop-page > nav.shop-pagination {
+    width: min(calc(100% - 28px), 1280px);
+  }
+
+  body.gramiss-next-staging .shop-intro {
+    min-height: 370px;
+    padding: 29px 23px 24px;
+    border-radius: 26px;
+    grid-template-columns: 1fr;
+    align-content: space-between;
+    gap: 30px;
+  }
+
+  body.gramiss-next-staging .shop-intro::before {
+    inset: 18px auto auto -24px;
+    font-size: 260px;
+  }
+
+  body.gramiss-next-staging .shop-intro h1 {
+    font-size: clamp(38px, 13vw, 54px);
+    line-height: 1.25;
+  }
+
+  body.gramiss-next-staging .shop-intro-copy > p:not(.shop-kicker) {
+    margin-top: 15px;
+    font-size: 11px;
+  }
+
+  body.gramiss-next-staging .shop-intro-signals {
+    margin-top: 20px;
+    gap: 6px;
+  }
+
+  body.gramiss-next-staging .shop-intro-signals span {
+    min-height: 31px;
+    padding: 0 10px;
+    font-size: 8px;
+  }
+
+  body.gramiss-next-staging .shop-breadcrumb {
+    width: fit-content;
+    min-height: 36px;
+    font-size: 8px;
+  }
+
+  body.gramiss-next-staging .shop-quick-categories {
+    margin-top: 13px;
+    padding: 18px 14px 14px;
+    border-radius: 21px;
+  }
+
+  body.gramiss-next-staging .shop-quick-heading {
+    margin-bottom: 14px;
+    align-items: center;
+  }
+
+  body.gramiss-next-staging .shop-quick-heading h2 {
+    font-size: 20px;
+  }
+  body.gramiss-next-staging .shop-quick-heading > span {
+    display: none;
+  }
+
+  body.gramiss-next-staging .shop-quick-scroll {
+    width: calc(100% + 14px);
+    padding-inline-end: 1px;
+  }
+
+  body.gramiss-next-staging .shop-quick-scroll > a {
+    min-width: 92px;
+    min-height: 82px;
+  }
+
+  body.gramiss-next-staging .shop-catalog {
+    margin-top: 13px;
+    padding: 10px;
+    border-radius: 22px;
+  }
+
+  body.gramiss-next-staging .shop-catalog-toolbar {
+    min-height: 58px;
+    margin-bottom: 10px;
+    padding: 7px 8px 7px 12px;
+    border-radius: 14px;
+  }
+
+  body.gramiss-next-staging .shop-product-count {
+    font-size: 9px;
+  }
+  body.gramiss-next-staging .shop-sort {
+    min-width: 118px;
+    height: 42px;
+  }
+  body.gramiss-next-staging .shop-sort select {
+    padding-inline: 11px 27px;
+    font-size: 8px;
+  }
+
+  body.gramiss-next-staging .shop-mobile-filter-trigger {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  body.gramiss-next-staging .shop-mobile-filter-trigger > span:last-child {
+    display: none;
+  }
+
+  body.gramiss-next-staging .shop-active-filters {
+    min-height: 42px;
+    margin-bottom: 9px;
+  }
+
+  body.gramiss-next-staging .shop-active-filters h2 {
+    display: none;
+  }
+
+  body.gramiss-next-staging .shop-product-grid.columns-3,
+  body.gramiss-next-staging .shop-product-grid.columns-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  body.gramiss-next-staging .shop-product-card {
+    padding: 6px 6px 10px;
+    border-radius: 16px;
+  }
+
+  body.gramiss-next-staging .shop-product-media {
+    border-radius: 12px;
+  }
+
+  body.gramiss-next-staging .shop-wishlist,
+  body.gramiss-next-staging .shop-compare {
+    width: 31px;
+    height: 31px;
+    inset-inline-start: 12px;
+  }
+
+  body.gramiss-next-staging .shop-wishlist {
+    top: 12px;
+  }
+  body.gramiss-next-staging .shop-compare {
+    top: 48px;
+  }
+
+  body.gramiss-next-staging .shop-product-badge {
+    inset: 9px 9px auto auto;
+    min-height: 24px;
+    padding: 0 8px;
+    font-size: 7px;
+  }
+
+  body.gramiss-next-staging .shop-product-copy {
+    min-height: 78px;
+    padding: 11px 3px 6px;
+  }
+
+  body.gramiss-next-staging .shop-product-copy strong {
+    font-size: 12px;
+  }
+
+  body.gramiss-next-staging .shop-product-buy {
+    min-height: 40px;
+    padding-inline: 3px;
+  }
+
+  body.gramiss-next-staging .shop-product-buy b,
+  body.gramiss-next-staging .shop-product-buy .price {
+    font-size: 8px !important;
+  }
+
+  body.gramiss-next-staging .shop-add-button {
+    min-width: 54px;
+    min-height: 29px;
+    padding: 0 8px;
+    font-size: 7px;
+  }
+
+  body.gramiss-next-staging .shop-smart-cta,
+  body.gramiss-next-staging .shop-buying-guide,
+  body.gramiss-next-staging .shop-newsletter {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  body.gramiss-next-staging .shop-smart-cta {
+    min-height: 260px;
+    margin-top: 13px;
+    padding: 29px 23px;
+    border-radius: 23px;
+  }
+
+  body.gramiss-next-staging .shop-buying-guide {
+    min-height: 290px;
+    padding: 30px 23px;
+    border-radius: 23px;
+  }
+
+  body.gramiss-next-staging .shop-smart-cta h2,
+  body.gramiss-next-staging .shop-buying-guide h2,
+  body.gramiss-next-staging .shop-newsletter h2 {
+    font-size: clamp(25px, 8.8vw, 34px);
+  }
+
+  body.gramiss-next-staging .shop-smart-cta .button,
+  body.gramiss-next-staging .shop-buying-guide .button {
+    width: 100%;
+  }
+
+  body.gramiss-next-staging .shop-pagination {
+    min-height: 70px;
+  }
+
+  body.gramiss-next-staging .shop-newsletter {
+    min-height: 310px;
+    margin-top: 13px;
+    padding: 29px 23px;
+    border-radius: 23px;
+  }
+
+  body.gramiss-next-staging .newsletter-form {
+    grid-template-columns: 1fr;
+  }
+  body.gramiss-next-staging .newsletter-form button {
+    min-height: 50px;
+  }
+}
+
+@media (max-width: 390px) {
+  body.gramiss-next-staging .shop-page > section,
+  body.gramiss-next-staging .shop-page > nav.shop-pagination {
+    width: min(calc(100% - 20px), 1280px);
+  }
+
+  body.gramiss-next-staging .shop-intro {
+    padding-inline: 19px;
+  }
+
+  body.gramiss-next-staging .shop-intro-signals span:last-child {
+    display: none;
+  }
+
+  body.gramiss-next-staging .shop-catalog-toolbar {
+    gap: 7px;
+  }
+  body.gramiss-next-staging .shop-sort {
+    min-width: 105px;
+  }
+
+  body.gramiss-next-staging .shop-product-copy strong {
+    font-size: 11px;
+  }
+  body.gramiss-next-staging .shop-product-buy {
+    align-items: flex-end;
+  }
+  body.gramiss-next-staging .shop-product-buy b {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 340px) {
+  body.gramiss-next-staging .shop-product-grid.columns-3,
+  body.gramiss-next-staging .shop-product-grid.columns-4 {
+    grid-template-columns: 1fr;
+  }
+
+  body.gramiss-next-staging .shop-product-media {
+    aspect-ratio: 1.08;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.gramiss-next-staging .shop-page *,
+  body.gramiss-next-staging .shop-filter-overlay *,
+  body.gramiss-next-staging .gramiss-shop-toast {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}

@@ -13,6 +13,9 @@ $wishlist_url  = $wishlist_page ? get_permalink( $wishlist_page ) : add_query_ar
 $compare_url   = $compare_page ? get_permalink( $compare_page ) : add_query_arg( 'gramiss_page', 'compare', home_url( '/' ) );
 $release_css   = get_template_directory_uri() . '/assets/css/gramiss-release.css';
 $release_ver   = gramiss_asset_version( '/assets/css/gramiss-release.css', (string) wp_get_theme()->get( 'Version' ) );
+$is_shop_view  = function_exists( 'is_shop' ) && ( is_shop() || is_product_taxonomy() || is_post_type_archive( 'product' ) );
+$shop_css      = get_template_directory_uri() . '/assets/css/shop.css';
+$shop_css_ver  = gramiss_asset_version( '/assets/css/shop.css', (string) wp_get_theme()->get( 'Version' ) );
 ?><!doctype html>
 <html <?php language_attributes(); ?> dir="rtl">
 <head>
@@ -21,6 +24,9 @@ $release_ver   = gramiss_asset_version( '/assets/css/gramiss-release.css', (stri
     <meta name="theme-color" content="#101319">
     <?php wp_head(); ?>
     <link rel="stylesheet" id="gramiss-release-css" href="<?php echo esc_url( add_query_arg( 'ver', $release_ver, $release_css ) ); ?>" media="all">
+    <?php if ( $is_shop_view ) : ?>
+        <link rel="stylesheet" id="gramiss-shop-css" href="<?php echo esc_url( add_query_arg( 'ver', $shop_css_ver, $shop_css ) ); ?>" media="all">
+    <?php endif; ?>
 </head>
 <body <?php body_class(); ?>>
 <?php wp_body_open(); ?>
