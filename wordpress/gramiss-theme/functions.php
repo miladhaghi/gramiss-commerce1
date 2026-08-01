@@ -193,12 +193,16 @@ function gramiss_filterable_shop_url( array $args = array() ): string {
  */
 function gramiss_launch_categories(): array {
     return array(
-        'caps'     => 'کلاه',
         't-shirts' => 'تیشرت',
         'pants'    => 'شلوار',
+        'caps'     => 'کلاه',
         'bags'     => 'کیف',
-        'socks'    => 'جوراب',
         'sneakers' => 'کتونی',
+        'socks'    => 'جوراب',
+        'belts'    => 'کمربند',
+        'shirts'   => 'پیراهن',
+        'underwear' => 'لباس زیر',
+        'keychains' => 'جاکلیدی',
     );
 }
 
@@ -233,65 +237,48 @@ function gramiss_product_category_url( array $candidates, string $fallback_slug 
  *
  * @return array<int,array<string,string>>
  */
-function gramiss_home_categories( int $limit = 5 ): array {
-    $results  = array();
-    $fallback = array(
-        array( 'name' => 'کلاه', 'en' => 'CAPS', 'slug' => 'caps', 'description' => 'جزئی کوچک با اثر بزرگ', 'mark' => 'C' ),
-        array( 'name' => 'کیف', 'en' => 'BAGS', 'slug' => 'bags', 'description' => 'فرم کاربردی برای هر روز', 'mark' => 'B' ),
-        array( 'name' => 'جوراب', 'en' => 'SOCKS', 'slug' => 'socks', 'description' => 'جزئیات ساده، انتخاب دقیق', 'mark' => 'S' ),
-        array( 'name' => 'تیشرت', 'en' => 'T-SHIRTS', 'slug' => 't-shirts', 'description' => 'پایه‌ای برای ترکیب‌های بی‌نهایت', 'mark' => 'T' ),
-        array( 'name' => 'کتونی', 'en' => 'SNEAKERS', 'slug' => 'sneakers', 'description' => 'حرکت، راحتی و استایل', 'mark' => 'SN' ),
+function gramiss_home_categories( int $limit = 10 ): array {
+    $catalog = array(
+        array( 'name' => 'تیشرت', 'en' => 'T-SHIRTS', 'slug' => 't-shirts', 'candidates' => array( 't-shirts', 't-shirt', 'tshirt', 'تی‌شرت', 'تیشرت' ) ),
+        array( 'name' => 'شلوار', 'en' => 'PANTS', 'slug' => 'pants', 'candidates' => array( 'pants', 'trousers', 'شلوار' ) ),
+        array( 'name' => 'کلاه', 'en' => 'CAPS', 'slug' => 'caps', 'candidates' => array( 'caps', 'cap', 'hats', 'hat', 'کلاه' ) ),
+        array( 'name' => 'کیف', 'en' => 'BAGS', 'slug' => 'bags', 'candidates' => array( 'bags', 'bag', 'کیف' ) ),
+        array( 'name' => 'کتونی', 'en' => 'SNEAKERS', 'slug' => 'sneakers', 'candidates' => array( 'sneakers', 'sneaker', 'shoes', 'کتونی', 'کفش' ) ),
+        array( 'name' => 'جوراب', 'en' => 'SOCKS', 'slug' => 'socks', 'candidates' => array( 'socks', 'sock', 'جوراب' ) ),
+        array( 'name' => 'کمربند', 'en' => 'BELTS', 'slug' => 'belts', 'candidates' => array( 'belts', 'belt', 'کمربند' ) ),
+        array( 'name' => 'پیراهن', 'en' => 'SHIRTS', 'slug' => 'shirts', 'candidates' => array( 'shirts', 'shirt', 'پیراهن' ) ),
+        array( 'name' => 'لباس زیر', 'en' => 'UNDERWEAR', 'slug' => 'underwear', 'candidates' => array( 'underwear', 'under-wear', 'لباس-زیر', 'لباس زیر' ) ),
+        array( 'name' => 'جاکلیدی', 'en' => 'KEYCHAINS', 'slug' => 'keychains', 'candidates' => array( 'keychains', 'keychain', 'key-chains', 'جاکلیدی' ) ),
     );
 
-    if ( taxonomy_exists( 'product_cat' ) ) {
-        $terms = get_terms(
-            array(
-                'taxonomy'   => 'product_cat',
-                'hide_empty' => true,
-                'number'     => $limit,
-                'orderby'    => 'count',
-                'order'      => 'DESC',
-            )
-        );
-
-        if ( ! is_wp_error( $terms ) ) {
-            foreach ( $terms as $term ) {
-                $thumbnail_id = (int) get_term_meta( $term->term_id, 'thumbnail_id', true );
-                $image        = $thumbnail_id ? wp_get_attachment_image_url( $thumbnail_id, 'gramiss-category' ) : '';
-                $url          = get_term_link( $term );
-
-                $results[] = array(
-                    'name'        => $term->name,
-                    'en'          => strtoupper( (string) $term->slug ),
-                    'slug'        => (string) $term->slug,
-                    'description' => $term->description ? wp_strip_all_tags( $term->description ) : __( 'انتخاب‌های دقیق برای استایل روزمره', 'gramiss' ),
-                    'mark'        => strtoupper( substr( (string) $term->slug, 0, 2 ) ),
-                    'image'       => $image ? (string) $image : '',
-                    'url'         => is_wp_error( $url ) ? '' : (string) $url,
-                );
-            }
-        }
+    $results = array();
+    foreach ( array_slice( $catalog, 0, max( 0, $limit ) ) as $item ) {
+        $item['url'] = gramiss_product_category_url( $item['candidates'], $item['slug'] );
+        unset( $item['candidates'] );
+        $results[] = $item;
     }
 
-    foreach ( $fallback as $item ) {
-        if ( count( $results ) >= $limit ) {
-            break;
-        }
+    return $results;
+}
 
-        $already_used = array_filter(
-            $results,
-            static fn( array $category ): bool => $category['slug'] === $item['slug'] || $category['name'] === $item['name']
-        );
-        if ( $already_used ) {
-            continue;
-        }
+/**
+ * Return the compact outline icon used by the home category directory.
+ */
+function gramiss_home_category_icon( string $slug ): string {
+    $icons = array(
+        't-shirts' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4 5 5.5 2.5 9l3 2L7 9v11h10V9l1.5 2 3-2L19 5.5 16 4c-.8 1.3-2.2 2-4 2S8.8 5.3 8 4Z"/></svg>',
+        'pants' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8l1 16-4 2-1-10-1 10-4-2L8 3Z"/><path d="M8 7h8"/></svg>',
+        'caps' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13c0-4.2 2.7-7 7-7s7 2.8 7 7H5Z"/><path d="M12 6v7M5 13c-2.3 0-3 1.1-3 2 0 1.1 1.7 1.7 4 1.2l6-1.7"/></svg>',
+        'bags' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16l-1 12H5L4 8Z"/><path d="M8 9V7a4 4 0 0 1 8 0v2"/></svg>',
+        'sneakers' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 14 2-6 5 5 7 2c2 .6 3 2 2 4H5c-2 0-3-3-1-5Z"/><path d="m8 12 2-2m2 4 1.5-2M4 17h16"/></svg>',
+        'socks' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h7v8c0 2 2 3 3 4 2 2 .5 6-3 6h-2c-2 0-3-1-3-3 0-1 .5-2 1.5-3L8 13V3Z"/><path d="M8 7h7"/></svg>',
+        'belts' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h8v6H3V9Zm10 1h8v4h-8"/><path d="M6 12h3m9-2v4"/></svg>',
+        'shirts' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 4-4 2-2 4 4 2v8h12v-8l4-2-2-4-4-2c-.5 1.2-2 2-4 2S8.5 5.2 8 4Z"/><path d="M12 6v14m0-10h.01m0 4h.01"/></svg>',
+        'underwear' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16l-1 6c-.5 4-3 7-7 8-4-1-6.5-4-7-8L4 7Z"/><path d="m9 8 3 5 3-5"/></svg>',
+        'keychains' => '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="4"/><path d="m11 11 10 10m-4-4 2-2m-5-1 2-2"/></svg>',
+    );
 
-        $item['image'] = '';
-        $item['url']   = gramiss_filterable_shop_url( array( 'gramiss_category' => $item['slug'] ) );
-        $results[]     = $item;
-    }
-
-    return array_slice( $results, 0, $limit );
+    return $icons[ $slug ] ?? $icons['keychains'];
 }
 
 function gramiss_customize_register( WP_Customize_Manager $wp_customize ): void {

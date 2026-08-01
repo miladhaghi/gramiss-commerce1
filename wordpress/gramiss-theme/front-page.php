@@ -12,7 +12,7 @@ $shop_url     = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permali
 $hero_product = gramiss_home_hero_product();
 $hero_img     = gramiss_home_hero_image();
 $featured     = gramiss_featured_products( 4 );
-$categories   = gramiss_home_categories( 5 );
+$categories   = gramiss_home_categories( 10 );
 $hero_objects = array(
     array(
         'class'  => 'is-hat',
@@ -120,22 +120,21 @@ $hero_objects = array(
                 <small>SHOP BY CATEGORY</small>
                 <h2>از چیزی که واقعاً نیاز داری شروع کن.</h2>
             </div>
-            <a class="g1-text-link" href="<?php echo esc_url( $shop_url ); ?>">همه دسته‌ها</a>
+            <a class="g1-text-link" href="<?php echo esc_url( $shop_url ); ?>">همه دسته‌بندی‌ها</a>
         </div>
 
         <div class="g1-category-grid">
             <?php foreach ( $categories as $index => $category ) : ?>
-                <a class="g1-category<?php echo $category['image'] ? ' has-image' : ''; ?>" href="<?php echo esc_url( $category['url'] ?: $shop_url ); ?>">
-                    <?php if ( $category['image'] ) : ?>
-                        <img class="g1-category-image" src="<?php echo esc_url( $category['image'] ); ?>" alt="<?php echo esc_attr( $category['name'] ); ?>" loading="lazy" decoding="async">
-                    <?php endif; ?>
-                    <span class="g1-category-index"><?php echo esc_html( str_pad( (string) ( $index + 1 ), 2, '0', STR_PAD_LEFT ) ); ?></span>
-                    <span class="g1-category-mark" aria-hidden="true"><?php echo esc_html( $category['mark'] ); ?></span>
+                <a class="g1-category" href="<?php echo esc_url( $category['url'] ?: $shop_url ); ?>" aria-label="مشاهده دسته‌بندی <?php echo esc_attr( $category['name'] ); ?>">
+                    <div class="g1-category-top">
+                        <span class="g1-category-icon"><?php echo gramiss_home_category_icon( $category['slug'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?></span>
+                        <span class="g1-category-index"><?php echo esc_html( str_pad( (string) ( $index + 1 ), 2, '0', STR_PAD_LEFT ) ); ?></span>
+                    </div>
                     <div class="g1-category-copy">
                         <span class="g1-category-en"><?php echo esc_html( $category['en'] ); ?></span>
                         <h3><?php echo esc_html( $category['name'] ); ?></h3>
-                        <p><?php echo esc_html( $category['description'] ); ?></p>
                     </div>
+                    <span class="g1-category-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
                 </a>
             <?php endforeach; ?>
         </div>
