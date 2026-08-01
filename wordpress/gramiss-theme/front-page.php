@@ -13,6 +13,44 @@ $hero_product = gramiss_home_hero_product();
 $hero_img     = gramiss_home_hero_image();
 $featured     = gramiss_featured_products( 4 );
 $categories   = gramiss_home_categories( 5 );
+$hero_objects = array(
+    array(
+        'class'  => 'is-hat',
+        'number' => '01',
+        'label'  => 'کلاه',
+        'url'    => gramiss_product_category_url( array( 'caps', 'cap', 'کلاه' ), 'caps' ),
+    ),
+    array(
+        'class'  => 'is-shirt',
+        'number' => '02',
+        'label'  => 'تیشرت',
+        'url'    => gramiss_product_category_url( array( 't-shirts', 'tshirt', 'تی‌شرت', 'تیشرت' ), 't-shirts' ),
+    ),
+    array(
+        'class'  => 'is-pants',
+        'number' => '03',
+        'label'  => 'شلوار',
+        'url'    => gramiss_product_category_url( array( 'pants', 'trousers', 'شلوار' ), 'pants' ),
+    ),
+    array(
+        'class'  => 'is-bag',
+        'number' => '04',
+        'label'  => 'کیف',
+        'url'    => gramiss_product_category_url( array( 'bags', 'bag', 'کیف' ), 'bags' ),
+    ),
+    array(
+        'class'  => 'is-socks',
+        'number' => '05',
+        'label'  => 'جوراب',
+        'url'    => gramiss_product_category_url( array( 'socks', 'sock', 'جوراب' ), 'socks' ),
+    ),
+    array(
+        'class'  => 'is-sneakers',
+        'number' => '06',
+        'label'  => 'کتونی',
+        'url'    => gramiss_product_category_url( array( 'sneakers', 'shoes', 'کتونی', 'کفش' ), 'sneakers' ),
+    ),
+);
 ?>
 <main id="primary" class="g1-home">
     <section class="g1-hero g1-reveal" aria-labelledby="g1-hero-title">
@@ -35,19 +73,28 @@ $categories   = gramiss_home_categories( 5 );
 
         <div class="g1-hero-media">
             <?php if ( $hero_img ) : ?>
-                <img src="<?php echo esc_url( $hero_img ); ?>" alt="<?php echo esc_attr( $hero_product ? $hero_product->get_name() : 'محصول منتخب Gramiss' ); ?>" fetchpriority="high" decoding="async">
+                <div class="g1-interactive-hero" data-g1-interactive-hero>
+                    <div class="g1-interactive-stage">
+                        <div class="g1-interactive-shadow" aria-hidden="true"></div>
+                        <div class="g1-interactive-art" style="<?php echo esc_attr( '--hero-image:url("' . esc_url_raw( $hero_img ) . '")' ); ?>">
+                            <img class="g1-interactive-base" src="<?php echo esc_url( $hero_img ); ?>" alt="مجموعه معلق Gramiss شامل کلاه، تیشرت، شلوار، کیف، جوراب و کتونی" fetchpriority="high" decoding="async">
+                            <span class="g1-interactive-glow" aria-hidden="true"></span>
+
+                            <?php foreach ( $hero_objects as $object ) : ?>
+                                <a class="g1-hero-object <?php echo esc_attr( $object['class'] ); ?>" href="<?php echo esc_url( $object['url'] ); ?>" aria-label="مشاهده دسته‌بندی <?php echo esc_attr( $object['label'] ); ?>">
+                                    <span class="g1-object-label" aria-hidden="true">
+                                        <small><?php echo esc_html( $object['number'] ); ?></small>
+                                        <strong><?php echo esc_html( $object['label'] ); ?></strong>
+                                    </span>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="g1-interaction-hint" aria-hidden="true">حرکت بده و دسته را انتخاب کن</div>
+                    </div>
+                </div>
             <?php else : ?>
                 <div class="g1-hero-placeholder" aria-hidden="true"><span>G</span><strong>GRAMISS</strong></div>
             <?php endif; ?>
-
-            <div class="g1-floating-card">
-                <small>CURATED OBJECT / 01</small>
-                <strong><?php echo $hero_product ? esc_html( $hero_product->get_name() ) : 'انتخاب منتخب Gramiss'; ?></strong>
-                <span><?php echo $hero_product ? wp_kses_post( $hero_product->get_price_html() ) : 'برای استایل روزمره و انتخاب دقیق‌تر'; ?></span>
-                <?php if ( $hero_product ) : ?>
-                    <a href="<?php echo esc_url( $hero_product->get_permalink() ); ?>">مشاهده محصول</a>
-                <?php endif; ?>
-            </div>
         </div>
     </section>
 
