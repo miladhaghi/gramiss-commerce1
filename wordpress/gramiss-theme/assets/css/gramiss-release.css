@@ -430,7 +430,9 @@ body.gramiss-next-staging::after {
   .g1-category h3 { font-size: 18px !important; }
   .g1-category-arrow { inset: auto auto 12px 12px; width: 22px; height: 22px; }
 
-  .g1-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 12px !important; }
+  .g1-product-grid { gap: 10px !important; }
+  .g1-product-card { flex-basis: 72vw !important; }
+  .g1-product-carousel.is-single .g1-product-card { flex-basis: 72vw !important; }
   .g1-product-media { border-radius: 17px !important; }
   .g1-product-info h3 { font-size: 13px !important; }
   .g1-product-meta { font-size: 8px !important; }

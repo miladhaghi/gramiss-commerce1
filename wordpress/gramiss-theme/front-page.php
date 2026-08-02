@@ -11,7 +11,7 @@ get_header();
 $shop_url     = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : home_url( '/shop/' );
 $hero_product = gramiss_home_hero_product();
 $hero_img     = gramiss_home_hero_image();
-$featured     = gramiss_featured_products( 4 );
+$featured     = gramiss_featured_products( 8 );
 $categories   = gramiss_home_categories( 10 );
 $hero_objects = array(
     array(
@@ -145,39 +145,52 @@ $hero_objects = array(
             <div class="g1-section-head">
                 <div>
                     <small>GRAMISS SELECTS</small>
-                    <h2>انتخاب‌های تازه.</h2>
+                    <h2 id="g1-products-title">انتخاب‌های تازه.</h2>
                 </div>
                 <a class="g1-text-link" href="<?php echo esc_url( $shop_url ); ?>">مشاهده فروشگاه</a>
             </div>
 
-            <div class="g1-product-grid">
-                <?php if ( ! empty( $featured ) ) : ?>
-                    <?php foreach ( $featured as $product ) : ?>
-                        <article class="g1-product-card">
-                            <a class="g1-product-media" href="<?php echo esc_url( $product->get_permalink() ); ?>">
-                                <?php if ( $product->is_on_sale() ) : ?>
-                                    <span class="g1-product-badge">تخفیف</span>
-                                <?php endif; ?>
-                                <?php echo wp_kses_post( $product->get_image( 'gramiss-product-card', array( 'loading' => 'lazy', 'decoding' => 'async' ) ) ); ?>
-                            </a>
-                            <div class="g1-product-info">
-                                <div class="g1-product-meta">
-                                    <span><?php echo wp_kses_post( wc_get_product_category_list( $product->get_id(), '، ' ) ); ?></span>
-                                    <span class="<?php echo $product->is_in_stock() ? 'is-in-stock' : 'is-out-of-stock'; ?>"><?php echo $product->is_in_stock() ? 'موجود' : 'ناموجود'; ?></span>
+            <div class="g1-product-carousel<?php echo count( $featured ) < 2 ? ' is-single' : ''; ?>" role="region" aria-roledescription="کاروسل" aria-labelledby="g1-products-title" data-g1-product-carousel>
+                <div class="g1-product-grid" role="list" tabindex="0" aria-label="محصولات منتخب Gramiss" data-g1-carousel-track>
+                    <?php if ( ! empty( $featured ) ) : ?>
+                        <?php foreach ( $featured as $product_index => $product ) : ?>
+                            <article class="g1-product-card" role="listitem" data-g1-carousel-card aria-label="محصول <?php echo esc_attr( (string) ( $product_index + 1 ) ); ?> از <?php echo esc_attr( (string) count( $featured ) ); ?>">
+                                <a class="g1-product-media" href="<?php echo esc_url( $product->get_permalink() ); ?>">
+                                    <?php if ( $product->is_on_sale() ) : ?>
+                                        <span class="g1-product-badge">تخفیف</span>
+                                    <?php endif; ?>
+                                    <?php echo wp_kses_post( $product->get_image( 'gramiss-product-card', array( 'loading' => 'lazy', 'decoding' => 'async' ) ) ); ?>
+                                </a>
+                                <div class="g1-product-info">
+                                    <div class="g1-product-meta">
+                                        <span><?php echo wp_kses_post( wc_get_product_category_list( $product->get_id(), '، ' ) ); ?></span>
+                                        <span class="<?php echo $product->is_in_stock() ? 'is-in-stock' : 'is-out-of-stock'; ?>"><?php echo $product->is_in_stock() ? 'موجود' : 'ناموجود'; ?></span>
+                                    </div>
+                                    <h3><a href="<?php echo esc_url( $product->get_permalink() ); ?>"><?php echo esc_html( $product->get_name() ); ?></a></h3>
+                                    <div class="g1-product-bottom">
+                                        <div class="g1-product-price"><?php echo wp_kses_post( $product->get_price_html() ); ?></div>
+                                        <a class="g1-product-arrow" href="<?php echo esc_url( $product->get_permalink() ); ?>" aria-label="مشاهده <?php echo esc_attr( $product->get_name() ); ?>">↗</a>
+                                    </div>
                                 </div>
-                                <h3><a href="<?php echo esc_url( $product->get_permalink() ); ?>"><?php echo esc_html( $product->get_name() ); ?></a></h3>
-                                <div class="g1-product-bottom">
-                                    <div class="g1-product-price"><?php echo wp_kses_post( $product->get_price_html() ); ?></div>
-                                    <a class="g1-product-arrow" href="<?php echo esc_url( $product->get_permalink() ); ?>" aria-label="مشاهده <?php echo esc_attr( $product->get_name() ); ?>">↗</a>
-                                </div>
-                            </div>
-                        </article>
-                    <?php endforeach; ?>
-                <?php else : ?>
-                    <div class="g1-empty-state">
-                        <small>PRODUCTS ARE COMING</small>
-                        <h3>محصولات واقعی ووکامرس اینجا نمایش داده می‌شوند.</h3>
-                        <p>با انتشار اولین محصولات، این بخش به‌صورت خودکار کامل می‌شود.</p>
+                            </article>
+                        <?php endforeach; ?>
+                    <?php else : ?>
+                        <div class="g1-empty-state">
+                            <small>PRODUCTS ARE COMING</small>
+                            <h3>محصولات واقعی ووکامرس اینجا نمایش داده می‌شوند.</h3>
+                            <p>با انتشار اولین محصولات، این بخش به‌صورت خودکار کامل می‌شود.</p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <?php if ( count( $featured ) > 1 ) : ?>
+                    <div class="g1-product-carousel-controls" aria-label="کنترل انتخاب‌های تازه">
+                        <button type="button" class="g1-carousel-button" data-g1-carousel-prev aria-label="محصول قبلی">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+                        </button>
+                        <p class="g1-carousel-status" aria-live="polite"><span data-g1-carousel-current>01</span><i>/</i><span><?php echo esc_html( str_pad( (string) count( $featured ), 2, '0', STR_PAD_LEFT ) ); ?></span></p>
+                        <button type="button" class="g1-carousel-button" data-g1-carousel-next aria-label="محصول بعدی">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                        </button>
                     </div>
                 <?php endif; ?>
             </div>
