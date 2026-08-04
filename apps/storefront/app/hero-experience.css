@@ -1,0 +1,441 @@
+/* Gramiss immersive Home hero — layered over the approved storefront without changing commerce state. */
+:root {
+  --gramiss-home-top: #6d625b;
+  --gramiss-home-mid: #c8bbad;
+  --gramiss-home-cream: #eee4d8;
+  --gramiss-home-white: #ffffff;
+  --gramiss-hero-art: none;
+}
+
+.page-shell {
+  background:
+    linear-gradient(
+      180deg,
+      var(--gramiss-home-top) 0%,
+      #8a8078 8%,
+      #b5a99d 20%,
+      var(--gramiss-home-mid) 31%,
+      var(--gramiss-home-cream) 48%,
+      #f8f4ef 62%,
+      var(--gramiss-home-white) 78%,
+      var(--gramiss-home-white) 100%
+    );
+}
+
+.page-shell > .site-header {
+  position: relative;
+  z-index: 40;
+  border-bottom-color: rgba(17, 17, 20, 0.09);
+  background: rgba(243, 237, 230, 0.72);
+  backdrop-filter: blur(18px) saturate(115%);
+  -webkit-backdrop-filter: blur(18px) saturate(115%);
+}
+
+.page-shell > .hero.gramiss-fashion-hero {
+  --hero-shift-x: 0px;
+  --hero-shift-y: 0px;
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: auto;
+  min-height: clamp(690px, 58vw, 835px);
+  padding: 0;
+  display: block;
+  overflow: hidden;
+  background: transparent;
+}
+
+.page-shell > .hero.gramiss-fashion-hero::before {
+  position: absolute;
+  z-index: -3;
+  inset: -18px;
+  content: "";
+  background-image: var(--gramiss-hero-art);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  transform: translate3d(var(--hero-shift-x), var(--hero-shift-y), 0) scale(1.025);
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.page-shell > .hero.gramiss-fashion-hero::after {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 43%, rgba(247, 240, 232, 0.94) 0 14%, rgba(244, 236, 227, 0.78) 30%, rgba(236, 226, 215, 0.2) 49%, transparent 68%),
+    linear-gradient(180deg, rgba(31, 29, 28, 0.07), transparent 18%, transparent 76%, rgba(255, 255, 255, 0.42));
+}
+
+.gramiss-fashion-hero > .hero-stage {
+  display: none !important;
+}
+
+.gramiss-fashion-hero > .hero-content {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  top: 48%;
+  width: min(520px, 38vw);
+  height: auto;
+  min-height: 0;
+  padding: 30px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 28px;
+  background: rgba(247, 241, 234, 0.28);
+  box-shadow: 0 28px 80px -48px rgba(31, 28, 26, 0.45);
+  direction: rtl;
+  text-align: center;
+  transform: translate(-50%, -50%);
+  backdrop-filter: blur(12px) saturate(108%);
+  -webkit-backdrop-filter: blur(12px) saturate(108%);
+}
+
+.gramiss-fashion-hero .eyebrow-pill {
+  margin-inline: auto;
+  border: 1px solid rgba(17, 17, 20, 0.08);
+  background: rgba(255, 255, 255, 0.56);
+  color: #504944;
+}
+
+.gramiss-fashion-hero .eyebrow-pill span {
+  background: #111114;
+}
+
+.gramiss-fashion-hero h1 {
+  width: 100%;
+  height: auto;
+  margin: 0;
+  font-size: clamp(45px, 4.3vw, 66px);
+  line-height: 1.34;
+  text-align: center;
+}
+
+.gramiss-fashion-hero .hero-description {
+  width: min(100%, 500px);
+  height: auto;
+  margin: 0;
+  color: #625b56;
+  font-size: clamp(15px, 1.2vw, 18px);
+  line-height: 2;
+  text-align: center;
+}
+
+.gramiss-fashion-hero .hero-actions {
+  justify-content: center;
+  direction: rtl;
+}
+
+.gramiss-fashion-hero .hero-actions .button {
+  min-width: 164px;
+  border-color: rgba(17, 17, 20, 0.12);
+}
+
+.gramiss-fashion-hero .hero-proof {
+  display: none;
+}
+
+.hero-category-hotspots {
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hero-hotspot {
+  position: absolute;
+  display: block;
+  border-radius: 34px;
+  outline: 1px solid transparent;
+  pointer-events: auto;
+  transition:
+    background 180ms ease,
+    box-shadow 180ms ease,
+    outline-color 180ms ease,
+    transform 180ms ease;
+}
+
+.hero-hotspot:hover,
+.hero-hotspot:focus-visible {
+  outline-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 24px 70px -42px rgba(17, 17, 20, 0.85);
+  transform: translateY(-5px) scale(1.015);
+}
+
+.hero-hotspot:focus-visible {
+  outline: 3px solid #111114;
+  outline-offset: 5px;
+}
+
+.hero-category-label {
+  position: absolute;
+  min-width: 112px;
+  padding: 9px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 999px;
+  background: rgba(17, 17, 20, 0.74);
+  color: #fff;
+  opacity: 0;
+  transform: translateY(7px);
+  transition: opacity 180ms ease, transform 180ms ease;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.hero-category-label strong {
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.hero-category-label small {
+  color: rgba(255, 255, 255, 0.66);
+  font-family: var(--font-en);
+  font-size: 8px;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+}
+
+.hero-hotspot:hover .hero-category-label,
+.hero-hotspot:focus-visible .hero-category-label {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hero-hotspot.is-cap { left: 5%; top: 8%; width: 24%; height: 29%; }
+.hero-hotspot.is-bag { left: 2%; top: 30%; width: 31%; height: 42%; }
+.hero-hotspot.is-socks { left: 11%; top: 63%; width: 21%; height: 27%; }
+.hero-hotspot.is-tshirt { right: 12%; top: 5%; width: 27%; height: 43%; }
+.hero-hotspot.is-sneakers { right: 18%; top: 51%; width: 25%; height: 32%; }
+.hero-hotspot.is-jeans { right: 0.5%; top: 16%; width: 22%; height: 75%; }
+
+.hero-hotspot.is-cap .hero-category-label,
+.hero-hotspot.is-bag .hero-category-label,
+.hero-hotspot.is-socks .hero-category-label { left: 12px; bottom: 12px; }
+
+.hero-hotspot.is-tshirt .hero-category-label,
+.hero-hotspot.is-sneakers .hero-category-label,
+.hero-hotspot.is-jeans .hero-category-label { right: 12px; bottom: 12px; }
+
+.hero-mobile-categories {
+  display: none;
+}
+
+.page-shell > .featured,
+.page-shell > .browse,
+.page-shell > .products {
+  background: transparent;
+}
+
+@media (max-width: 1100px) {
+  .gramiss-fashion-hero > .hero-content {
+    width: min(500px, 44vw);
+  }
+
+  .gramiss-fashion-hero h1 {
+    font-size: clamp(40px, 5vw, 56px);
+  }
+}
+
+@media (max-width: 767px) {
+  .page-shell {
+    background:
+      linear-gradient(
+        180deg,
+        #81766e 0%,
+        #b8ab9f 12%,
+        #ded2c5 28%,
+        #f0e8df 46%,
+        #fbf8f4 63%,
+        #ffffff 82%,
+        #ffffff 100%
+      );
+  }
+
+  .page-shell > .site-header {
+    background: rgba(238, 231, 223, 0.82);
+  }
+
+  .page-shell > .hero.gramiss-fashion-hero {
+    min-height: 0;
+    padding: 40px 0 46px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 30px;
+  }
+
+  .page-shell > .hero.gramiss-fashion-hero::before {
+    inset: 0;
+    background-image:
+      radial-gradient(circle at 50% 17%, rgba(255, 255, 255, 0.52), transparent 46%),
+      linear-gradient(180deg, rgba(111, 101, 94, 0.12), rgba(247, 241, 234, 0.2));
+    transform: none;
+  }
+
+  .page-shell > .hero.gramiss-fashion-hero::after {
+    background: linear-gradient(180deg, rgba(255,255,255,0.08), transparent 70%);
+  }
+
+  .gramiss-fashion-hero > .hero-content {
+    position: relative;
+    left: auto;
+    top: auto;
+    width: auto;
+    min-height: 0;
+    margin: 0 16px;
+    padding: 22px 16px 24px;
+    gap: 16px;
+    order: 1;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.2);
+    transform: none;
+  }
+
+  .gramiss-fashion-hero .eyebrow-pill {
+    min-height: 36px;
+    padding: 6px 11px;
+    font-size: 11px;
+  }
+
+  .gramiss-fashion-hero h1 {
+    font-size: clamp(37px, 10.6vw, 50px);
+    line-height: 1.33;
+  }
+
+  .gramiss-fashion-hero .hero-description {
+    max-width: 35rem;
+    font-size: 14px;
+    line-height: 2;
+  }
+
+  .gramiss-fashion-hero .hero-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .gramiss-fashion-hero .hero-actions .button {
+    width: 100%;
+    min-width: 0;
+    height: 52px;
+    padding-inline: 10px;
+    font-size: 13px;
+  }
+
+  .hero-category-hotspots {
+    display: none;
+  }
+
+  .hero-mobile-categories {
+    width: 100%;
+    display: block;
+    order: 2;
+    overflow: hidden;
+  }
+
+  .hero-mobile-track {
+    width: 100%;
+    padding: 2px 16px 12px;
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 16px;
+    scrollbar-width: none;
+    direction: rtl;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .hero-mobile-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hero-mobile-card {
+    position: relative;
+    width: min(74vw, 286px);
+    height: 330px;
+    flex: 0 0 min(74vw, 286px);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.46);
+    border-radius: 26px;
+    background-color: rgba(255, 255, 255, 0.16);
+    background-image: var(--gramiss-hero-art);
+    background-repeat: no-repeat;
+    background-size: 340% auto;
+    box-shadow: 0 26px 64px -48px rgba(17, 17, 20, 0.8);
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+    transition: transform 180ms ease;
+  }
+
+  .hero-mobile-card:active {
+    transform: scale(0.985);
+  }
+
+  .hero-mobile-card::after {
+    position: absolute;
+    inset: 0;
+    content: "";
+    background: linear-gradient(180deg, transparent 54%, rgba(15, 15, 16, 0.68));
+    pointer-events: none;
+  }
+
+  .hero-mobile-card .hero-category-label {
+    z-index: 2;
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    min-width: 0;
+    padding: 10px 13px;
+    opacity: 1;
+    transform: none;
+  }
+
+  .hero-mobile-card .hero-category-label strong {
+    font-size: 13px;
+  }
+
+  .hero-mobile-card.is-cap { background-position: 14% 18%; }
+  .hero-mobile-card.is-bag { background-position: 5% 56%; }
+  .hero-mobile-card.is-socks { background-position: 16% 91%; }
+  .hero-mobile-card.is-tshirt { background-position: 77% 16%; }
+  .hero-mobile-card.is-sneakers { background-position: 70% 73%; }
+  .hero-mobile-card.is-jeans { background-position: 100% 55%; }
+}
+
+@media (max-width: 390px) {
+  .gramiss-fashion-hero .hero-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-mobile-card {
+    width: 78vw;
+    flex-basis: 78vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-shell > .hero.gramiss-fashion-hero::before,
+  .hero-hotspot,
+  .hero-category-label,
+  .hero-mobile-card {
+    transition: none !important;
+  }
+}

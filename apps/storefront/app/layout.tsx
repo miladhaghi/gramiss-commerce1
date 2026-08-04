@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "@fontsource-variable/estedad";
 import "@fontsource-variable/inter";
 import "./globals.css";
+import "./hero-experience.css";
 import { createPageMetadata, SITE_URL } from "./lib/page-metadata";
 
 export const metadata: Metadata = {
@@ -25,7 +27,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fa" dir="rtl">
-      <body>{children}</body>
+      <body>
+        {children}
+        <Script src="/hero-experience.js" strategy="afterInteractive" />
+      </body>
     </html>
   );
 }
