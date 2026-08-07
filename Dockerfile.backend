@@ -14,16 +14,34 @@ ENV ADMIN_CORS=$ADMIN_CORS
 ENV AUTH_CORS=$AUTH_CORS
 ENV JWT_SECRET=$JWT_SECRET
 ENV COOKIE_SECRET=$COOKIE_SECRET
+ENV NPM_CONFIG_FETCH_RETRIES=5
+ENV NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=20000
+ENV NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000
+ENV NPM_CONFIG_MAXSOCKETS=3
 COPY apps/backend/package.json ./package.json
-RUN npm install --no-audit --no-fund
+RUN set -eux; \
+  for attempt in 1 2 3 4; do \
+    npm install --no-audit --no-fund --prefer-offline && break; \
+    if [ "$attempt" -eq 4 ]; then exit 1; fi; \
+    sleep $((attempt * 45)); \
+  done
 COPY apps/backend ./
 RUN npm run build
 
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+ENV NPM_CONFIG_FETCH_RETRIES=5
+ENV NPM_CONFIG_FETCH_RETRY_MINTIMEOUT=20000
+ENV NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT=120000
+ENV NPM_CONFIG_MAXSOCKETS=3
 COPY --from=builder /app/apps/backend/.medusa/server ./
-RUN npm install --omit=dev --no-audit --no-fund \
-  && npm cache clean --force
+RUN set -eux; \
+  for attempt in 1 2 3 4; do \
+    npm install --omit=dev --no-audit --no-fund --prefer-offline && break; \
+    if [ "$attempt" -eq 4 ]; then exit 1; fi; \
+    sleep $((attempt * 45)); \
+  done; \
+  npm cache clean --force
 EXPOSE 9000
 CMD ["npm", "run", "start"]
