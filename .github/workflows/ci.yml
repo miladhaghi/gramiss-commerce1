@@ -48,6 +48,10 @@ jobs:
       AUTH_CORS: http://localhost:3000,http://localhost:9000
       JWT_SECRET: ci-only-secret-ci-only-secret-123
       COOKIE_SECRET: ci-only-secret-ci-only-secret-456
+      NPM_CONFIG_FETCH_RETRIES: "5"
+      NPM_CONFIG_FETCH_RETRY_MINTIMEOUT: "20000"
+      NPM_CONFIG_FETCH_RETRY_MAXTIMEOUT: "120000"
+      NPM_CONFIG_MAXSOCKETS: "3"
 
     steps:
       - name: Checkout
@@ -58,8 +62,25 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install backend dependencies
-        run: npm install --prefix apps/backend --no-audit --no-fund
+      - name: Install backend dependencies with retry
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4; do
+            echo "Backend dependency install attempt ${attempt}/4"
+            if npm install --prefix apps/backend --no-audit --no-fund --prefer-offline; then
+              exit 0
+            fi
+
+            if [ "$attempt" -eq 4 ]; then
+              echo "Backend dependency installation failed after 4 attempts."
+              exit 1
+            fi
+
+            delay=$((attempt * 45))
+            echo "npm registry request failed; waiting ${delay}s before retry..."
+            sleep "$delay"
+          done
 
       - name: Validate catalog migration data
         run: npm run --prefix apps/backend catalog:validate
