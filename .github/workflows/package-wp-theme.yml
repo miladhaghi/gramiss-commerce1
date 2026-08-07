@@ -1,0 +1,22 @@
+name: Package WordPress Theme
+
+on:
+  push:
+    branches: [package-wp-theme]
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build installable theme zip
+        run: |
+          cd wordpress
+          zip -r ../gramiss-theme-next.zip gramiss-theme
+      - name: Upload theme artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gramiss-theme-next
+          path: gramiss-theme-next.zip
+          if-no-files-found: error
