@@ -3,6 +3,8 @@ name: Package WordPress Theme
 on:
   push:
     branches: [package-wp-theme]
+  pull_request:
+    branches: [wordpress-migration]
 
 jobs:
   package:
