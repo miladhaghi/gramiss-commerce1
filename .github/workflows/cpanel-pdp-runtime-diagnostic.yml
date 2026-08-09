@@ -1,0 +1,91 @@
+name: cPanel PDP Runtime Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  diagnose:
+    if: github.head_ref == 'ops/pdp-runtime-diagnostic'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      PUBLIC_ROOT: public_html
+    steps:
+      - name: Inspect WordPress runtime and rendered PDP
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, ssl, time, urllib.parse, urllib.request
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['PUBLIC_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context()
+
+          def call(func, params, post=False):
+              url=f'https://{host}:2083/execute/Fileman/{func}'
+              enc=urllib.parse.urlencode(params).encode()
+              req=urllib.request.Request(url if post else url+'?'+enc.decode(), data=enc if post else None, method='POST' if post else 'GET')
+              req.add_header('Authorization', f'cpanel {user}:{token}')
+              if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+              with urllib.request.urlopen(req, context=ctx, timeout=45) as r:
+                  payload=json.loads(r.read().decode('utf-8'))
+              result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
+              if not isinstance(result,dict) or result.get('status')!=1:
+                  raise RuntimeError(f'{func} failed: {result.get("errors") if isinstance(result,dict) else "unknown"}')
+              return result.get('data')
+
+          def save_file(name, content):
+              call('save_file_content',{'dir':root,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},post=True)
+
+          diag='g2-runtime-diag.php'
+          php=r'''<?php
+          define('WP_USE_THEMES', false);
+          require __DIR__ . '/wp-load.php';
+          header('Content-Type: application/json; charset=utf-8');
+          $plugins = (array) get_option('active_plugins', array());
+          echo wp_json_encode(array(
+              'stylesheet' => get_stylesheet(),
+              'template' => get_template(),
+              'stylesheet_dir' => get_stylesheet_directory(),
+              'template_dir' => get_template_directory(),
+              'single_product' => locate_template(array('single-product.php')),
+              'woocommerce_php' => locate_template(array('woocommerce.php')),
+              'wc_single_product' => locate_template(array('woocommerce/single-product.php')),
+              'wc_content_single_product' => locate_template(array('woocommerce/content-single-product.php')),
+              'wp_cache' => defined('WP_CACHE') ? WP_CACHE : null,
+              'active_plugins' => $plugins,
+          ), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+          '''
+          save_file(diag, php)
+
+          try:
+              with urllib.request.urlopen(f'https://gramiss.ir/{diag}?t={int(time.time())}', timeout=45) as r:
+                  runtime_raw=r.read().decode('utf-8','replace')
+              print('=== WORDPRESS RUNTIME ===')
+              print(runtime_raw)
+
+              slug='کلاه-فیت-کپ-ny'
+              qs=urllib.parse.urlencode({'product':slug,'g2runtime':str(int(time.time()))})
+              req=urllib.request.Request('https://gramiss.ir/?'+qs, headers={'User-Agent':'Mozilla/5.0 GramissRuntimeDiagnostic/1.0','Cache-Control':'no-cache','Pragma':'no-cache'})
+              with urllib.request.urlopen(req, timeout=60) as r:
+                  html=r.read().decode('utf-8','replace')
+                  headers=dict(r.headers.items())
+              print('=== PDP RESPONSE ===')
+              print('status=200 bytes=',len(html))
+              for key in ('server','x-litespeed-cache','x-cache','cf-cache-status','cache-control','age'):
+                  for hk,hv in headers.items():
+                      if hk.lower()==key: print(f'{hk}: {hv}')
+              markers=['gramiss-pdp-v2','g2-pdp-top','g2-pdp-related','woocommerce-product-gallery','related products','محصولات مرتبط']
+              for m in markers:
+                  print(f'MARKER {m!r}:', m in html)
+              idx=html.find('gramiss-pdp-v2')
+              if idx>=0: print('PDP V2 SNIPPET:',html[max(0,idx-180):idx+420].replace('\n',' ')[:700])
+              else:
+                  idx=html.find('محصولات مرتبط')
+                  print('LEGACY SNIPPET:',html[max(0,idx-300):idx+600].replace('\n',' ')[:1000] if idx>=0 else 'not found')
+          finally:
+              save_file(diag, "<?php http_response_code(404); header('Content-Type: text/plain'); exit('disabled');")
+          PY
