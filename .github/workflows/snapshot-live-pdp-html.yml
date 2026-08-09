@@ -1,0 +1,34 @@
+name: Snapshot Live PDP HTML
+
+on:
+  push:
+    branches:
+      - test/cpanel-uapi
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  snapshot-html:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch live product page HTML
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --compressed --fail --silent --show-error \
+            --connect-timeout 10 --max-time 40 \
+            -A 'Mozilla/5.0 Gramiss-Diagnostic/1.0' \
+            'https://gramiss.ir/?product=%DA%A9%D9%84%D8%A7%D9%87-%D9%81%DB%8C%D8%AA-%DA%A9%D9%BE-%D9%85%D8%B4%DA%A9%DB%8C-%D9%86%D8%A7%D8%B1%D9%86%D8%AC%DB%8C-ny' \
+            -o live-pdp.html
+          wc -c live-pdp.html
+          grep -o 'gramiss-product-detail-css[^>]*' live-pdp.html | head -1 || true
+          grep -o 'body class="[^"]*"' live-pdp.html | head -1 || true
+
+      - name: Upload live PDP HTML artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gramiss-live-pdp-html
+          path: live-pdp.html
+          if-no-files-found: error
+          retention-days: 3
