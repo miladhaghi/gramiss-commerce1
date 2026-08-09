@@ -1,0 +1,91 @@
+name: cPanel PDP Runtime Rebuild
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.head_ref == 'ops/pdp-runtime-rebuild'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Backup live header and deploy isolated PDP runtime rebuild
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, os, ssl, time, urllib.parse, urllib.request
+          from pathlib import Path
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S', time.gmtime())
+
+          def call(func, params, post=False):
+              url=f'https://{host}:2083/execute/Fileman/{func}'
+              enc=urllib.parse.urlencode(params).encode()
+              req=urllib.request.Request(url if post else url+'?'+enc.decode(), data=enc if post else None, method='POST' if post else 'GET')
+              req.add_header('Authorization', f'cpanel {user}:{token}')
+              if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+              with urllib.request.urlopen(req, context=ctx, timeout=45) as r:
+                  payload=json.loads(r.read().decode('utf-8'))
+              result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
+              if not isinstance(result,dict) or result.get('status')!=1:
+                  raise RuntimeError(f'{func} failed: {result.get("errors") if isinstance(result,dict) else "unknown"}')
+              return result.get('data')
+
+          def get_file(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else f'{root}/{parent}'
+              data=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(data,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(data.get(k),str): return data[k]
+              if isinstance(data,str): return data
+              raise RuntimeError(f'Unexpected content for {rel}')
+
+          def save_file(rel, content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else f'{root}/{parent}'
+              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},post=True)
+
+          css=Path('deploy/pdp-runtime/product-runtime-fix.css').read_text(encoding='utf-8')
+          js=Path('deploy/pdp-runtime/product-runtime-fix.js').read_text(encoding='utf-8')
+          header=get_file('header.php')
+
+          start='<!-- GRAMISS PDP RUNTIME REBUILD START -->'
+          end='<!-- GRAMISS PDP RUNTIME REBUILD END -->'
+          block=f'''{start}\n<?php if ( function_exists( 'is_product' ) && is_product() ) : ?>\n<link id="gramiss-pdp-runtime-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/product-runtime-fix.css?v=20260809-3' ); ?>">\n<script id="gramiss-pdp-runtime-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/product-runtime-fix.js?v=20260809-3' ); ?>"></script>\n<?php endif; ?>\n{end}'''
+
+          if start in header and end in header:
+              before=header.split(start,1)[0]
+              after=header.split(end,1)[1]
+              header_new=before+block+after
+          elif '</head>' in header:
+              header_new=header.replace('</head>',block+'\n</head>',1)
+          else:
+              raise RuntimeError('Could not locate </head> in live header.php')
+
+          save_file(f'header.php.bak-pdpruntime-{stamp}',header)
+          print('Backup: header.php.bak-pdpruntime-'+stamp)
+          save_file('assets/css/product-runtime-fix.css',css)
+          save_file('assets/js/product-runtime-fix.js',js)
+          save_file('header.php',header_new)
+
+          checks={
+              'header runtime loader': start in get_file('header.php') and 'product-runtime-fix.js?v=20260809-3' in get_file('header.php'),
+              'runtime CSS': 'Gramiss PDP Runtime Rebuild v3' in get_file('assets/css/product-runtime-fix.css'),
+              'runtime JS': 'GRAMISS_PDP_RUNTIME_V3' in get_file('assets/js/product-runtime-fix.js'),
+              'related isolation': 'g3-related-zone' in get_file('assets/js/product-runtime-fix.js'),
+              'hover motion disabled': 'transform:none!important' in get_file('assets/css/product-runtime-fix.css'),
+          }
+          for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
+          if not all(checks.values()): raise SystemExit('Runtime rebuild verification failed')
+          print('LIVE PDP RUNTIME REBUILD V3 DEPLOYED AND VERIFIED')
+          PY
