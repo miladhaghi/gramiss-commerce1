@@ -1,0 +1,70 @@
+name: Test cPanel UAPI Read Access
+
+on:
+  push:
+    branches:
+      - test/cpanel-uapi
+
+jobs:
+  read-only-probe:
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      THEME_DIR: /home/gramissi/public_html/wp-content/themes/gramiss-theme-next
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+    steps:
+      - name: Verify secret is present
+        shell: bash
+        run: |
+          if [ -z "${CPANEL_TOKEN}" ]; then
+            echo "CPANEL_TOKEN secret is missing"
+            exit 1
+          fi
+          echo "CPANEL_TOKEN secret is present"
+
+      - name: Read active theme directory via cPanel UAPI
+        shell: bash
+        run: |
+          set -euo pipefail
+          HTTP_CODE=$(curl -k -sS \
+            -o /tmp/cpanel-uapi.json \
+            -w '%{http_code}' \
+            --connect-timeout 10 \
+            --max-time 30 \
+            -H "Authorization: cpanel ${CPANEL_USER}:${CPANEL_TOKEN}" \
+            --get \
+            --data-urlencode "dir=${THEME_DIR}" \
+            "https://${CPANEL_HOST}:2083/execute/Fileman/list_files")
+
+          echo "HTTP status: ${HTTP_CODE}"
+          if [ "${HTTP_CODE}" != "200" ]; then
+            echo "cPanel UAPI HTTP request failed"
+            exit 1
+          fi
+
+          python3 - <<'PY'
+          import json, sys
+          path = '/tmp/cpanel-uapi.json'
+          try:
+              payload = json.load(open(path, encoding='utf-8'))
+          except Exception as exc:
+              print(f'Invalid JSON from cPanel UAPI: {exc}')
+              sys.exit(1)
+
+          result = payload.get('result', {})
+          status = result.get('status')
+          errors = result.get('errors') or []
+          if status != 1:
+              print('cPanel UAPI authentication/read failed')
+              for err in errors[:3]:
+                  print(f'Error: {err}')
+              sys.exit(1)
+
+          data = result.get('data') or []
+          print(f'Authenticated read succeeded. Entries found: {len(data)}')
+          for item in data[:12]:
+              name = item.get('file') or item.get('name') or item.get('fullpath') or '<unnamed>'
+              kind = item.get('type') or ('dir' if item.get('isdir') else 'file')
+              print(f'- {name} [{kind}]')
+          PY
