@@ -26,7 +26,7 @@ jobs:
           fi
           echo "CPANEL_TOKEN secret is present"
 
-      - name: Verify cPanel API authentication
+      - name: Diagnose cPanel API authentication safely
         shell: bash
         run: |
           set -euo pipefail
@@ -42,19 +42,42 @@ jobs:
           python3 - <<'PY'
           import json, sys
           p = json.load(open('/tmp/cpanel-auth.json', encoding='utf-8'))
-          r = p.get('result', {})
-          print(f"Auth UAPI status: {r.get('status')}")
-          for key in ('errors', 'messages', 'warnings'):
-              vals = r.get(key) or []
-              for value in vals[:3]:
-                  print(f'{key[:-1].capitalize()}: {value}')
-          if r.get('status') != 1:
-              sys.exit(1)
-          data = r.get('data') or {}
-          if isinstance(data, dict):
-              print('Authenticated cPanel user:', data.get('user') or data.get('username') or '<authenticated>')
-          else:
-              print('Authenticated cPanel API successfully')
+          print('Top-level keys:', ', '.join(sorted(p.keys())))
+
+          if isinstance(p.get('result'), dict):
+              r = p['result']
+              print('UAPI result status:', r.get('status'))
+              for key in ('errors', 'messages', 'warnings'):
+                  vals = r.get(key) or []
+                  if isinstance(vals, str):
+                      vals = [vals]
+                  for value in vals[:3]:
+                      print(f'{key}: {value}')
+              if r.get('status') == 1:
+                  print('Authentication succeeded in UAPI format')
+                  sys.exit(0)
+
+          if isinstance(p.get('cpanelresult'), dict):
+              cr = p['cpanelresult']
+              print('cPanelResult keys:', ', '.join(sorted(cr.keys())))
+              data = cr.get('data') or []
+              if isinstance(data, list):
+                  for item in data[:3]:
+                      if isinstance(item, dict):
+                          for key in ('result', 'reason', 'error', 'status'):
+                              if key in item:
+                                  print(f'cpanelresult.{key}: {item[key]}')
+
+          for key in ('status', 'message', 'reason', 'error', 'errors'):
+              if key in p:
+                  value = p[key]
+                  if isinstance(value, (str, int, float, bool)) or value is None:
+                      print(f'top-level {key}: {value}')
+                  elif isinstance(value, list):
+                      print(f'top-level {key}: {value[:3]}')
+
+          print('Authentication did not return a successful UAPI result')
+          sys.exit(1)
           PY
 
       - name: Read active theme directory via cPanel UAPI
@@ -79,8 +102,10 @@ jobs:
           print(f"Fileman UAPI status: {r.get('status')}")
           for key in ('errors', 'messages', 'warnings'):
               vals = r.get(key) or []
+              if isinstance(vals, str):
+                  vals = [vals]
               for value in vals[:3]:
-                  print(f'{key[:-1].capitalize()}: {value}')
+                  print(f'{key}: {value}')
           if r.get('status') != 1:
               sys.exit(1)
           data = r.get('data') or []
