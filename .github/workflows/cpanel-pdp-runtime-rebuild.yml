@@ -21,7 +21,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import hashlib, json, os, ssl, time, urllib.parse, urllib.request
+          import json, os, ssl, time, urllib.parse, urllib.request
           from pathlib import Path
 
           host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
@@ -30,15 +30,23 @@ jobs:
           def call(func, params, post=False):
               url=f'https://{host}:2083/execute/Fileman/{func}'
               enc=urllib.parse.urlencode(params).encode()
-              req=urllib.request.Request(url if post else url+'?'+enc.decode(), data=enc if post else None, method='POST' if post else 'GET')
-              req.add_header('Authorization', f'cpanel {user}:{token}')
-              if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
-              with urllib.request.urlopen(req, context=ctx, timeout=45) as r:
-                  payload=json.loads(r.read().decode('utf-8'))
-              result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
-              if not isinstance(result,dict) or result.get('status')!=1:
-                  raise RuntimeError(f'{func} failed: {result.get("errors") if isinstance(result,dict) else "unknown"}')
-              return result.get('data')
+              last=None
+              for attempt in range(1,6):
+                  try:
+                      req=urllib.request.Request(url if post else url+'?'+enc.decode(), data=enc if post else None, method='POST' if post else 'GET')
+                      req.add_header('Authorization', f'cpanel {user}:{token}')
+                      if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+                      with urllib.request.urlopen(req, context=ctx, timeout=75) as r:
+                          payload=json.loads(r.read().decode('utf-8'))
+                      result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
+                      if not isinstance(result,dict) or result.get('status')!=1:
+                          raise RuntimeError(f'{func} failed: {result.get("errors") if isinstance(result,dict) else "unknown"}')
+                      return result.get('data')
+                  except Exception as exc:
+                      last=exc
+                      print(f'Attempt {attempt}/5 failed for {func}: {exc}')
+                      if attempt<5: time.sleep(attempt*4)
+              raise last
 
           def get_file(rel):
               parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
@@ -75,15 +83,21 @@ jobs:
           save_file(f'header.php.bak-pdpruntime-{stamp}',header)
           print('Backup: header.php.bak-pdpruntime-'+stamp)
           save_file('assets/css/product-runtime-fix.css',css)
+          print('Saved: assets/css/product-runtime-fix.css')
           save_file('assets/js/product-runtime-fix.js',js)
+          print('Saved: assets/js/product-runtime-fix.js')
           save_file('header.php',header_new)
+          print('Saved: header.php')
 
+          live_header=get_file('header.php')
+          live_css=get_file('assets/css/product-runtime-fix.css')
+          live_js=get_file('assets/js/product-runtime-fix.js')
           checks={
-              'header runtime loader': start in get_file('header.php') and 'product-runtime-fix.js?v=20260809-3' in get_file('header.php'),
-              'runtime CSS': 'Gramiss PDP Runtime Rebuild v3' in get_file('assets/css/product-runtime-fix.css'),
-              'runtime JS': 'GRAMISS_PDP_RUNTIME_V3' in get_file('assets/js/product-runtime-fix.js'),
-              'related isolation': 'g3-related-zone' in get_file('assets/js/product-runtime-fix.js'),
-              'hover motion disabled': 'transform:none!important' in get_file('assets/css/product-runtime-fix.css'),
+              'header runtime loader': start in live_header and 'product-runtime-fix.js?v=20260809-3' in live_header,
+              'runtime CSS': 'Gramiss PDP Runtime Rebuild v3' in live_css,
+              'runtime JS': 'GRAMISS_PDP_RUNTIME_V3' in live_js,
+              'related isolation': 'g3-related-zone' in live_js,
+              'hover motion disabled': 'transform:none!important' in live_css,
           }
           for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
           if not all(checks.values()): raise SystemExit('Runtime rebuild verification failed')
