@@ -1,0 +1,22 @@
+name: Test cPanel SSH Connectivity
+
+on:
+  push:
+    branches:
+      - test/cpanel-connectivity
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show DNS
+        run: getent hosts gramiss.ir || true
+
+      - name: Test cPanel SSH port 8340
+        shell: bash
+        run: |
+          set -x
+          timeout 15 bash -c '</dev/tcp/gramiss.ir/8340'
+
+      - name: Read SSH host key
+        run: ssh-keyscan -T 10 -p 8340 gramiss.ir
