@@ -3,7 +3,7 @@ Theme Name: Gramiss Next (Staging)
 Theme URI: https://gramiss.ir
 Author: Gramiss
 Description: Staging build of the custom RTL WooCommerce theme for Gramiss.
-Version: 1.0.0-rc.1
+Version: 1.0.1
 Text Domain: gramiss
 Requires at least: 6.5
 Requires PHP: 8.1
@@ -27,3 +27,105 @@ body {
 *, *::before, *::after { box-sizing: border-box; }
 img { max-width: 100%; height: auto; }
 a { color: inherit; text-decoration: none; }
+
+/*
+ * Shop-only visual unification — v1.0.1
+ * Scoped to WooCommerce catalog/product screens so Home, header, footer,
+ * journal, account and other site sections keep their existing styling.
+ */
+body.woocommerce-shop .woocommerce ul.products li.product a.woocommerce-LoopProduct-link,
+body.post-type-archive-product .woocommerce ul.products li.product a.woocommerce-LoopProduct-link,
+body.tax-product_cat .woocommerce ul.products li.product a.woocommerce-LoopProduct-link,
+body.tax-product_tag .woocommerce ul.products li.product a.woocommerce-LoopProduct-link,
+body.woocommerce-shop .product-media,
+body.post-type-archive-product .product-media,
+body.tax-product_cat .product-media,
+body.tax-product_tag .product-media,
+body.woocommerce-shop .g1-product-media,
+body.post-type-archive-product .g1-product-media,
+body.tax-product_cat .g1-product-media,
+body.tax-product_tag .g1-product-media {
+  background: #ffffff !important;
+}
+
+body.single-product .g1-product-page {
+  --gramiss-shop-cream: #eee5d9;
+  --gramiss-shop-cream-soft: #f6f0e8;
+}
+
+body.single-product .single-product div.product,
+body.single-product div.product {
+  gap: 0 !important;
+  align-items: stretch !important;
+}
+
+body.single-product div.product div.images {
+  background: #ffffff !important;
+  border-color: rgba(17, 17, 20, .08) !important;
+  border-radius: 0 32px 32px 0 !important;
+  padding: 28px !important;
+  box-shadow: 0 22px 55px rgba(43, 36, 28, .055);
+}
+
+body.single-product div.product div.images .woocommerce-product-gallery__image,
+body.single-product div.product div.images .woocommerce-product-gallery__wrapper,
+body.single-product div.product div.images .woocommerce-product-gallery__image a {
+  background: #ffffff !important;
+}
+
+body.single-product div.product div.images .woocommerce-product-gallery__image {
+  border-radius: 20px !important;
+}
+
+body.single-product div.product div.images img {
+  background: #ffffff !important;
+}
+
+body.single-product div.product div.summary {
+  align-self: stretch !important;
+  margin: 0 !important;
+  padding: 46px 52px !important;
+  border: 1px solid rgba(17, 17, 20, .08);
+  border-right: 0;
+  border-radius: 32px 0 0 32px;
+  background: linear-gradient(90deg, #ffffff 0%, #fbf8f4 32%, #f4ede4 67%, #e9decf 100%) !important;
+  box-shadow: 0 22px 55px rgba(43, 36, 28, .045);
+}
+
+body.single-product div.product div.summary .variations select,
+body.single-product div.product div.summary input,
+body.single-product div.product div.summary textarea {
+  background: rgba(255,255,255,.9) !important;
+}
+
+body.single-product .g1-trust-item {
+  background: rgba(255,255,255,.72) !important;
+  backdrop-filter: blur(8px);
+}
+
+@media (max-width: 1100px) {
+  body.single-product div.product {
+    gap: 0 !important;
+  }
+  body.single-product div.product div.summary {
+    padding: 36px 34px !important;
+  }
+}
+
+@media (max-width: 760px) {
+  body.single-product div.product {
+    gap: 12px !important;
+  }
+  body.single-product div.product div.images {
+    border-radius: 22px !important;
+    padding: 12px !important;
+  }
+  body.single-product div.product div.summary {
+    position: static !important;
+    padding: 28px 20px !important;
+    border: 1px solid rgba(17, 17, 20, .08);
+    border-radius: 22px;
+    background: linear-gradient(180deg, #ffffff 0%, #faf6f1 48%, #eee4d8 100%) !important;
+    box-shadow: none;
+  }
+}
