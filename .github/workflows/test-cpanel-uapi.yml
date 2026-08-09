@@ -14,7 +14,7 @@ jobs:
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
       CPANEL_USER: gramissi
-      THEME_DIR: /home/gramissi/public_html/wp-content/themes/gramiss-theme-next
+      THEME_DIR: public_html/wp-content/themes/gramiss-theme-next
       CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
     steps:
       - name: Verify secret is present
@@ -26,12 +26,43 @@ jobs:
           fi
           echo "CPANEL_TOKEN secret is present"
 
+      - name: Verify cPanel API authentication
+        shell: bash
+        run: |
+          set -euo pipefail
+          HTTP_CODE=$(curl -k -sS \
+            -o /tmp/cpanel-auth.json \
+            -w '%{http_code}' \
+            --connect-timeout 10 \
+            --max-time 30 \
+            -H "Authorization: cpanel ${CPANEL_USER}:${CPANEL_TOKEN}" \
+            "https://${CPANEL_HOST}:2083/execute/Variables/get_user_information")
+
+          echo "Auth HTTP status: ${HTTP_CODE}"
+          python3 - <<'PY'
+          import json, sys
+          p = json.load(open('/tmp/cpanel-auth.json', encoding='utf-8'))
+          r = p.get('result', {})
+          print(f"Auth UAPI status: {r.get('status')}")
+          for key in ('errors', 'messages', 'warnings'):
+              vals = r.get(key) or []
+              for value in vals[:3]:
+                  print(f'{key[:-1].capitalize()}: {value}')
+          if r.get('status') != 1:
+              sys.exit(1)
+          data = r.get('data') or {}
+          if isinstance(data, dict):
+              print('Authenticated cPanel user:', data.get('user') or data.get('username') or '<authenticated>')
+          else:
+              print('Authenticated cPanel API successfully')
+          PY
+
       - name: Read active theme directory via cPanel UAPI
         shell: bash
         run: |
           set -euo pipefail
           HTTP_CODE=$(curl -k -sS \
-            -o /tmp/cpanel-uapi.json \
+            -o /tmp/cpanel-files.json \
             -w '%{http_code}' \
             --connect-timeout 10 \
             --max-time 30 \
@@ -40,33 +71,23 @@ jobs:
             --data-urlencode "dir=${THEME_DIR}" \
             "https://${CPANEL_HOST}:2083/execute/Fileman/list_files")
 
-          echo "HTTP status: ${HTTP_CODE}"
-          if [ "${HTTP_CODE}" != "200" ]; then
-            echo "cPanel UAPI HTTP request failed"
-            exit 1
-          fi
-
+          echo "Fileman HTTP status: ${HTTP_CODE}"
           python3 - <<'PY'
           import json, sys
-          path = '/tmp/cpanel-uapi.json'
-          try:
-              payload = json.load(open(path, encoding='utf-8'))
-          except Exception as exc:
-              print(f'Invalid JSON from cPanel UAPI: {exc}')
+          p = json.load(open('/tmp/cpanel-files.json', encoding='utf-8'))
+          r = p.get('result', {})
+          print(f"Fileman UAPI status: {r.get('status')}")
+          for key in ('errors', 'messages', 'warnings'):
+              vals = r.get(key) or []
+              for value in vals[:3]:
+                  print(f'{key[:-1].capitalize()}: {value}')
+          if r.get('status') != 1:
               sys.exit(1)
-
-          result = payload.get('result', {})
-          status = result.get('status')
-          errors = result.get('errors') or []
-          if status != 1:
-              print('cPanel UAPI authentication/read failed')
-              for err in errors[:3]:
-                  print(f'Error: {err}')
-              sys.exit(1)
-
-          data = result.get('data') or []
-          print(f'Authenticated read succeeded. Entries found: {len(data)}')
-          for item in data[:12]:
+          data = r.get('data') or []
+          print(f'Authenticated theme read succeeded. Entries found: {len(data)}')
+          for item in data[:15]:
+              if not isinstance(item, dict):
+                  continue
               name = item.get('file') or item.get('name') or item.get('fullpath') or '<unnamed>'
               kind = item.get('type') or ('dir' if item.get('isdir') else 'file')
               print(f'- {name} [{kind}]')
