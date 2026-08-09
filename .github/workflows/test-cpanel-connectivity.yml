@@ -1,4 +1,4 @@
-name: Test cPanel SSH Connectivity
+name: Test cPanel Connectivity
 
 on:
   push:
@@ -13,13 +13,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Show DNS
-        run: getent hosts gramiss.ir || true
+        run: |
+          getent hosts gramiss.ir || true
+          getent hosts cip20.mizbanfadns.net || true
 
       - name: Test cPanel SSH port 8340
         shell: bash
+        continue-on-error: true
         run: |
           set -x
           timeout 15 bash -c '</dev/tcp/gramiss.ir/8340'
 
-      - name: Read SSH host key
-        run: ssh-keyscan -T 10 -p 8340 gramiss.ir
+      - name: Test cPanel HTTPS port 2083
+        shell: bash
+        run: |
+          set -x
+          curl -k -I --connect-timeout 10 --max-time 20 https://cip20.mizbanfadns.net:2083/
+
+      - name: Probe UAPI endpoint without credentials
+        shell: bash
+        run: |
+          set -x
+          curl -k -sS -o /tmp/uapi.out -w '%{http_code}\n' --connect-timeout 10 --max-time 20 https://cip20.mizbanfadns.net:2083/execute/Fileman/list_files?dir=public_html
+          head -c 500 /tmp/uapi.out || true
