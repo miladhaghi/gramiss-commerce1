@@ -1,0 +1,68 @@
+name: Verify Live PDP Hotfix
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    if: github.head_ref == 'fix/pdp-live-direct'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - name: Read and semantically verify live PDP files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, ssl, urllib.parse, urllib.request
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context()
+
+          def call(func, params):
+              q=urllib.parse.urlencode(params)
+              req=urllib.request.Request(f'https://{host}:2083/execute/Fileman/{func}?{q}', headers={'Authorization':f'cpanel {user}:{token}'})
+              with urllib.request.urlopen(req, context=ctx, timeout=40) as r:
+                  p=json.loads(r.read().decode('utf-8'))
+              result=p.get('result') if isinstance(p.get('result'),dict) else p
+              if not isinstance(result,dict) or result.get('status')!=1:
+                  raise RuntimeError(f'{func} failed: {result.get("errors") if isinstance(result,dict) else "unknown"}')
+              return result.get('data')
+
+          def get_file(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else f'{root}/{parent}'
+              data=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(data,dict):
+                  for key in ('content','file_content','data'):
+                      if isinstance(data.get(key),str): return data[key]
+              if isinstance(data,str): return data
+              raise RuntimeError(f'Unexpected response for {rel}')
+
+          header=get_file('header.php')
+          single=get_file('single-product.php')
+          css=get_file('assets/css/product-detail.css')
+
+          checks={
+              'single has g1-pdp-main': 'g1-pdp-main' in single,
+              'single has g1-pdp-after': 'g1-pdp-after' in single,
+              'single uses before summary hook': "woocommerce_before_single_product_summary" in single,
+              'single uses after summary hook': "woocommerce_after_single_product_summary" in single,
+              'CSS hotfix marker present': 'Gramiss PDP structural hotfix v1.3.0' in css,
+              'CSS targets vertical thumbs': 'flex-direction:column!important' in css and 'flex-control-thumbs' in css,
+              'header malformed token removed': '<head><meta charset="utf-8">\n    ">\n' not in header and '<head><meta charset="utf-8">\r\n    ">\r\n' not in header,
+          }
+
+          for label,ok in checks.items():
+              print(('PASS' if ok else 'FAIL')+': '+label)
+          print('Live sizes:', {'header.php':len(header),'single-product.php':len(single),'product-detail.css':len(css)})
+          failed=[k for k,v in checks.items() if not v]
+          if failed:
+              raise SystemExit('Semantic verification failed: '+', '.join(failed))
+          print('LIVE PDP HOTFIX IS PRESENT')
+          PY
