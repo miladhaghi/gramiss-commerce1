@@ -33,6 +33,14 @@ a { color: inherit; text-decoration: none; }
  * Scoped to WooCommerce catalog/product screens so Home, header, footer,
  * journal, account and other site sections keep their existing styling.
  */
+body.woocommerce-shop .woocommerce ul.products li.product,
+body.post-type-archive-product .woocommerce ul.products li.product,
+body.tax-product_cat .woocommerce ul.products li.product,
+body.tax-product_tag .woocommerce ul.products li.product,
+body.woocommerce-shop .shop-product-card,
+body.post-type-archive-product .shop-product-card,
+body.tax-product_cat .shop-product-card,
+body.tax-product_tag .shop-product-card,
 body.woocommerce-shop .woocommerce ul.products li.product a.woocommerce-LoopProduct-link,
 body.post-type-archive-product .woocommerce ul.products li.product a.woocommerce-LoopProduct-link,
 body.tax-product_cat .woocommerce ul.products li.product a.woocommerce-LoopProduct-link,
@@ -44,7 +52,11 @@ body.tax-product_tag .product-media,
 body.woocommerce-shop .g1-product-media,
 body.post-type-archive-product .g1-product-media,
 body.tax-product_cat .g1-product-media,
-body.tax-product_tag .g1-product-media {
+body.tax-product_tag .g1-product-media,
+body.woocommerce-shop .shop-product-media,
+body.post-type-archive-product .shop-product-media,
+body.tax-product_cat .shop-product-media,
+body.tax-product_tag .shop-product-media {
   background: #ffffff !important;
 }
 
