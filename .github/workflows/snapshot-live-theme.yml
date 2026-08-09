@@ -1,0 +1,126 @@
+name: Snapshot Live cPanel Theme
+
+on:
+  push:
+    branches:
+      - test/cpanel-uapi
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - name: Snapshot live theme text source via read-only UAPI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, ssl, sys, urllib.parse, urllib.request
+          from pathlib import Path
+
+          host = os.environ['CPANEL_HOST']
+          user = os.environ['CPANEL_USER']
+          token = os.environ['CPANEL_TOKEN']
+          root = os.environ['THEME_ROOT'].strip('/')
+          out = Path('live-theme-snapshot')
+          out.mkdir(parents=True, exist_ok=True)
+          ctx = ssl._create_unverified_context()
+
+          def call(module, func, **params):
+              q = urllib.parse.urlencode(params)
+              url = f'https://{host}:2083/execute/{module}/{func}' + (f'?{q}' if q else '')
+              req = urllib.request.Request(url, headers={'Authorization': f'cpanel {user}:{token}'})
+              with urllib.request.urlopen(req, context=ctx, timeout=30) as r:
+                  payload = json.loads(r.read().decode('utf-8'))
+              result = payload.get('result') if isinstance(payload.get('result'), dict) else payload
+              if not isinstance(result, dict) or result.get('status') != 1:
+                  raise RuntimeError(f'UAPI {module}/{func} failed: {result.get("errors") if isinstance(result, dict) else "unknown"}')
+              return result.get('data')
+
+          def list_dir(rel):
+              directory = root if not rel else f'{root}/{rel}'
+              data = call('Fileman', 'list_files', dir=directory) or []
+              if isinstance(data, dict):
+                  data = data.get('files') or data.get('data') or []
+              return [x for x in data if isinstance(x, dict)]
+
+          def get_content(rel):
+              rel = rel.strip('/')
+              parent, name = rel.rsplit('/', 1) if '/' in rel else ('', rel)
+              directory = root if not parent else f'{root}/{parent}'
+              data = call('Fileman', 'get_file_content', dir=directory, file=name, from_charset='_DETECT_', to_charset='utf-8')
+              if isinstance(data, dict):
+                  for key in ('content', 'file_content', 'data'):
+                      if isinstance(data.get(key), str):
+                          return data[key]
+              if isinstance(data, str):
+                  return data
+              raise RuntimeError(f'Unexpected content response for {rel}: {type(data).__name__}')
+
+          text_ext = {'.php', '.css', '.js', '.json', '.txt', '.md', '.xml', '.yml', '.yaml', '.svg'}
+          queue = ['']
+          seen_dirs = set()
+          files = []
+          max_files = 500
+
+          while queue:
+              rel_dir = queue.pop(0)
+              if rel_dir in seen_dirs:
+                  continue
+              seen_dirs.add(rel_dir)
+              try:
+                  entries = list_dir(rel_dir)
+              except Exception as exc:
+                  print(f'WARN list {rel_dir or "."}: {exc}')
+                  continue
+              for item in entries:
+                  name = item.get('file') or item.get('name')
+                  if not name or name in ('.', '..'):
+                      continue
+                  rel = f'{rel_dir}/{name}'.strip('/')
+                  typ = item.get('type')
+                  is_dir = typ == 'dir' or item.get('isdir') in (1, '1', True)
+                  if is_dir:
+                      if rel.count('/') < 5:
+                          queue.append(rel)
+                  else:
+                      files.append(rel)
+                  if len(files) > max_files:
+                      raise RuntimeError('Snapshot safety limit exceeded')
+
+          manifest = {'theme_root': root, 'directories': sorted(seen_dirs), 'files': sorted(files)}
+          (out / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding='utf-8')
+
+          captured = 0
+          for rel in sorted(files):
+              if Path(rel).suffix.lower() not in text_ext:
+                  continue
+              try:
+                  content = get_content(rel)
+              except Exception as exc:
+                  print(f'WARN read {rel}: {exc}')
+                  continue
+              target = out / rel
+              target.parent.mkdir(parents=True, exist_ok=True)
+              target.write_text(content, encoding='utf-8')
+              captured += 1
+
+          print(f'Live theme snapshot complete: {len(files)} files indexed, {captured} text files captured.')
+          for rel in sorted(files)[:30]:
+              print('-', rel)
+          PY
+
+      - name: Upload live theme snapshot artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gramiss-live-theme-snapshot
+          path: live-theme-snapshot
+          if-no-files-found: error
+          retention-days: 3
