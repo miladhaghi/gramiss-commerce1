@@ -1,0 +1,91 @@
+name: cPanel PDP v2 Full Rebuild
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  rebuild:
+    if: github.head_ref == 'ops/pdp-v2-rebuild'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Backup and replace live PDP template and CSS
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, os, ssl, time, urllib.parse, urllib.request
+          from pathlib import Path
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S', time.gmtime())
+
+          def call(func, params, post=False):
+              url=f'https://{host}:2083/execute/Fileman/{func}'
+              enc=urllib.parse.urlencode(params).encode()
+              req=urllib.request.Request(url if post else url+'?'+enc.decode(), data=enc if post else None, method='POST' if post else 'GET')
+              req.add_header('Authorization', f'cpanel {user}:{token}')
+              if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+              with urllib.request.urlopen(req, context=ctx, timeout=45) as r:
+                  payload=json.loads(r.read().decode('utf-8'))
+              result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
+              if not isinstance(result,dict) or result.get('status')!=1:
+                  raise RuntimeError(f'{func} failed: {result.get("errors") if isinstance(result,dict) else "unknown"}')
+              return result.get('data')
+
+          def get_file(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else f'{root}/{parent}'
+              data=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(data,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(data.get(k),str): return data[k]
+              if isinstance(data,str): return data
+              raise RuntimeError(f'Unexpected content for {rel}')
+
+          def save_file(rel, content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else f'{root}/{parent}'
+              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},post=True)
+
+          targets={
+              'single-product.php': Path('deploy/pdp-v2/single-product.php').read_text(encoding='utf-8'),
+              'assets/css/product-detail.css': Path('deploy/pdp-v2/product-detail.css').read_text(encoding='utf-8'),
+          }
+
+          for rel,new_content in targets.items():
+              current=get_file(rel)
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              backup=(f'{parent}/' if parent else '')+name+f'.bak-pdpv2-{stamp}'
+              save_file(backup,current)
+              print('Backup:', backup)
+              save_file(rel,new_content)
+
+          for rel,wanted in targets.items():
+              live=get_file(rel)
+              if hashlib.sha256(live.encode()).hexdigest()!=hashlib.sha256(wanted.encode()).hexdigest():
+                  raise RuntimeError(f'Verification failed: {rel}')
+              print('Verified:',rel)
+
+          live_single=get_file('single-product.php')
+          live_css=get_file('assets/css/product-detail.css')
+          checks={
+              'new root': 'gramiss-pdp-v2' in live_single,
+              'custom gallery': 'g2-pdp-main-image' in live_single and 'data-g2-pdp-thumb' in live_single,
+              'manual related': 'woocommerce_output_related_products' in live_single,
+              'old product root absent': 'wc_product_class' not in live_single,
+              'css marker': 'Gramiss PDP v2 full rebuild' in live_css,
+              'hover motion disabled': 'transform:none!important' in live_css,
+          }
+          for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
+          if not all(checks.values()):
+              raise SystemExit('PDP v2 semantic verification failed')
+          print('LIVE PDP v2 FULL REBUILD DEPLOYED AND VERIFIED')
+          PY
