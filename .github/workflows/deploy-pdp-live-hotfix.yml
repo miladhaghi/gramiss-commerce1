@@ -14,59 +14,247 @@ jobs:
       CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
       THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Backup, deploy and verify only PDP files
+      - name: Backup and apply PDP root-layout override v1.3.1
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import hashlib, json, os, ssl, time, urllib.parse, urllib.request
-          from pathlib import Path
+          import json, os, ssl, time, urllib.parse, urllib.request
 
-          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
-          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S', time.gmtime())
+          host=os.environ['CPANEL_HOST']
+          user=os.environ['CPANEL_USER']
+          token=os.environ['CPANEL_TOKEN']
+          root=os.environ['THEME_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context()
+          stamp=time.strftime('%Y%m%d-%H%M%S', time.gmtime())
 
           def call(func, params, post=False):
               url=f'https://{host}:2083/execute/Fileman/{func}'
-              data=urllib.parse.urlencode(params).encode()
-              req=urllib.request.Request(url if post else url+'?'+data.decode(), data=data if post else None, method='POST' if post else 'GET')
+              encoded=urllib.parse.urlencode(params).encode()
+              req=urllib.request.Request(
+                  url if post else url+'?'+encoded.decode(),
+                  data=encoded if post else None,
+                  method='POST' if post else 'GET'
+              )
               req.add_header('Authorization', f'cpanel {user}:{token}')
-              if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
-              with urllib.request.urlopen(req, context=ctx, timeout=45) as r: payload=json.loads(r.read().decode())
+              if post:
+                  req.add_header('Content-Type','application/x-www-form-urlencoded')
+              with urllib.request.urlopen(req, context=ctx, timeout=45) as response:
+                  payload=json.loads(response.read().decode('utf-8'))
               result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
-              if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(f'{func} failed: {result.get("errors") if isinstance(result,dict) else "unknown"}')
+              if not isinstance(result,dict) or result.get('status')!=1:
+                  raise RuntimeError(f'{func} failed: {result.get("errors") if isinstance(result,dict) else "unknown"}')
               return result.get('data')
 
           def get_file(rel):
-              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else f'{root}/{parent}'
-              data=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              parent,name=rel.rsplit('/',1)
+              directory=f'{root}/{parent}'
+              data=call('get_file_content',{
+                  'dir':directory,
+                  'file':name,
+                  'from_charset':'_DETECT_',
+                  'to_charset':'utf-8'
+              })
               if isinstance(data,dict):
-                  for k in ('content','file_content','data'):
-                      if isinstance(data.get(k),str): return data[k]
-              if isinstance(data,str): return data
-              raise RuntimeError(f'Unexpected content for {rel}')
+                  for key in ('content','file_content','data'):
+                      if isinstance(data.get(key),str):
+                          return data[key]
+              if isinstance(data,str):
+                  return data
+              raise RuntimeError('Unexpected file response')
 
-          def save_file(rel,content):
-              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else f'{root}/{parent}'
-              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},post=True)
+          def save_file(rel, content):
+              parent,name=rel.rsplit('/',1)
+              directory=f'{root}/{parent}'
+              call('save_file_content',{
+                  'dir':directory,
+                  'file':name,
+                  'content':content,
+                  'from_charset':'UTF-8',
+                  'to_charset':'UTF-8',
+                  'fallback':'0'
+              },post=True)
 
-          current_single=get_file('single-product.php'); current_header=get_file('header.php'); current_css=get_file('assets/css/product-detail.css')
-          for rel,current in [('single-product.php',current_single),('header.php',current_header),('assets/css/product-detail.css',current_css)]:
-              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); bak=(f'{parent}/' if parent else '')+name+f'.bak-{stamp}'; save_file(bak,current); print('Backup:',bak)
+          rel='assets/css/product-detail.css'
+          current=get_file(rel)
+          backup=f'assets/css/product-detail.css.bak-{stamp}'
+          save_file(backup,current)
+          print('Backup:', backup)
 
-          new_single=Path('deploy/pdp-live/single-product.php').read_text(encoding='utf-8')
-          patch=Path('deploy/pdp-live/product-detail.css').read_text(encoding='utf-8').strip()
-          fixed_header=current_header.replace('<head><meta charset="utf-8">\n    ">\n','<head>\n    <meta charset="utf-8">\n').replace('<head><meta charset="utf-8">\r\n    ">\r\n','<head>\r\n    <meta charset="utf-8">\r\n')
-          marker='/* Gramiss PDP structural hotfix v1.3.0 */'
-          base_css=current_css.split(marker,1)[0].rstrip() if marker in current_css else current_css.rstrip()
-          new_css=base_css+'\n\n'+patch+'\n'
+          marker='/* Gramiss PDP root layout override v1.3.1 */'
+          base=current.split(marker,1)[0].rstrip() if marker in current else current.rstrip()
+          override=r'''/* Gramiss PDP root layout override v1.3.1 */
+body.single-product .g1-product-page div.product.g1-pdp-product{
+  display:block!important;
+  grid-template-columns:none!important;
+  grid-template-rows:none!important;
+  column-gap:0!important;
+  row-gap:0!important;
+  align-items:initial!important;
+  width:100%!important;
+  max-width:none!important;
+  float:none!important;
+  position:relative!important;
+  overflow:visible!important;
+}
+body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-main{
+  display:grid!important;
+  grid-template-columns:minmax(330px,.82fr) minmax(0,1.18fr)!important;
+  grid-template-rows:auto!important;
+  column-gap:clamp(26px,3.6vw,58px)!important;
+  align-items:start!important;
+  width:100%!important;
+  min-width:0!important;
+  direction:ltr!important;
+  position:relative!important;
+  z-index:1!important;
+}
+body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-main>.g1-pdp-summary{
+  grid-column:1!important;
+  grid-row:1!important;
+  width:100%!important;
+  min-width:0!important;
+  float:none!important;
+  position:static!important;
+  inset:auto!important;
+  margin:0!important;
+  direction:rtl!important;
+}
+body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-main>.g1-pdp-gallery-col{
+  grid-column:2!important;
+  grid-row:1!important;
+  width:100%!important;
+  min-width:0!important;
+  float:none!important;
+  position:relative!important;
+}
+body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-after{
+  display:block!important;
+  grid-column:auto!important;
+  grid-row:auto!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  clear:both!important;
+  float:none!important;
+  position:relative!important;
+  inset:auto!important;
+  z-index:0!important;
+  margin:clamp(72px,8vw,112px) 0 0!important;
+  padding:0!important;
+  overflow:visible!important;
+}
+body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-after>.woocommerce-tabs,
+body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-after>.up-sells,
+body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-after>.upsells,
+body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-after>.related.products{
+  display:block!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  clear:both!important;
+  float:none!important;
+  position:static!important;
+  inset:auto!important;
+  transform:none!important;
+}
+body.single-product .g1-product-page div.product.g1-pdp-product .g1-pdp-gallery-col div.images.woocommerce-product-gallery{
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 92px!important;
+  grid-template-rows:auto!important;
+  column-gap:14px!important;
+  width:100%!important;
+  float:none!important;
+  margin:0!important;
+  padding:14px!important;
+  background:#fff!important;
+  border:0!important;
+  box-shadow:none!important;
+  direction:ltr!important;
+}
+body.single-product .g1-product-page div.product.g1-pdp-product .g1-pdp-gallery-col div.images.woocommerce-product-gallery>.flex-viewport,
+body.single-product .g1-product-page div.product.g1-pdp-product .g1-pdp-gallery-col div.images.woocommerce-product-gallery>.woocommerce-product-gallery__wrapper{
+  grid-column:1!important;
+  grid-row:1!important;
+  min-width:0!important;
+  width:100%!important;
+  background:#fff!important;
+}
+body.single-product .g1-product-page div.product.g1-pdp-product .g1-pdp-gallery-col div.images.woocommerce-product-gallery>.flex-control-thumbs{
+  grid-column:2!important;
+  grid-row:1!important;
+  display:flex!important;
+  flex-direction:column!important;
+  flex-wrap:nowrap!important;
+  gap:10px!important;
+  width:92px!important;
+  max-width:92px!important;
+  margin:0!important;
+  padding:0!important;
+  float:none!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+}
+body.single-product .g1-product-page div.product.g1-pdp-product .g1-pdp-gallery-col .flex-control-thumbs li{
+  display:block!important;
+  flex:0 0 84px!important;
+  width:84px!important;
+  height:84px!important;
+  margin:0!important;
+  float:none!important;
+}
+body.single-product .g1-product-page div.product.g1-pdp-product .g1-pdp-gallery-col .flex-control-thumbs li img{
+  width:84px!important;
+  height:84px!important;
+  object-fit:contain!important;
+  background:#fff!important;
+}
+@media(max-width:760px){
+  body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-main{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:22px!important;
+    direction:rtl!important;
+  }
+  body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-main>.g1-pdp-gallery-col,
+  body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-main>.g1-pdp-summary{
+    width:100%!important;
+    min-width:0!important;
+  }
+  body.single-product .g1-product-page div.product.g1-pdp-product .g1-pdp-gallery-col div.images.woocommerce-product-gallery{
+    display:block!important;
+    width:100%!important;
+    padding:10px!important;
+    background:#fff!important;
+    direction:rtl!important;
+  }
+  body.single-product .g1-product-page div.product.g1-pdp-product .g1-pdp-gallery-col div.images.woocommerce-product-gallery>.flex-control-thumbs{
+    display:flex!important;
+    flex-direction:row!important;
+    gap:8px!important;
+    width:100%!important;
+    max-width:none!important;
+    margin:10px 0 0!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+  }
+  body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-after{
+    margin-top:56px!important;
+  }
+}
+'''
+          updated=base+'\n\n'+override+'\n'
+          save_file(rel,updated)
 
-          expected={'header.php':fixed_header,'single-product.php':new_single,'assets/css/product-detail.css':new_css}
-          for rel,content in expected.items(): save_file(rel,content)
-          for rel,wanted in expected.items():
-              actual=get_file(rel)
-              if hashlib.sha256(actual.encode()).hexdigest()!=hashlib.sha256(wanted.encode()).hexdigest(): raise RuntimeError(f'Verification failed: {rel}')
-              print('Verified:',rel)
-          print('LIVE PDP HOTFIX DEPLOYED')
+          live=get_file(rel)
+          required=[
+              marker,
+              'div.product.g1-pdp-product{',
+              'grid-template-columns:none!important',
+              '>.g1-pdp-after{'
+          ]
+          missing=[item for item in required if item not in live]
+          if missing:
+              raise RuntimeError('Verification failed: '+', '.join(missing))
+          print('LIVE PDP ROOT OVERRIDE v1.3.1 DEPLOYED')
           PY
