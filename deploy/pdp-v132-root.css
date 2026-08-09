@@ -1,0 +1,81 @@
+/* Gramiss PDP root-flow final override v1.3.2 */
+body.single-product .g1-product-page div.product.g1-pdp-product{
+  display:block!important;
+  grid-template-columns:none!important;
+  grid-template-rows:none!important;
+  grid-auto-columns:auto!important;
+  grid-auto-rows:auto!important;
+  column-gap:0!important;
+  row-gap:0!important;
+  width:100%!important;
+  max-width:none!important;
+  float:none!important;
+  position:relative!important;
+  overflow:visible!important;
+}
+body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-main{
+  display:grid!important;
+  grid-template-columns:minmax(330px,.82fr) minmax(0,1.18fr)!important;
+  grid-template-rows:auto!important;
+  column-gap:clamp(26px,3.6vw,58px)!important;
+  width:100%!important;
+  min-width:0!important;
+  align-items:start!important;
+  direction:ltr!important;
+  position:relative!important;
+}
+body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-main>.g1-pdp-summary{
+  grid-column:1!important;
+  grid-row:1!important;
+  position:static!important;
+  float:none!important;
+  width:100%!important;
+  min-width:0!important;
+  margin:0!important;
+  direction:rtl!important;
+}
+body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-main>.g1-pdp-gallery-col{
+  grid-column:2!important;
+  grid-row:1!important;
+  position:relative!important;
+  float:none!important;
+  width:100%!important;
+  min-width:0!important;
+}
+body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-after{
+  display:block!important;
+  grid-column:auto!important;
+  grid-row:auto!important;
+  position:relative!important;
+  float:none!important;
+  clear:both!important;
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  transform:none!important;
+  margin:clamp(72px,8vw,112px) 0 0!important;
+  padding:0!important;
+}
+body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-after>.woocommerce-tabs,
+body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-after>.related.products,
+body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-after>.up-sells,
+body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-after>.upsells{
+  display:block!important;
+  position:static!important;
+  float:none!important;
+  clear:both!important;
+  width:100%!important;
+  max-width:none!important;
+  transform:none!important;
+}
+@media(max-width:760px){
+  body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-main{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:22px!important;
+    direction:rtl!important;
+  }
+  body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-after{
+    margin-top:56px!important;
+  }
+}
