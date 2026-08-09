@@ -1,0 +1,70 @@
+name: cPanel PDP v1.3.2 PR Repair
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  repair:
+    if: github.head_ref == 'ops/pdp-v132-live'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - uses: actions/checkout@v4
+      - name: Backup, apply and verify live PDP root-flow patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, ssl, time, urllib.parse, urllib.request
+          from pathlib import Path
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S', time.gmtime())
+
+          def call(func,params,post=False):
+              url=f'https://{host}:2083/execute/Fileman/{func}'; enc=urllib.parse.urlencode(params).encode()
+              req=urllib.request.Request(url if post else url+'?'+enc.decode(),data=enc if post else None,method='POST' if post else 'GET')
+              req.add_header('Authorization',f'cpanel {user}:{token}')
+              if post:req.add_header('Content-Type','application/x-www-form-urlencoded')
+              with urllib.request.urlopen(req,context=ctx,timeout=45) as r:p=json.loads(r.read().decode())
+              result=p.get('result') if isinstance(p.get('result'),dict) else p
+              if not isinstance(result,dict) or result.get('status')!=1:raise RuntimeError(f'{func} failed: {result.get("errors") if isinstance(result,dict) else "unknown"}')
+              return result.get('data')
+
+          def get_file(rel):
+              parent,name=rel.rsplit('/',1); data=call('get_file_content',{'dir':f'{root}/{parent}','file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(data,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(data.get(k),str):return data[k]
+              if isinstance(data,str):return data
+              raise RuntimeError('Unexpected content response')
+
+          def save_file(rel,content):
+              parent,name=rel.rsplit('/',1); call('save_file_content',{'dir':f'{root}/{parent}','file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},post=True)
+
+          rel='assets/css/product-detail.css'
+          current=get_file(rel)
+          patch=Path('deploy/pdp-v132-root.css').read_text(encoding='utf-8').strip()
+          marker='/* Gramiss PDP root-flow final override v1.3.2 */'
+          base=current.split(marker,1)[0].rstrip() if marker in current else current.rstrip()
+          save_file(f'assets/css/product-detail.css.bak-{stamp}',current)
+          save_file(rel,base+'\n\n'+patch+'\n')
+
+          live=get_file(rel)
+          checks={
+              'marker': marker in live,
+              'strong root selector': 'div.product.g1-pdp-product{' in live,
+              'root grid disabled': 'grid-template-columns:none!important' in live,
+              'main stays two-column': '>.g1-pdp-main{' in live and 'display:grid!important' in live,
+              'after content sequential': '>.g1-pdp-after{' in live and 'display:block!important' in live,
+          }
+          for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
+          failed=[label for label,ok in checks.items() if not ok]
+          if failed: raise SystemExit('Verification failed: '+', '.join(failed))
+          print('LIVE PDP v1.3.2 ROOT FLOW REPAIRED AND VERIFIED')
+          PY
