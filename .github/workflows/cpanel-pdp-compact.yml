@@ -81,11 +81,12 @@ jobs:
 
           live_header=get_file('header.php')
           live_css=get_file('assets/css/product-runtime-compact.css')
+          compact=''.join(live_css.split())
           checks={
               'compact loader': 'product-runtime-compact.css?v=20260810-1' in live_header,
               'compact marker': 'Gramiss PDP Compact v1' in live_css,
-              'compact purchase height': 'min-height:520px!important' in live_css,
-              'gallery visibility': 'opacity:1!important' in live_css,
+              'compact purchase height': 'min-height:520px!important' in compact,
+              'gallery visibility': 'opacity:1!important' in compact,
           }
           for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
           if not all(checks.values()): raise SystemExit('Compact PDP verification failed')
