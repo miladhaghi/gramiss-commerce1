@@ -153,6 +153,23 @@
     return {value:select.value,label:optionLabel(select,select.value)};
   }
 
+  function productVariations(form){
+    if(window.jQuery){
+      var data=window.jQuery(form).data('product_variations');
+      if(Array.isArray(data)) return data;
+    }
+    var raw=form.getAttribute('data-product_variations');
+    if(!raw) return [];
+    try{ return JSON.parse(raw); }catch(e){ return []; }
+  }
+
+  function variationMatchesColor(variation,value){
+    var attrs=(variation && variation.attributes) || {};
+    return Object.keys(attrs).some(function(key){
+      return norm(key).indexOf('color')!==-1 && attrs[key]===value;
+    });
+  }
+
   function applyVariationImage(form,variation){
     if(!variation || !variation.image) return;
     var g=gallery();
@@ -171,9 +188,28 @@
     }
   }
 
+  function previewSelectedColor(form){
+    var meta=selectedColorMeta(form);
+    if(!meta.value) return false;
+    var variations=productVariations(form);
+    var match=variations.find(function(variation){
+      if(!variationMatchesColor(variation,meta.value)) return false;
+      if(variation.variation_is_active===false) return false;
+      if(!variation.image) return false;
+      return !!(variation.image.full_src || variation.image.src);
+    });
+    if(!match) return false;
+    applyVariationImage(form,match);
+    return true;
+  }
+
   function resetGallery(){
     var g=gallery();
     if(g && typeof g.g3ResetVariationImage==='function') g.g3ResetVariationImage();
+  }
+
+  function resetOrPreview(form){
+    if(!previewSelectedColor(form)) resetGallery();
   }
 
   function initForm(form){
@@ -188,6 +224,10 @@
       select.addEventListener('change',function(){
         setTimeout(function(){ syncAll(form); },0);
         setTimeout(function(){ syncAll(form); },80);
+        if(isColorSelect(select)){
+          setTimeout(function(){ previewSelectedColor(form); },20);
+          setTimeout(function(){ previewSelectedColor(form); },100);
+        }
       });
     });
 
@@ -209,7 +249,7 @@
       });
       $form.on('reset_data hide_variation',function(){
         setTimeout(function(){ syncAll(form); },0);
-        resetGallery();
+        setTimeout(function(){ resetOrPreview(form); },30);
       });
     }
 
