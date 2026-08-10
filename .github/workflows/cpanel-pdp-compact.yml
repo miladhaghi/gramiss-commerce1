@@ -15,7 +15,7 @@ jobs:
       THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy compact PDP override
+      - name: Deploy compact PDP override and static gallery switching
         shell: bash
         run: |
           set -euo pipefail
@@ -63,10 +63,11 @@ jobs:
               call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},post=True)
 
           css=Path('deploy/pdp-compact/product-runtime-compact.css').read_text(encoding='utf-8')
+          js=Path('deploy/pdp-compact/product-runtime-gallery-fix.js').read_text(encoding='utf-8')
           header=get_file('header.php')
           start='<!-- GRAMISS PDP COMPACT START -->'
           end='<!-- GRAMISS PDP COMPACT END -->'
-          block=f'''{start}\n<?php if ( function_exists( 'is_product' ) && is_product() ) : ?>\n<link id="gramiss-pdp-compact-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/product-runtime-compact.css?v=20260810-1' ); ?>">\n<?php endif; ?>\n{end}'''
+          block=f'''{start}\n<?php if ( function_exists( 'is_product' ) && is_product() ) : ?>\n<link id="gramiss-pdp-compact-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/product-runtime-compact.css?v=20260810-2' ); ?>">\n<script id="gramiss-pdp-gallery-switch-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/product-runtime-gallery-fix.js?v=20260810-2' ); ?>"></script>\n<?php endif; ?>\n{end}'''
           if start in header and end in header:
               header_new=header.split(start,1)[0]+block+header.split(end,1)[1]
           elif '</head>' in header:
@@ -74,21 +75,25 @@ jobs:
           else:
               raise RuntimeError('Could not locate </head>')
 
-          save_file(f'header.php.bak-pdpcompact-{stamp}',header)
-          print('Backup: header.php.bak-pdpcompact-'+stamp)
+          save_file(f'header.php.bak-pdpgallery-{stamp}',header)
+          print('Backup: header.php.bak-pdpgallery-'+stamp)
           save_file('assets/css/product-runtime-compact.css',css)
+          save_file('assets/js/product-runtime-gallery-fix.js',js)
           save_file('header.php',header_new)
 
           live_header=get_file('header.php')
           live_css=get_file('assets/css/product-runtime-compact.css')
+          live_js=get_file('assets/js/product-runtime-gallery-fix.js')
           compact=''.join(live_css.split())
           checks={
-              'compact loader': 'product-runtime-compact.css?v=20260810-1' in live_header,
+              'compact loader': 'product-runtime-compact.css?v=20260810-2' in live_header,
+              'gallery switch loader': 'product-runtime-gallery-fix.js?v=20260810-2' in live_header,
               'compact marker': 'Gramiss PDP Compact v1' in live_css,
               'compact purchase height': 'min-height:520px!important' in compact,
-              'gallery visibility': 'opacity:1!important' in compact,
+              'gallery switch marker': 'GRAMISS_PDP_GALLERY_SWITCH_V1' in live_js,
+              'native thumbs wired': 'flex-control-thumbs img' in live_js and 'g3ActiveSlide' in live_js,
           }
           for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
-          if not all(checks.values()): raise SystemExit('Compact PDP verification failed')
-          print('LIVE PDP COMPACT V1 DEPLOYED AND VERIFIED')
+          if not all(checks.values()): raise SystemExit('Compact PDP/gallery verification failed')
+          print('LIVE PDP COMPACT + STATIC GALLERY SWITCH DEPLOYED AND VERIFIED')
           PY
