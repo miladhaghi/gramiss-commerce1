@@ -1,0 +1,19 @@
+/* GRAMISS_PDP_GRADIENT_REVERSE_V1 */
+@media (min-width: 861px) {
+  body.single-product .gramiss-pdp-runtime-v3 .g3-purchase-zone {
+    background: linear-gradient(90deg, #efe5d8 0%, #f4ede4 34%, #fbf8f4 45%, #ffffff 58%, #ffffff 100%) !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .g3-summary-slot,
+  body.single-product .gramiss-pdp-runtime-v3 .g3-summary-slot > .summary,
+  body.single-product .gramiss-pdp-runtime-v3 .g3-summary-slot > .g2-pdp-buy,
+  body.single-product .gramiss-pdp-runtime-v3 .g3-gallery-slot,
+  body.single-product .gramiss-pdp-runtime-v3 .g3-gallery-slot > .woocommerce-product-gallery,
+  body.single-product .gramiss-pdp-runtime-v3 .g3-gallery-slot > .g2-pdp-gallery {
+    background: transparent !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .g3-dual-stage {
+    background: #ffffff !important;
+  }
+}
