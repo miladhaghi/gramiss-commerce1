@@ -136,6 +136,74 @@
   }
 }
 
+/* Stable two-image editorial stage. Native FlexSlider remains only as the image data/thumb source. */
+body.single-product .gramiss-pdp-runtime-v3 .woocommerce-product-gallery[data-g3-dual-stage-ready="1"] .flex-viewport {
+  display: none !important;
+}
+
+body.single-product .gramiss-pdp-runtime-v3 .g3-dual-stage {
+  grid-column: 1 !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  height: clamp(410px, 31vw, 500px) !important;
+  max-height: 500px !important;
+  position: relative !important;
+  overflow: hidden !important;
+  background: #fff !important;
+  perspective: none !important;
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
+  pointer-events: none !important;
+  isolation: isolate !important;
+}
+
+body.single-product .gramiss-pdp-runtime-v3 .g3-dual-image {
+  position: absolute !important;
+  display: block !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+  translate: none !important;
+  rotate: none !important;
+  scale: none !important;
+  transition: none !important;
+  animation: none !important;
+  filter: none !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+body.single-product .gramiss-pdp-runtime-v3 .g3-dual-image-primary {
+  width: 58% !important;
+  height: 88% !important;
+  right: 5% !important;
+  top: 6% !important;
+  left: auto !important;
+  bottom: auto !important;
+  z-index: 2 !important;
+}
+
+body.single-product .gramiss-pdp-runtime-v3 .g3-dual-image-secondary {
+  width: 36% !important;
+  height: 58% !important;
+  left: 7% !important;
+  top: 22% !important;
+  right: auto !important;
+  bottom: auto !important;
+  z-index: 1 !important;
+}
+
+body.single-product .gramiss-pdp-runtime-v3 .woocommerce-product-gallery,
+body.single-product .gramiss-pdp-runtime-v3 .woocommerce-product-gallery *:not(ol.flex-control-thumbs):not(ol.flex-control-thumbs *) {
+  perspective: none !important;
+}
+
 @media (max-width: 860px) {
   body.single-product .gramiss-pdp-runtime-v3 {
     padding-bottom: 48px !important;
@@ -148,5 +216,24 @@
   body.single-product .gramiss-pdp-runtime-v3 .g3-related-zone {
     margin-top: 40px !important;
     padding-top: 24px !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .g3-dual-stage {
+    height: min(92vw, 430px) !important;
+    max-height: 430px !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .g3-dual-image-primary {
+    width: 66% !important;
+    height: 82% !important;
+    right: 1% !important;
+    top: 9% !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .g3-dual-image-secondary {
+    width: 38% !important;
+    height: 52% !important;
+    left: 2% !important;
+    top: 25% !important;
   }
 }
