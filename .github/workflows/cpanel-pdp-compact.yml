@@ -15,7 +15,7 @@ jobs:
       THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy compact PDP override and stable dual-image gallery
+      - name: Deploy compact PDP, dual gallery and variation swatches
         shell: bash
         run: |
           set -euo pipefail
@@ -63,11 +63,12 @@ jobs:
               call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},post=True)
 
           css=Path('deploy/pdp-compact/product-runtime-compact.css').read_text(encoding='utf-8')
-          js=Path('deploy/pdp-compact/product-runtime-gallery-fix.js').read_text(encoding='utf-8')
+          gallery_js=Path('deploy/pdp-compact/product-runtime-gallery-fix.js').read_text(encoding='utf-8')
+          variation_js=Path('deploy/pdp-compact/product-runtime-variation-ui.js').read_text(encoding='utf-8')
           header=get_file('header.php')
           start='<!-- GRAMISS PDP COMPACT START -->'
           end='<!-- GRAMISS PDP COMPACT END -->'
-          block=f'''{start}\n<?php if ( function_exists( 'is_product' ) && is_product() ) : ?>\n<link id="gramiss-pdp-compact-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/product-runtime-compact.css?v=20260810-3' ); ?>">\n<script id="gramiss-pdp-gallery-switch-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/product-runtime-gallery-fix.js?v=20260810-3' ); ?>"></script>\n<?php endif; ?>\n{end}'''
+          block=f'''{start}\n<?php if ( function_exists( 'is_product' ) && is_product() ) : ?>\n<link id="gramiss-pdp-compact-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/product-runtime-compact.css?v=20260810-4' ); ?>">\n<script id="gramiss-pdp-gallery-switch-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/product-runtime-gallery-fix.js?v=20260810-4' ); ?>"></script>\n<script id="gramiss-pdp-variation-ui-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/product-runtime-variation-ui.js?v=20260810-4' ); ?>"></script>\n<?php endif; ?>\n{end}'''
           if start in header and end in header:
               header_new=header.split(start,1)[0]+block+header.split(end,1)[1]
           elif '</head>' in header:
@@ -75,27 +76,32 @@ jobs:
           else:
               raise RuntimeError('Could not locate </head>')
 
-          save_file(f'header.php.bak-pdpgallery-{stamp}',header)
-          print('Backup: header.php.bak-pdpgallery-'+stamp)
+          save_file(f'header.php.bak-pdpswatches-{stamp}',header)
+          print('Backup: header.php.bak-pdpswatches-'+stamp)
           save_file('assets/css/product-runtime-compact.css',css)
-          save_file('assets/js/product-runtime-gallery-fix.js',js)
+          save_file('assets/js/product-runtime-gallery-fix.js',gallery_js)
+          save_file('assets/js/product-runtime-variation-ui.js',variation_js)
           save_file('header.php',header_new)
 
           live_header=get_file('header.php')
           live_css=get_file('assets/css/product-runtime-compact.css')
-          live_js=get_file('assets/js/product-runtime-gallery-fix.js')
+          live_gallery=get_file('assets/js/product-runtime-gallery-fix.js')
+          live_variation=get_file('assets/js/product-runtime-variation-ui.js')
           compact=''.join(live_css.split())
           checks={
-              'compact loader': 'product-runtime-compact.css?v=20260810-3' in live_header,
-              'gallery switch loader': 'product-runtime-gallery-fix.js?v=20260810-3' in live_header,
+              'compact loader': 'product-runtime-compact.css?v=20260810-4' in live_header,
+              'gallery loader': 'product-runtime-gallery-fix.js?v=20260810-4' in live_header,
+              'variation loader': 'product-runtime-variation-ui.js?v=20260810-4' in live_header,
               'compact marker': 'Gramiss PDP Compact v1' in live_css,
               'compact purchase height': 'min-height:520px!important' in compact,
-              'gallery switch marker': 'GRAMISS_PDP_GALLERY_SWITCH_V2' in live_js,
-              'dual stage logic': 'g3-dual-stage' in live_js and 'secondaryIndexFor' in live_js,
-              'dual stage styling': '.g3-dual-stage' in live_css and '.g3-dual-image-secondary' in live_css,
-              'pointer motion blocked': "'mousemove','pointermove'" in live_js,
+              'gallery marker': 'GRAMISS_PDP_GALLERY_SWITCH_V3' in live_gallery,
+              'dual stage logic': 'g3-dual-stage' in live_gallery and 'g3ApplyVariationImage' in live_gallery,
+              'variation UI marker': 'GRAMISS_PDP_VARIATION_UI_V1' in live_variation,
+              'Woo select sync': 'attribute_' in live_variation and "trigger('change')" in live_variation,
+              'swatch styling': '.g3-color-option' in live_css and '.g3-size-option' in live_css,
+              'pointer motion blocked': "'mousemove','pointermove'" in live_gallery,
           }
           for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
-          if not all(checks.values()): raise SystemExit('Compact PDP/dual gallery verification failed')
-          print('LIVE PDP COMPACT + STABLE DUAL GALLERY DEPLOYED AND VERIFIED')
+          if not all(checks.values()): raise SystemExit('PDP swatch deployment verification failed')
+          print('LIVE PDP SWATCHES + DUAL GALLERY DEPLOYED AND VERIFIED')
           PY
