@@ -1,0 +1,152 @@
+/* Gramiss PDP Compact v1 */
+
+@media (min-width: 861px) {
+  body.single-product .gramiss-pdp-runtime-v3 {
+    padding-top: 18px !important;
+    padding-bottom: 56px !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .g3-purchase-zone {
+    min-height: 520px !important;
+    border-radius: 28px !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .g3-summary-slot > .summary,
+  body.single-product .gramiss-pdp-runtime-v3 .g3-summary-slot > .g2-pdp-buy {
+    justify-content: center !important;
+    padding: 34px clamp(28px, 3.2vw, 50px) !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .summary h1,
+  body.single-product .gramiss-pdp-runtime-v3 .g2-pdp-title {
+    font-size: clamp(34px, 3.2vw, 52px) !important;
+    line-height: 1.12 !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .summary .price,
+  body.single-product .gramiss-pdp-runtime-v3 .g2-pdp-price {
+    margin-top: 18px !important;
+    font-size: clamp(21px, 1.7vw, 27px) !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .summary form.cart,
+  body.single-product .gramiss-pdp-runtime-v3 .g2-pdp-cart form.cart {
+    margin-top: 22px !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .product_meta,
+  body.single-product .gramiss-pdp-runtime-v3 .g2-pdp-meta {
+    margin-top: 22px !important;
+    padding-top: 14px !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .g3-gallery-slot > .woocommerce-product-gallery,
+  body.single-product .gramiss-pdp-runtime-v3 .g3-gallery-slot > .g2-pdp-gallery {
+    grid-template-columns: minmax(0, 1fr) 88px !important;
+    gap: 12px !important;
+    padding: 16px 18px !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    align-items: center !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .woocommerce-product-gallery .flex-viewport,
+  body.single-product .gramiss-pdp-runtime-v3 .woocommerce-product-gallery > .woocommerce-product-gallery__wrapper,
+  body.single-product .gramiss-pdp-runtime-v3 .g2-pdp-stage {
+    min-height: 0 !important;
+    height: clamp(410px, 31vw, 500px) !important;
+    max-height: 500px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .woocommerce-product-gallery__wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .woocommerce-product-gallery__image {
+    width: 100% !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    max-height: 500px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .woocommerce-product-gallery__image img,
+  body.single-product .gramiss-pdp-runtime-v3 .g2-pdp-main-image {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 485px !important;
+    object-fit: contain !important;
+    object-position: center !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: block !important;
+    position: relative !important;
+    z-index: 2 !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 ol.flex-control-thumbs,
+  body.single-product .gramiss-pdp-runtime-v3 .g2-pdp-thumbs {
+    width: 88px !important;
+    max-width: 88px !important;
+    max-height: 460px !important;
+    gap: 9px !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 ol.flex-control-thumbs li,
+  body.single-product .gramiss-pdp-runtime-v3 ol.flex-control-thumbs img,
+  body.single-product .gramiss-pdp-runtime-v3 .g2-pdp-thumb {
+    width: 78px !important;
+    height: 78px !important;
+    flex-basis: 78px !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .g3-details-zone {
+    margin-top: 34px !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .woocommerce-tabs ul.tabs {
+    padding-bottom: 12px !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .woocommerce-Tabs-panel {
+    padding-top: 20px !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .g3-related-zone {
+    margin-top: 42px !important;
+    padding-top: 26px !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .g3-related-zone > .related.products > h2 {
+    margin-bottom: 22px !important;
+    font-size: clamp(27px, 2.5vw, 38px) !important;
+  }
+}
+
+@media (max-width: 860px) {
+  body.single-product .gramiss-pdp-runtime-v3 {
+    padding-bottom: 48px !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .g3-details-zone {
+    margin-top: 34px !important;
+  }
+
+  body.single-product .gramiss-pdp-runtime-v3 .g3-related-zone {
+    margin-top: 40px !important;
+    padding-top: 24px !important;
+  }
+}
