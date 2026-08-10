@@ -15,7 +15,7 @@ jobs:
       THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy compact PDP override and static gallery switching
+      - name: Deploy compact PDP override and stable dual-image gallery
         shell: bash
         run: |
           set -euo pipefail
@@ -67,7 +67,7 @@ jobs:
           header=get_file('header.php')
           start='<!-- GRAMISS PDP COMPACT START -->'
           end='<!-- GRAMISS PDP COMPACT END -->'
-          block=f'''{start}\n<?php if ( function_exists( 'is_product' ) && is_product() ) : ?>\n<link id="gramiss-pdp-compact-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/product-runtime-compact.css?v=20260810-2' ); ?>">\n<script id="gramiss-pdp-gallery-switch-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/product-runtime-gallery-fix.js?v=20260810-2' ); ?>"></script>\n<?php endif; ?>\n{end}'''
+          block=f'''{start}\n<?php if ( function_exists( 'is_product' ) && is_product() ) : ?>\n<link id="gramiss-pdp-compact-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/product-runtime-compact.css?v=20260810-3' ); ?>">\n<script id="gramiss-pdp-gallery-switch-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/product-runtime-gallery-fix.js?v=20260810-3' ); ?>"></script>\n<?php endif; ?>\n{end}'''
           if start in header and end in header:
               header_new=header.split(start,1)[0]+block+header.split(end,1)[1]
           elif '</head>' in header:
@@ -86,14 +86,16 @@ jobs:
           live_js=get_file('assets/js/product-runtime-gallery-fix.js')
           compact=''.join(live_css.split())
           checks={
-              'compact loader': 'product-runtime-compact.css?v=20260810-2' in live_header,
-              'gallery switch loader': 'product-runtime-gallery-fix.js?v=20260810-2' in live_header,
+              'compact loader': 'product-runtime-compact.css?v=20260810-3' in live_header,
+              'gallery switch loader': 'product-runtime-gallery-fix.js?v=20260810-3' in live_header,
               'compact marker': 'Gramiss PDP Compact v1' in live_css,
               'compact purchase height': 'min-height:520px!important' in compact,
-              'gallery switch marker': 'GRAMISS_PDP_GALLERY_SWITCH_V1' in live_js,
-              'native thumbs wired': 'flex-control-thumbs img' in live_js and 'g3ActiveSlide' in live_js,
+              'gallery switch marker': 'GRAMISS_PDP_GALLERY_SWITCH_V2' in live_js,
+              'dual stage logic': 'g3-dual-stage' in live_js and 'secondaryIndexFor' in live_js,
+              'dual stage styling': '.g3-dual-stage' in live_css and '.g3-dual-image-secondary' in live_css,
+              'pointer motion blocked': "'mousemove','pointermove'" in live_js,
           }
           for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
-          if not all(checks.values()): raise SystemExit('Compact PDP/gallery verification failed')
-          print('LIVE PDP COMPACT + STATIC GALLERY SWITCH DEPLOYED AND VERIFIED')
+          if not all(checks.values()): raise SystemExit('Compact PDP/dual gallery verification failed')
+          print('LIVE PDP COMPACT + STABLE DUAL GALLERY DEPLOYED AND VERIFIED')
           PY
