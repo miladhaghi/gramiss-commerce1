@@ -15,7 +15,7 @@ jobs:
       THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy compact PDP, dual gallery, variation swatches and reversed gradient
+      - name: Deploy compact PDP, dual gallery, variation swatches, reversed gradient and image blend v2
         shell: bash
         run: |
           set -euo pipefail
@@ -64,12 +64,13 @@ jobs:
 
           css=Path('deploy/pdp-compact/product-runtime-compact.css').read_text(encoding='utf-8')
           gradient_css=Path('deploy/pdp-compact/product-runtime-gradient-reverse.css').read_text(encoding='utf-8')
+          image_blend_v2=Path('deploy/pdp-image-blend-v2/product-image-blend-v2.css').read_text(encoding='utf-8')
           gallery_js=Path('deploy/pdp-compact/product-runtime-gallery-fix.js').read_text(encoding='utf-8')
           variation_js=Path('deploy/pdp-compact/product-runtime-variation-ui.js').read_text(encoding='utf-8')
           header=get_file('header.php')
           start='<!-- GRAMISS PDP COMPACT START -->'
           end='<!-- GRAMISS PDP COMPACT END -->'
-          block=f'''{start}\n<?php if ( function_exists( 'is_product' ) && is_product() ) : ?>\n<link id="gramiss-pdp-compact-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/product-runtime-compact.css?v=20260810-4' ); ?>">\n<link id="gramiss-pdp-gradient-reverse-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/product-runtime-gradient-reverse.css?v=20260811-1' ); ?>">\n<script id="gramiss-pdp-gallery-switch-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/product-runtime-gallery-fix.js?v=20260810-4' ); ?>"></script>\n<script id="gramiss-pdp-variation-ui-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/product-runtime-variation-ui.js?v=20260810-4' ); ?>"></script>\n<?php endif; ?>\n{end}'''
+          block=f'''{start}\n<?php if ( function_exists( 'is_product' ) && is_product() ) : ?>\n<link id="gramiss-pdp-compact-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/product-runtime-compact.css?v=20260810-4' ); ?>">\n<link id="gramiss-pdp-gradient-reverse-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/product-runtime-gradient-reverse.css?v=20260811-1' ); ?>">\n<script id="gramiss-pdp-gallery-switch-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/product-runtime-gallery-fix.js?v=20260810-4' ); ?>"></script>\n<script id="gramiss-pdp-variation-ui-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/product-runtime-variation-ui.js?v=20260810-4' ); ?>"></script>\n<style id="gramiss-pdp-image-blend-v2">\n{image_blend_v2}\n</style>\n<?php endif; ?>\n{end}'''
           if start in header and end in header:
               header_new=header.split(start,1)[0]+block+header.split(end,1)[1]
           elif '</head>' in header:
@@ -77,8 +78,8 @@ jobs:
           else:
               raise RuntimeError('Could not locate </head>')
 
-          save_file(f'header.php.bak-pdpgradient-{stamp}',header)
-          print('Backup: header.php.bak-pdpgradient-'+stamp)
+          save_file(f'header.php.bak-pdpimageblendv2-{stamp}',header)
+          print('Backup: header.php.bak-pdpimageblendv2-'+stamp)
           save_file('assets/css/product-runtime-compact.css',css)
           save_file('assets/css/product-runtime-gradient-reverse.css',gradient_css)
           save_file('assets/js/product-runtime-gallery-fix.js',gallery_js)
@@ -96,6 +97,9 @@ jobs:
               'gradient loader': 'product-runtime-gradient-reverse.css?v=20260811-1' in live_header,
               'gallery loader': 'product-runtime-gallery-fix.js?v=20260810-4' in live_header,
               'variation loader': 'product-runtime-variation-ui.js?v=20260810-4' in live_header,
+              'inline image blend v2': 'GRAMISS_PDP_IMAGE_BLEND_V2' in live_header,
+              'high specificity blend': 'img.g3-dual-image.g3-dual-image' in live_header,
+              'forced whitening': 'brightness(1.035) contrast(1.03)' in live_header,
               'compact marker': 'Gramiss PDP Compact v1' in live_css,
               'gradient marker': 'GRAMISS_PDP_GRADIENT_REVERSE_V1' in live_gradient,
               'gradient direction': 'linear-gradient(90deg' in live_gradient,
@@ -108,6 +112,6 @@ jobs:
               'pointer motion blocked': "'mousemove','pointermove'" in live_gallery,
           }
           for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
-          if not all(checks.values()): raise SystemExit('PDP gradient deployment verification failed')
-          print('LIVE PDP REVERSED GRADIENT DEPLOYED AND VERIFIED')
+          if not all(checks.values()): raise SystemExit('PDP image blend v2 deployment verification failed')
+          print('LIVE PDP IMAGE BLEND V2 DEPLOYED AND VERIFIED')
           PY
