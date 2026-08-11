@@ -1,0 +1,49 @@
+/* GRAMISS_PDP_IMAGE_BLEND_V1 */
+
+/* Keep the whole product-media area visually continuous. */
+body.single-product .gramiss-pdp-runtime-v3 .g3-gallery-slot,
+body.single-product .gramiss-pdp-runtime-v3 .g3-gallery-slot > .woocommerce-product-gallery,
+body.single-product .gramiss-pdp-runtime-v3 .g3-gallery-slot > .g2-pdp-gallery,
+body.single-product .gramiss-pdp-runtime-v3 .g3-dual-stage {
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+body.single-product .gramiss-pdp-runtime-v3 .g3-dual-stage::before,
+body.single-product .gramiss-pdp-runtime-v3 .g3-dual-stage::after,
+body.single-product .gramiss-pdp-runtime-v3 .woocommerce-product-gallery::before,
+body.single-product .gramiss-pdp-runtime-v3 .woocommerce-product-gallery::after {
+  content: none !important;
+  display: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* The generated studio images are near-white rather than absolute #fff.
+   A very light normalization pushes only those near-white pixels to true white
+   while keeping product colors and details visually intact. */
+body.single-product .gramiss-pdp-runtime-v3 .g3-dual-image,
+body.single-product .gramiss-pdp-runtime-v3 .woocommerce-product-gallery__image img,
+body.single-product .gramiss-pdp-runtime-v3 .g2-pdp-main-image {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  outline: 0 !important;
+  filter: contrast(1.08) brightness(1.01) !important;
+}
+
+/* Thumbnails should feel part of the same surface, while retaining their active outline. */
+body.single-product .gramiss-pdp-runtime-v3 ol.flex-control-thumbs,
+body.single-product .gramiss-pdp-runtime-v3 ol.flex-control-thumbs li,
+body.single-product .gramiss-pdp-runtime-v3 .g2-pdp-thumbs,
+body.single-product .gramiss-pdp-runtime-v3 .g2-pdp-thumb {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.single-product .gramiss-pdp-runtime-v3 ol.flex-control-thumbs img,
+body.single-product .gramiss-pdp-runtime-v3 .g2-pdp-thumb img {
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: contrast(1.08) brightness(1.01) !important;
+}
