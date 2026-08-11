@@ -1,0 +1,1 @@
+Trigger image blend v2 through existing PDP Compact workflow.
