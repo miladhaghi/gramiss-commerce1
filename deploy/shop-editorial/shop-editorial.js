@@ -1,4 +1,4 @@
-/* GRAMISS_SHOP_EDITORIAL_V1 */
+/* GRAMISS_SHOP_EDITORIAL_V2 */
 (function(){
   'use strict';
 
@@ -56,7 +56,6 @@
       ['price-desc','گران‌ترین'],
       ['popularity','پرفروش‌ترین']
     ];
-
     var activeValue = nativeSelect && nativeSelect.value ? nativeSelect.value : (currentParams.get('orderby') || 'menu_order');
 
     choices.forEach(function(pair){
@@ -93,6 +92,19 @@
     products.parentNode.insertBefore(toolbar, products);
   }
 
+  function ensureMediaFrame(item){
+    var link = $('.woocommerce-loop-product__link', item);
+    if (!link || $('.gse-media-frame', link)) return;
+    var img = $('img', link);
+    if (!img) return;
+
+    var mediaNode = img.closest('picture') || img;
+    var frame = document.createElement('div');
+    frame.className = 'gse-media-frame';
+    mediaNode.parentNode.insertBefore(frame, mediaNode);
+    frame.appendChild(mediaNode);
+  }
+
   function markProducts(products){
     var items = $all(':scope > li.product', products);
     items.forEach(function(item, index){
@@ -102,6 +114,7 @@
       if (cycle === 0) item.classList.add('gse-large-right');
       else if (cycle === 4) item.classList.add('gse-large-left');
       else item.classList.add('gse-small');
+      ensureMediaFrame(item);
     });
   }
 
