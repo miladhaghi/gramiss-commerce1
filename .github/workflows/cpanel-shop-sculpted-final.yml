@@ -6,7 +6,7 @@ on:
 
 jobs:
   deploy:
-    if: github.head_ref == 'ops/shop-sculpted'
+    if: github.head_ref == 'ops/shop-sculpted-final'
     runs-on: ubuntu-latest
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
@@ -33,7 +33,7 @@ jobs:
                   try:
                       req=urllib.request.Request(url if post else url+'?'+data.decode(), data=data if post else None, method='POST' if post else 'GET')
                       req.add_header('Authorization',f'cpanel {user}:{token}')
-                      if post:req.add_header('Content-Type','application/x-www-form-urlencoded')
+                      if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
                       with urllib.request.urlopen(req,context=ctx,timeout=75) as r: payload=json.loads(r.read().decode())
                       result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
                       if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result.get('errors') if isinstance(result,dict) else result))
@@ -60,19 +60,7 @@ jobs:
           js=Path('deploy/shop-sculpted/shop-sculpted.js').read_text(encoding='utf-8')
           header=read('header.php')
           start='<!-- GRAMISS SHOP EDITORIAL START -->'; end='<!-- GRAMISS SHOP EDITORIAL END -->'
-          block=start+'''\n<?php
-$gramiss_shop_catalog = false;
-if ( function_exists( 'is_shop' ) ) {
-  $gramiss_shop_catalog = is_shop() || ( function_exists( 'is_product_taxonomy' ) && is_product_taxonomy() ) || is_post_type_archive( 'product' ) || ( is_search() && 'product' === get_query_var( 'post_type' ) );
-}
-if ( $gramiss_shop_catalog ) { add_filter( 'single_product_archive_thumbnail_size', function( $size ) { return 'full'; }, 999 ); }
-if ( $gramiss_shop_catalog ) : ?>
-<script id="gramiss-shop-first-paint-gate">(function(d,w){d.documentElement.classList.add('gramiss-shop-booting');w.setTimeout(function(){d.documentElement.classList.remove('gramiss-shop-booting');},3200);})(document,window);</script>
-<style id="gramiss-shop-first-paint-style">html.gramiss-shop-booting body main.site-main,html.gramiss-shop-booting body #main{visibility:hidden!important;opacity:0!important;pointer-events:none!important;min-height:72vh!important}</style>
-<link id="gramiss-shop-sculpted-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/shop-sculpted.css?v=20260812-4' ); ?>">
-<script id="gramiss-shop-sculpted-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/shop-sculpted.js?v=20260812-4' ); ?>"></script>
-<?php endif; ?>
-'''+end
+          block=start+"\n<?php\n$gramiss_shop_catalog = false;\nif ( function_exists( 'is_shop' ) ) {\n  $gramiss_shop_catalog = is_shop() || ( function_exists( 'is_product_taxonomy' ) && is_product_taxonomy() ) || is_post_type_archive( 'product' ) || ( is_search() && 'product' === get_query_var( 'post_type' ) );\n}\nif ( $gramiss_shop_catalog ) { add_filter( 'single_product_archive_thumbnail_size', function( $size ) { return 'full'; }, 999 ); }\nif ( $gramiss_shop_catalog ) : ?>\n<script id=\"gramiss-shop-first-paint-gate\">(function(d,w){d.documentElement.classList.add('gramiss-shop-booting');w.setTimeout(function(){d.documentElement.classList.remove('gramiss-shop-booting');},3200);})(document,window);</script>\n<style id=\"gramiss-shop-first-paint-style\">html.gramiss-shop-booting body main.site-main,html.gramiss-shop-booting body #main{visibility:hidden!important;opacity:0!important;pointer-events:none!important;min-height:72vh!important}</style>\n<link id=\"gramiss-shop-sculpted-css\" rel=\"stylesheet\" href=\"<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/shop-sculpted.css?v=20260812-5' ); ?>\">\n<script id=\"gramiss-shop-sculpted-js\" defer src=\"<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/shop-sculpted.js?v=20260812-5' ); ?>\"></script>\n<?php endif; ?>\n"+end
           if start in header and end in header: new_header=header.split(start,1)[0]+block+header.split(end,1)[1]
           elif '</head>' in header: new_header=header.replace('</head>',block+'\n</head>',1)
           else: raise RuntimeError('header marker not found')
@@ -81,7 +69,7 @@ if ( $gramiss_shop_catalog ) : ?>
           save('assets/css/shop-sculpted.css',css); save('assets/js/shop-sculpted.js',js); save('header.php',new_header)
           h=read('header.php'); c=read('assets/css/shop-sculpted.css'); j=read('assets/js/shop-sculpted.js')
           checks={
-            'loader':'shop-sculpted.css?v=20260812-4' in h and 'shop-sculpted.js?v=20260812-4' in h,
+            'loader':'shop-sculpted.css?v=20260812-5' in h and 'shop-sculpted.js?v=20260812-5' in h,
             'no flash':'gramiss-shop-first-paint-gate' in h,
             'full images':"return 'full'" in h,
             'css':'GRAMISS_SHOP_SCULPTED_V1' in c,
