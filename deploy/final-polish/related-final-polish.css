@@ -1,0 +1,111 @@
+/* GRAMISS_RELATED_FINAL_POLISH_V1 */
+
+/* Related products: match Shop card scale and density. */
+@media (min-width:1101px){
+  body.single-product .g3-related-zone .related.products ul.products,
+  body.single-product section.related.products ul.products,
+  body.single-product .related.products ul.products{
+    width:min(100% - 48px,1480px)!important;
+    margin:0 auto!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    gap:26px 18px!important;
+  }
+  body.single-product .related.products ul.products>li.product{
+    width:auto!important;
+    max-width:none!important;
+    min-width:0!important;
+    padding-bottom:96px!important;
+    border-radius:28px!important;
+  }
+  body.single-product .related.products ul.products>li.product img,
+  body.single-product .related.products ul.products>li.product picture img{
+    height:350px!important;
+    padding:18px 16px 6px!important;
+  }
+  body.single-product .related.products ul.products>li.product .woocommerce-loop-product__title{
+    left:14px!important;
+    bottom:46px!important;
+    width:calc(90% - 28px)!important;
+    font-size:11.7px!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+  body.single-product .related.products ul.products>li.product .price{
+    left:14px!important;
+    bottom:18px!important;
+    width:calc(90% - 28px)!important;
+    font-size:11.5px!important;
+  }
+  body.single-product .related.products ul.products>li.product>a.button,
+  body.single-product .related.products ul.products>li.product>.button,
+  body.single-product .related.products ul.products>li.product>.added_to_cart{
+    top:18px!important;
+    right:18px!important;
+  }
+}
+
+@media (min-width:901px) and (max-width:1100px){
+  body.single-product .g3-related-zone .related.products ul.products,
+  body.single-product section.related.products ul.products,
+  body.single-product .related.products ul.products{
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  }
+}
+
+/* Pure-white photo canvas and wrappers, matching Shop. */
+body.single-product .related.products ul.products>li.product,
+body.single-product .related.products ul.products>li.product>a.woocommerce-LoopProduct-link,
+body.single-product .related.products ul.products>li.product>a.woocommerce-loop-product__link,
+body.single-product .related.products ul.products>li.product picture,
+body.single-product .related.products ul.products>li.product picture span,
+body.single-product .related.products ul.products>li.product picture div,
+body.single-product .related.products ul.products>li.product img,
+body.single-product .related.products ul.products>li.product picture img{
+  background:#fff!important;
+  background-color:#fff!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+body.single-product .related.products ul.products>li.product img,
+body.single-product .related.products ul.products>li.product picture img{
+  filter:brightness(1.035)!important;
+  mix-blend-mode:normal!important;
+  opacity:1!important;
+  object-fit:contain!important;
+  object-position:center!important;
+}
+
+/* Keep the Shop-like sculpted lower information panel and top-right action shape. */
+body.single-product .related.products ul.products>li.product>a.woocommerce-LoopProduct-link::after,
+body.single-product .related.products ul.products>li.product>a.woocommerce-loop-product__link::after{
+  width:90%!important;
+  height:96px!important;
+  border-top-right-radius:54px!important;
+  background:#fff!important;
+}
+body.single-product .related.products ul.products>li.product::before{
+  top:-16px!important;
+  right:-16px!important;
+  width:104px!important;
+  height:104px!important;
+  background:linear-gradient(180deg,#fff 0%,#f2f3f4 100%)!important;
+}
+
+@media(max-width:900px){
+  body.single-product .g3-related-zone .related.products ul.products,
+  body.single-product section.related.products ul.products,
+  body.single-product .related.products ul.products{
+    width:calc(100% - 32px)!important;
+    margin:0 auto!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:18px 12px!important;
+  }
+}
+@media(max-width:359px){
+  body.single-product .g3-related-zone .related.products ul.products,
+  body.single-product section.related.products ul.products,
+  body.single-product .related.products ul.products{
+    grid-template-columns:1fr!important;
+  }
+}
