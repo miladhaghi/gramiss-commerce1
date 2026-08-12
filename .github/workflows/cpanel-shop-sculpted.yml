@@ -6,7 +6,7 @@ on:
 
 jobs:
   deploy:
-    if: github.head_ref == 'ops/shop-sculpted'
+    if: github.head_ref == 'ops/shop-editorial'
     runs-on: ubuntu-latest
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
