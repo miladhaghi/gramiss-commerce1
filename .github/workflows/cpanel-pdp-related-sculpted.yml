@@ -1,0 +1,91 @@
+name: cPanel PDP Related Sculpted
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.head_ref == 'ops/pdp-related-sculpted'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy sculpted related-product cards
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re, ssl, time, urllib.parse, urllib.request
+          from pathlib import Path
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S', time.gmtime())
+
+          def call(fn, params, post=False):
+              url=f'https://{host}:2083/execute/Fileman/{fn}'
+              data=urllib.parse.urlencode(params).encode(); last=None
+              for attempt in range(1,6):
+                  try:
+                      req=urllib.request.Request(url if post else url+'?'+data.decode(), data=data if post else None, method='POST' if post else 'GET')
+                      req.add_header('Authorization',f'cpanel {user}:{token}')
+                      if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+                      with urllib.request.urlopen(req,context=ctx,timeout=75) as r: payload=json.loads(r.read().decode())
+                      result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
+                      if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result.get('errors') if isinstance(result,dict) else result))
+                      return result.get('data')
+                  except Exception as exc:
+                      last=exc; print(f'Attempt {attempt}/5 {fn}: {exc}')
+                      if attempt<5: time.sleep(attempt*4)
+              raise last
+
+          def read(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else f'{root}/{parent}'
+              d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(d,dict):
+                  for key in ('content','file_content','data'):
+                      if isinstance(d.get(key),str): return d[key]
+              if isinstance(d,str): return d
+              raise RuntimeError('Unexpected content: '+rel)
+
+          def save(rel,content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else f'{root}/{parent}'
+              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+
+          css=Path('deploy/pdp-related-sculpted/pdp-related-sculpted.css').read_text(encoding='utf-8')
+          js=Path('deploy/pdp-related-sculpted/pdp-related-sculpted.js').read_text(encoding='utf-8')
+          header=read('header.php')
+          start='<!-- GRAMISS PDP RELATED SCULPTED START -->'; end='<!-- GRAMISS PDP RELATED SCULPTED END -->'
+          block=start+"\n<?php if ( function_exists( 'is_product' ) && is_product() ) :\nadd_filter( 'single_product_archive_thumbnail_size', function( $size ) { return 'full'; }, 999 ); ?>\n<link id=\"gramiss-pdp-related-sculpted-css\" rel=\"stylesheet\" href=\"<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/pdp-related-sculpted.css?v=20260813-1' ); ?>\">\n<script id=\"gramiss-pdp-related-sculpted-js\" defer src=\"<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/pdp-related-sculpted.js?v=20260813-1' ); ?>\"></script>\n<?php endif; ?>\n"+end
+          if start in header and end in header:
+              new_header=header.split(start,1)[0]+block+header.split(end,1)[1]
+          elif '</head>' in header:
+              new_header=header.replace('</head>',block+'\n</head>',1)
+          else:
+              raise RuntimeError('Could not locate </head>')
+
+          save(f'header.php.bak-pdprelated-{stamp}',header); print('Backup: header.php.bak-pdprelated-'+stamp)
+          save('assets/css/pdp-related-sculpted.css',css)
+          save('assets/js/pdp-related-sculpted.js',js)
+          save('header.php',new_header)
+
+          h=read('header.php'); c=read('assets/css/pdp-related-sculpted.css'); j=read('assets/js/pdp-related-sculpted.js')
+          checks={
+            'product-only loader':'GRAMISS PDP RELATED SCULPTED START' in h and "is_product()" in h,
+            'full loop images':"return 'full'" in h,
+            'css loader':'pdp-related-sculpted.css?v=20260813-1' in h,
+            'js loader':'pdp-related-sculpted.js?v=20260813-1' in h,
+            'css marker':'GRAMISS_PDP_RELATED_SCULPTED_V1' in c,
+            'sculpted card':'gpr-card-surface' in c and 'gpr-action-orb' in c and 'gpr-info-panel' in c,
+            'white canvas':'gpr-media-frame' in c and 'background:#fff!important' in c,
+            'js marker':'GRAMISS_PDP_RELATED_SCULPTED_V1' in j,
+            'related selector':'g3-related-zone' in j and 'related.products' in j,
+          }
+          for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
+          if not all(checks.values()): raise SystemExit('PDP related sculpted verification failed')
+          print('LIVE PDP RELATED SCULPTED DEPLOYED AND VERIFIED')
+          PY
