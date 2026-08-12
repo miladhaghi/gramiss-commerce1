@@ -1,0 +1,80 @@
+/* GRAMISS_SHOP_FINAL_POLISH_V1 */
+
+/* Remove legacy decorative/taupe strips around the top of the Shop content. */
+body.gse-shop-ready .shop-strip,
+body.gse-shop-ready .shop-band,
+body.gse-shop-ready .shop-top-strips,
+body.gse-shop-ready .shop-gradient-band,
+body.gse-shop-ready .shop-intro-strip,
+body.gse-shop-ready [class*="shop-strip"],
+body.gse-shop-ready [class*="shop-band"]{
+  display:none!important;
+}
+body.gse-shop-ready .woocommerce-products-header,
+body.gse-shop-ready .woocommerce-products-header::before,
+body.gse-shop-ready .woocommerce-products-header::after,
+body.gse-shop-ready #main::before,
+body.gse-shop-ready #main::after,
+body.gse-shop-ready main.site-main::before,
+body.gse-shop-ready main.site-main::after,
+body.gse-shop-ready .woocommerce::before,
+body.gse-shop-ready .woocommerce::after{
+  background:transparent!important;
+  background-image:none!important;
+  box-shadow:none!important;
+  border-color:transparent!important;
+}
+body.gse-shop-ready .woocommerce-products-header{
+  margin-top:0!important;
+  padding-top:0!important;
+}
+
+/* Final desktop rhythm: four equal cards. */
+@media (min-width:1101px){
+  body.gse-shop-ready ul.products.gse-products{
+    width:min(100% - 48px,1480px)!important;
+    grid-template-columns:repeat(4,minmax(0,1fr))!important;
+    gap:26px 18px!important;
+  }
+  body.gse-shop-ready ul.products.gse-products>li.product,
+  body.gse-shop-ready ul.products.gse-products>li.product.gse-large-right,
+  body.gse-shop-ready ul.products.gse-products>li.product.gse-large-left,
+  body.gse-shop-ready ul.products.gse-products>li.product.gse-small{
+    grid-column:span 1!important;
+    width:auto!important;
+    max-width:none!important;
+  }
+  body.gse-shop-ready .gse-media-frame,
+  body.gse-shop-ready li.product.gse-small .gse-media-frame,
+  body.gse-shop-ready li.product.gse-large-right .gse-media-frame,
+  body.gse-shop-ready li.product.gse-large-left .gse-media-frame{
+    height:350px!important;
+  }
+  body.gse-shop-ready li.product.gse-large-right .gse-info-panel,
+  body.gse-shop-ready li.product.gse-large-left .gse-info-panel{
+    width:90%!important;
+  }
+}
+
+/* Force every image wrapper/canvas in Shop to pure white. */
+body.gse-shop-ready .gse-card-surface,
+body.gse-shop-ready .gse-card-surface .woocommerce-loop-product__link,
+body.gse-shop-ready .gse-media-frame,
+body.gse-shop-ready .gse-media-frame picture,
+body.gse-shop-ready .gse-media-frame span,
+body.gse-shop-ready .gse-media-frame div,
+body.gse-shop-ready .gse-media-frame img,
+body.gse-shop-ready .gse-media-frame picture img{
+  background:#fff!important;
+  background-color:#fff!important;
+  background-image:none!important;
+  box-shadow:none!important;
+}
+body.gse-shop-ready .gse-media-frame img,
+body.gse-shop-ready .gse-media-frame picture img{
+  filter:brightness(1.035)!important;
+  mix-blend-mode:normal!important;
+  opacity:1!important;
+  object-fit:contain!important;
+  object-position:center!important;
+}
