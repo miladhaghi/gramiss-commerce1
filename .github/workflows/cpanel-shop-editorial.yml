@@ -67,7 +67,7 @@ jobs:
           header=get_file('header.php')
           start='<!-- GRAMISS SHOP EDITORIAL START -->'
           end='<!-- GRAMISS SHOP EDITORIAL END -->'
-          block=f'''{start}\n<?php\n$gramiss_shop_catalog = false;\nif ( function_exists( 'is_shop' ) ) {{\n    $gramiss_shop_catalog = is_shop()\n        || ( function_exists( 'is_product_taxonomy' ) && is_product_taxonomy() )\n        || is_post_type_archive( 'product' )\n        || ( is_search() && 'product' === get_query_var( 'post_type' ) );\n}}\nif ( $gramiss_shop_catalog ) : ?>\n<link id="gramiss-shop-editorial-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/shop-editorial.css?v=20260812-1' ); ?>">\n<script id="gramiss-shop-editorial-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/shop-editorial.js?v=20260812-1' ); ?>"></script>\n<?php endif; ?>\n{end}'''
+          block=f'''{start}\n<?php\n$gramiss_shop_catalog = false;\nif ( function_exists( 'is_shop' ) ) {{\n    $gramiss_shop_catalog = is_shop()\n        || ( function_exists( 'is_product_taxonomy' ) && is_product_taxonomy() )\n        || is_post_type_archive( 'product' )\n        || ( is_search() && 'product' === get_query_var( 'post_type' ) );\n}}\nif ( $gramiss_shop_catalog ) {{\n    add_filter( 'single_product_archive_thumbnail_size', function( $size ) {{ return 'full'; }}, 999 );\n}}\nif ( $gramiss_shop_catalog ) : ?>\n<link id="gramiss-shop-editorial-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/shop-editorial.css?v=20260812-2' ); ?>">\n<script id="gramiss-shop-editorial-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/shop-editorial.js?v=20260812-2' ); ?>"></script>\n<?php endif; ?>\n{end}'''
           if start in header and end in header:
               header_new=header.split(start,1)[0]+block+header.split(end,1)[1]
           elif '</head>' in header:
@@ -75,8 +75,8 @@ jobs:
           else:
               raise RuntimeError('Could not locate </head>')
 
-          save_file(f'header.php.bak-shopeditorial-{stamp}',header)
-          print('Backup: header.php.bak-shopeditorial-'+stamp)
+          save_file(f'header.php.bak-shopeditorialv2-{stamp}',header)
+          print('Backup: header.php.bak-shopeditorialv2-'+stamp)
           save_file('assets/css/shop-editorial.css',css)
           save_file('assets/js/shop-editorial.js',js)
           save_file('header.php',header_new)
@@ -86,17 +86,20 @@ jobs:
           live_js=get_file('assets/js/shop-editorial.js')
           checks={
               'shop-only loader': 'GRAMISS SHOP EDITORIAL START' in live_header and 'is_post_type_archive( \'product\' )' in live_header,
-              'css loader': 'shop-editorial.css?v=20260812-1' in live_header,
-              'js loader': 'shop-editorial.js?v=20260812-1' in live_header,
-              'css marker': 'GRAMISS_SHOP_EDITORIAL_V1' in live_css,
+              'full archive image filter': "single_product_archive_thumbnail_size" in live_header and "return 'full'" in live_header,
+              'css loader v2': 'shop-editorial.css?v=20260812-2' in live_header,
+              'js loader v2': 'shop-editorial.js?v=20260812-2' in live_header,
+              'css marker v2': 'GRAMISS_SHOP_EDITORIAL_V2' in live_css,
               'white shop': '--gse-bg:#fff' in ''.join(live_css.split()),
               'asymmetric grid': 'grid-template-columns:repeat(5,minmax(0,1fr))' in ''.join(live_css.split()),
-              'corner brackets': 'gse-corner-card' in live_css,
-              'js marker': 'GRAMISS_SHOP_EDITORIAL_V1' in live_js,
+              'media corner frame': 'gse-media-frame' in live_css,
+              'complete image fit': 'object-fit:contain!important' in ''.join(live_css.split()),
+              'js marker v2': 'GRAMISS_SHOP_EDITORIAL_V2' in live_js,
+              'media wrapping': 'ensureMediaFrame' in live_js,
               'sorting controls': 'gse-sort-button' in live_js and 'orderby' in live_js,
               'search control': 'gse-search-input' in live_js and 'post_type' in live_js,
           }
           for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
-          if not all(checks.values()): raise SystemExit('Shop editorial deployment verification failed')
-          print('LIVE SHOP EDITORIAL V1 DEPLOYED AND VERIFIED')
+          if not all(checks.values()): raise SystemExit('Shop editorial v2 deployment verification failed')
+          print('LIVE SHOP EDITORIAL V2 DEPLOYED AND VERIFIED')
           PY
