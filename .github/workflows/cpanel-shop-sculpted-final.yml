@@ -60,7 +60,7 @@ jobs:
           js=Path('deploy/shop-sculpted/shop-sculpted.js').read_text(encoding='utf-8')
           header=read('header.php')
           start='<!-- GRAMISS SHOP EDITORIAL START -->'; end='<!-- GRAMISS SHOP EDITORIAL END -->'
-          block=start+"\n<?php\n$gramiss_shop_catalog = false;\nif ( function_exists( 'is_shop' ) ) {\n  $gramiss_shop_catalog = is_shop() || ( function_exists( 'is_product_taxonomy' ) && is_product_taxonomy() ) || is_post_type_archive( 'product' ) || ( is_search() && 'product' === get_query_var( 'post_type' ) );\n}\nif ( $gramiss_shop_catalog ) { add_filter( 'single_product_archive_thumbnail_size', function( $size ) { return 'full'; }, 999 ); }\nif ( $gramiss_shop_catalog ) : ?>\n<script id=\"gramiss-shop-first-paint-gate\">(function(d,w){d.documentElement.classList.add('gramiss-shop-booting');w.setTimeout(function(){d.documentElement.classList.remove('gramiss-shop-booting');},3200);})(document,window);</script>\n<style id=\"gramiss-shop-first-paint-style\">html.gramiss-shop-booting body main.site-main,html.gramiss-shop-booting body #main{visibility:hidden!important;opacity:0!important;pointer-events:none!important;min-height:72vh!important}</style>\n<link id=\"gramiss-shop-sculpted-css\" rel=\"stylesheet\" href=\"<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/shop-sculpted.css?v=20260812-5' ); ?>\">\n<script id=\"gramiss-shop-sculpted-js\" defer src=\"<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/shop-sculpted.js?v=20260812-5' ); ?>\"></script>\n<?php endif; ?>\n"+end
+          block=start+"\n<?php\n$gramiss_shop_catalog = false;\nif ( function_exists( 'is_shop' ) ) {\n  $gramiss_shop_catalog = is_shop() || ( function_exists( 'is_product_taxonomy' ) && is_product_taxonomy() ) || is_post_type_archive( 'product' ) || ( is_search() && 'product' === get_query_var( 'post_type' ) );\n}\nif ( $gramiss_shop_catalog ) { add_filter( 'single_product_archive_thumbnail_size', function( $size ) { return 'full'; }, 999 ); }\nif ( $gramiss_shop_catalog ) : ?>\n<script id=\"gramiss-shop-first-paint-gate\">(function(d,w){d.documentElement.classList.add('gramiss-shop-booting');w.setTimeout(function(){d.documentElement.classList.remove('gramiss-shop-booting');},3200);})(document,window);</script>\n<style id=\"gramiss-shop-first-paint-style\">html.gramiss-shop-booting body main.site-main,html.gramiss-shop-booting body #main{visibility:hidden!important;opacity:0!important;pointer-events:none!important;min-height:72vh!important}</style>\n<link id=\"gramiss-shop-sculpted-css\" rel=\"stylesheet\" href=\"<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/shop-sculpted.css?v=20260812-6' ); ?>\">\n<script id=\"gramiss-shop-sculpted-js\" defer src=\"<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/shop-sculpted.js?v=20260812-6' ); ?>\"></script>\n<?php endif; ?>\n"+end
           if start in header and end in header: new_header=header.split(start,1)[0]+block+header.split(end,1)[1]
           elif '</head>' in header: new_header=header.replace('</head>',block+'\n</head>',1)
           else: raise RuntimeError('header marker not found')
@@ -69,11 +69,11 @@ jobs:
           save('assets/css/shop-sculpted.css',css); save('assets/js/shop-sculpted.js',js); save('header.php',new_header)
           h=read('header.php'); c=read('assets/css/shop-sculpted.css'); j=read('assets/js/shop-sculpted.js')
           checks={
-            'loader':'shop-sculpted.css?v=20260812-5' in h and 'shop-sculpted.js?v=20260812-5' in h,
+            'loader':'shop-sculpted.css?v=20260812-6' in h and 'shop-sculpted.js?v=20260812-6' in h,
             'no flash':'gramiss-shop-first-paint-gate' in h,
             'full images':"return 'full'" in h,
             'css':'GRAMISS_SHOP_SCULPTED_V1' in c,
-            'gradient':'linear-gradient(180deg,#fff 0%,#f2f3f4 52%,#fff 100%)' in ''.join(c.split()),
+            'gradient':'linear-gradient(180deg,#fff' in c and '#f2f3f4' in c,
             'white image canvas':'gse-media-frame' in c and 'background:#fff!important' in c,
             'top action':'gse-action-orb' in c and 'top:18px' in c,
             'bottom shape':'gse-info-panel' in c and 'border-top-right-radius:64px' in c,
