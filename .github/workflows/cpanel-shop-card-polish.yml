@@ -1,0 +1,90 @@
+name: cPanel Shop Card Polish
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.head_ref == 'ops/shop-card-polish'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - uses: actions/checkout@v4
+      - name: Polish Shop info panels and action plus
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re, ssl, time, urllib.parse, urllib.request
+          from pathlib import Path
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S', time.gmtime())
+
+          def call(fn, params, post=False):
+              url=f'https://{host}:2083/execute/Fileman/{fn}'
+              data=urllib.parse.urlencode(params).encode(); last=None
+              for attempt in range(1,6):
+                  try:
+                      req=urllib.request.Request(url if post else url+'?'+data.decode(), data=data if post else None, method='POST' if post else 'GET')
+                      req.add_header('Authorization',f'cpanel {user}:{token}')
+                      if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+                      with urllib.request.urlopen(req,context=ctx,timeout=75) as r: payload=json.loads(r.read().decode())
+                      result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
+                      if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result.get('errors') if isinstance(result,dict) else result))
+                      return result.get('data')
+                  except Exception as exc:
+                      last=exc; print(f'Attempt {attempt}/5 {fn}: {exc}')
+                      if attempt<5: time.sleep(attempt*4)
+              raise last
+
+          def read(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else f'{root}/{parent}'
+              d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(d,dict):
+                  for key in ('content','file_content','data'):
+                      if isinstance(d.get(key),str): return d[key]
+              if isinstance(d,str): return d
+              raise RuntimeError('Unexpected content: '+rel)
+
+          def save(rel,content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else f'{root}/{parent}'
+              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+
+          patch=Path('deploy/shop-sculpted/shop-card-polish.css').read_text(encoding='utf-8').strip()
+          css=read('assets/css/shop-sculpted.css')
+          header=read('header.php')
+          start='/* GRAMISS_SHOP_CARD_POLISH_START */'; end='/* GRAMISS_SHOP_CARD_POLISH_END */'
+          if start in css and end in css:
+              css=css.split(start,1)[0].rstrip()+css.split(end,1)[1]
+          css_new=css.rstrip()+'\n\n'+start+'\n'+patch+'\n'+end+'\n'
+          header_new=re.sub(r'shop-sculpted\.css\?v=[0-9A-Za-z._-]+','shop-sculpted.css?v=20260812-7',header)
+          if header_new == header and 'shop-sculpted.css?v=20260812-7' not in header:
+              raise RuntimeError('Could not bump Shop CSS version')
+
+          save(f'assets/css/shop-sculpted.css.bak-cardpolish-{stamp}',read('assets/css/shop-sculpted.css'))
+          save(f'header.php.bak-cardpolish-{stamp}',header)
+          print('Backups created: '+stamp)
+          save('assets/css/shop-sculpted.css',css_new)
+          save('header.php',header_new)
+
+          live_css=read('assets/css/shop-sculpted.css'); live_header=read('header.php')
+          checks={
+            'polish marker':'GRAMISS_SHOP_CARD_POLISH_V1' in live_css,
+            'wider info panel':'width:90%!important' in ''.join(live_css.split()),
+            'horizontal title':'white-space:nowrap!important' in ''.join(live_css.split()),
+            'geometric plus':'width:15px!important' in ''.join(live_css.split()) and 'height:15px!important' in ''.join(live_css.split()),
+            'center transform':'translate(-50%,-50%)' in live_css,
+            'cache bump':'shop-sculpted.css?v=20260812-7' in live_header,
+          }
+          for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
+          if not all(checks.values()): raise SystemExit('Shop card polish verification failed')
+          print('LIVE SHOP CARD POLISH DEPLOYED AND VERIFIED')
+          PY
