@@ -1,13 +1,17 @@
-/* GRAMISS_PDP_RUNTIME_V3 */
+/* GRAMISS_PDP_RUNTIME_V4 */
 (function(){
   'use strict';
 
   function first(sel){ return document.querySelector(sel); }
+  function releaseBoot(){
+    document.documentElement.classList.remove('gramiss-pdp-booting');
+    document.documentElement.classList.add('gramiss-pdp-booted');
+  }
 
   function init(){
     var body=document.body;
-    if(!body || !body.classList.contains('single-product')) return;
-    if(first('.gramiss-pdp-runtime-v3')) return;
+    if(!body || !body.classList.contains('single-product')){ releaseBoot(); return; }
+    if(first('.gramiss-pdp-runtime-v3')){ releaseBoot(); return; }
 
     var g2Root=first('.gramiss-pdp-v2');
     var product=first('main .product.type-product, .site-main .product.type-product, div.product.type-product, div.product');
@@ -18,15 +22,16 @@
 
     if(!summary || !gallery){
       body.classList.add('gramiss-pdp-runtime-missing-core');
+      releaseBoot();
       return;
     }
 
     var sourceRoot=g2Root || product || summary.parentElement;
-    if(!sourceRoot || !sourceRoot.parentNode) return;
+    if(!sourceRoot || !sourceRoot.parentNode){ releaseBoot(); return; }
 
     var shell=document.createElement('div');
     shell.className='gramiss-pdp-runtime-v3';
-    shell.setAttribute('data-runtime-version','3');
+    shell.setAttribute('data-runtime-version','4');
 
     var purchase=document.createElement('section');
     purchase.className='g3-purchase-zone';
@@ -56,7 +61,6 @@
     if(tabs){ detailsZone.appendChild(tabs); shell.appendChild(detailsZone); }
     if(related){ relatedZone.appendChild(related); shell.appendChild(relatedZone); }
 
-    /* Remove zoom trigger and legacy motion attributes without recreating nodes. */
     shell.querySelectorAll('.woocommerce-product-gallery__trigger').forEach(function(node){ node.remove(); });
     shell.querySelectorAll('[data-parallax],[data-tilt],[data-magnetic]').forEach(function(node){
       node.removeAttribute('data-parallax');
@@ -64,7 +68,6 @@
       node.removeAttribute('data-magnetic');
     });
 
-    /* If the custom v2 gallery exists, keep its thumbnail switching behavior alive here too. */
     var customMain=shell.querySelector('#g2-pdp-main-image');
     if(customMain){
       shell.addEventListener('click',function(event){
@@ -84,7 +87,6 @@
       });
     }
 
-    /* The original wrapper is now only legacy scaffolding; hide it after moving functional nodes out. */
     if(sourceRoot && sourceRoot!==shell){
       sourceRoot.setAttribute('data-gramiss-pdp-legacy-hidden','true');
       sourceRoot.style.setProperty('display','none','important');
@@ -97,18 +99,29 @@
 
     body.classList.add('gramiss-pdp-runtime-ready');
 
-    /* Hard-stop pointer-driven transforms from legacy scripts. */
     var stableNodes=shell.querySelectorAll('.woocommerce-product-gallery, .woocommerce-product-gallery *, .g2-pdp-gallery, .g2-pdp-gallery *, .g3-related-zone li.product, .g3-related-zone li.product *');
     stableNodes.forEach(function(node){
       node.style.setProperty('transform','none','important');
       node.style.setProperty('animation','none','important');
     });
+
+    /* Release the first-paint gate immediately after the final DOM is in place. */
+    releaseBoot();
   }
 
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',function(){ requestAnimationFrame(init); });
+  /* This file is loaded with defer. Run synchronously as soon as the parsed DOM is available;
+     do not defer another animation frame, because that caused the visible legacy-layout flash. */
+  if(document.body){
+    init();
   }else{
-    requestAnimationFrame(init);
+    document.addEventListener('DOMContentLoaded',init,{once:true});
   }
-  window.addEventListener('load',function(){ setTimeout(init,60); });
+
+  window.addEventListener('load',function(){
+    if(!document.body || !document.body.classList.contains('gramiss-pdp-runtime-ready')) init();
+    releaseBoot();
+  },{once:true});
+
+  /* Never leave the storefront hidden if an unrelated third-party script fails. */
+  window.setTimeout(releaseBoot,3500);
 })();
