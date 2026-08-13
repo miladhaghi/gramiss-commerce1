@@ -1,0 +1,91 @@
+name: cPanel Shop Native v3
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.head_ref == 'ops/shop-native'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - uses: actions/checkout@v4
+      - name: Make Shop server-rendered
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, ssl, time, urllib.parse, urllib.request
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S', time.gmtime())
+          def call(fn,p,post=False):
+              u=f'https://{host}:2083/execute/Fileman/{fn}'; d=urllib.parse.urlencode(p).encode(); last=None
+              for a in range(1,6):
+                  try:
+                      q=urllib.request.Request(u if post else u+'?'+d.decode(),data=d if post else None,method='POST' if post else 'GET'); q.add_header('Authorization',f'cpanel {user}:{token}')
+                      if post:q.add_header('Content-Type','application/x-www-form-urlencoded')
+                      with urllib.request.urlopen(q,context=ctx,timeout=75) as r:x=json.loads(r.read().decode())
+                      z=x.get('result') if isinstance(x.get('result'),dict) else x
+                      if not isinstance(z,dict) or z.get('status')!=1: raise RuntimeError(str(z.get('errors') if isinstance(z,dict) else z))
+                      return z.get('data')
+                  except Exception as e:
+                      last=e; print(f'Attempt {a}/5 {fn}: {e}')
+                      if a<5: time.sleep(a*4)
+              raise last
+          def read(rel):
+              pa,n=rel.rsplit('/',1) if '/' in rel else ('',rel); dr=root if not pa else f'{root}/{pa}'; x=call('get_file_content',{'dir':dr,'file':n,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(x,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(x.get(k),str): return x[k]
+              if isinstance(x,str): return x
+              raise RuntimeError(rel)
+          def save(rel,c):
+              pa,n=rel.rsplit('/',1) if '/' in rel else ('',rel); dr=root if not pa else f'{root}/{pa}'; call('save_file_content',{'dir':dr,'file':n,'content':c,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+
+          h=read('header.php')
+          start='<!-- GRAMISS SHOP EDITORIAL START -->'; end='<!-- GRAMISS SHOP EDITORIAL END -->'
+          php=r'''<?php
+          /* GRAMISS_SHOP_NATIVE_INLINE_V3 */
+          $gramiss_shop_catalog=false;
+          if(function_exists('is_shop')){$gramiss_shop_catalog=is_shop()||(function_exists('is_product_taxonomy')&&is_product_taxonomy())||is_post_type_archive('product')||(is_search()&&'product'===get_query_var('post_type'));}
+          if($gramiss_shop_catalog){
+            add_filter('body_class',function($c){$c[]='gse-shop-ready';$c[]='gramiss-shop-native';return array_values(array_unique($c));},999);
+            add_filter('woocommerce_product_loop_start',function($html){return preg_replace('/class=(["\'])products\b/','class=$1products gse-products',$html,1);},999);
+            add_filter('woocommerce_post_class',function($c){$c[]='gse-sculpted-card';$c[]='gse-small';return array_values(array_unique($c));},999);
+            add_filter('single_product_archive_thumbnail_size',function(){return 'full';},999);
+
+            remove_action('woocommerce_before_shop_loop','woocommerce_result_count',20); remove_action('woocommerce_before_shop_loop','woocommerce_catalog_ordering',30);
+            add_action('woocommerce_before_shop_loop',function(){
+              $total=(int)wc_get_loop_prop('total'); $ob=isset($_GET['orderby'])?wc_clean(wp_unslash($_GET['orderby'])):'menu_order'; $base=remove_query_arg(array('paged','product-page','orderby'));
+              $sorts=array('menu_order'=>'پیش‌فرض','date'=>'جدیدترین','price'=>'ارزان‌ترین','price-desc'=>'گران‌ترین','popularity'=>'پرفروش‌ترین');
+              $action=(function_exists('is_product_category')&&is_product_category())?get_term_link(get_queried_object()):wc_get_page_permalink('shop'); if(is_wp_error($action)){$action=wc_get_page_permalink('shop');}
+              echo '<section class="gse-catalog-toolbar gramiss-native-toolbar"><div class="gse-count">'.esc_html($total).' محصول</div><form class="gse-search-wrap" role="search" method="get" action="'.esc_url($action).'"><input class="gse-search-input" type="search" name="s" value="'.esc_attr(get_search_query()).'" placeholder="جست‌وجو در محصولات…"><input type="hidden" name="post_type" value="product"></form><nav class="gse-sort-tabs">';
+              foreach($sorts as $v=>$lab){$url='menu_order'===$v?$base:add_query_arg('orderby',$v,$base);$act=$ob===$v||('menu_order'===$v&&!isset($_GET['orderby']));echo '<a class="gse-sort-button'.($act?' is-active':'').'" href="'.esc_url($url).'">'.esc_html($lab).'</a>';}
+              echo '</nav></section>';
+            },20);
+
+            remove_action('woocommerce_before_shop_loop_item','woocommerce_template_loop_product_link_open',10); remove_action('woocommerce_before_shop_loop_item_title','woocommerce_show_product_loop_sale_flash',10); remove_action('woocommerce_before_shop_loop_item_title','woocommerce_template_loop_product_thumbnail',10); remove_action('woocommerce_shop_loop_item_title','woocommerce_template_loop_product_title',10); remove_action('woocommerce_after_shop_loop_item_title','woocommerce_template_loop_rating',5); remove_action('woocommerce_after_shop_loop_item_title','woocommerce_template_loop_price',10); remove_action('woocommerce_after_shop_loop_item','woocommerce_template_loop_product_link_close',5); remove_action('woocommerce_after_shop_loop_item','woocommerce_template_loop_add_to_cart',10);
+            add_action('woocommerce_before_shop_loop_item',function(){echo '<div class="gse-card-surface">';},5);
+            add_action('woocommerce_before_shop_loop_item_title',function(){global $product;if(!$product)return;echo '<a class="woocommerce-loop-product__link gse-product-link" href="'.esc_url(get_permalink($product->get_id())).'"><div class="gse-media-frame">'.wp_kses_post($product->get_image('full',array('loading'=>'lazy','decoding'=>'async'))).'</div></a>';if($product->is_on_sale())echo '<span class="onsale">تخفیف</span>';},10);
+            add_action('woocommerce_shop_loop_item_title',function(){global $product;if(!$product)return;echo '<div class="gse-info-panel"><a class="gse-title-link" href="'.esc_url(get_permalink($product->get_id())).'"><h2 class="woocommerce-loop-product__title">'.esc_html(get_the_title()).'</h2></a>';},10);
+            add_action('woocommerce_after_shop_loop_item_title',function(){woocommerce_template_loop_price();echo '</div>';},10);
+            add_action('woocommerce_after_shop_loop_item',function(){echo '<div class="gse-action-orb">';woocommerce_template_loop_add_to_cart();echo '</div></div>';},10);
+          }
+          if($gramiss_shop_catalog): ?>
+          <link id="gramiss-shop-sculpted-css" rel="stylesheet" href="<?php echo esc_url(get_stylesheet_directory_uri().'/assets/css/shop-sculpted.css?v=20260813-native3'); ?>">
+          <style id="gramiss-shop-native-firstpaint">body.gramiss-shop-native ul.products.gse-products{grid-template-columns:repeat(4,minmax(0,1fr))!important}body.gramiss-shop-native .gse-media-frame,body.gramiss-shop-native .gse-media-frame img{background:#fff!important}body.gramiss-shop-native .woocommerce-result-count,body.gramiss-shop-native .woocommerce-ordering{display:none!important}@media(max-width:1100px){body.gramiss-shop-native ul.products.gse-products{grid-template-columns:repeat(3,minmax(0,1fr))!important}}@media(max-width:900px){body.gramiss-shop-native ul.products.gse-products{grid-template-columns:repeat(2,minmax(0,1fr))!important}}</style>
+          <?php endif; ?>'''
+          block=start+'\n'+php+'\n'+end
+          if start not in h or end not in h: raise RuntimeError('Shop markers missing')
+          nh=h.split(start,1)[0]+block+h.split(end,1)[1]
+          save(f'header.php.bak-shopnative-{stamp}',h); save('header.php',nh)
+          v=read('header.php'); checks={'inline native':'GRAMISS_SHOP_NATIVE_INLINE_V3' in v,'old js gone':'shop-sculpted.js' not in v,'boot gone':'gramiss-shop-first-paint-gate' not in v and 'gramiss-shop-booting' not in v,'native class':'gramiss-shop-native' in v,'native card hooks':'gse-card-surface' in v and 'gse-action-orb' in v,'native toolbar':'gramiss-native-toolbar' in v,'four columns':'repeat(4,minmax(0,1fr))' in v}
+          for k,x in checks.items():print(('PASS' if x else 'FAIL')+': '+k)
+          if not all(checks.values()): raise SystemExit('verification failed')
+          print('LIVE SHOP NATIVE V3 DEPLOYED AND VERIFIED; backup '+stamp)
+          PY
