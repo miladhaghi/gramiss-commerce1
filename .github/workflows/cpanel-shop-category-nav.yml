@@ -55,41 +55,38 @@ jobs:
               parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else f'{root}/{parent}'
               call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
 
-          def replace_marked(base,start,end,block):
-              if start in base and end in base:
-                  return base.split(start,1)[0].rstrip()+'\n\n'+block.strip()+'\n'+base.split(end,1)[1].lstrip()
-              return base.rstrip()+'\n\n'+block.strip()+'\n'
-
           css=Path('deploy/shop-category-nav/shop-category-nav.css').read_text(encoding='utf-8')
           js=Path('deploy/shop-category-nav/shop-category-nav.js').read_text(encoding='utf-8')
           php=Path('deploy/shop-category-nav/shop-category-nav.php').read_text(encoding='utf-8')
-          header=read('header.php'); functions=read('functions.php')
-
-          pstart='/* GRAMISS SHOP CATEGORY NAV PHP START */'; pend='/* GRAMISS SHOP CATEGORY NAV PHP END */'
-          functions_new=replace_marked(functions,pstart,pend,php)
+          header=read('header.php')
 
           hstart='<!-- GRAMISS SHOP CATEGORY NAV START -->'; hend='<!-- GRAMISS SHOP CATEGORY NAV END -->'
-          block=f'''{hstart}\n<?php if ( function_exists( 'is_shop' ) && ( is_shop() || ( function_exists( 'is_product_taxonomy' ) && is_product_taxonomy() ) || is_post_type_archive( 'product' ) ) ) : ?>\n<script>document.documentElement.classList.add('gramiss-shop-cleaning');</script>\n<link id="gramiss-shop-category-nav-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/shop-category-nav.css?v=20260813-1' ); ?>">\n<script id="gramiss-shop-category-nav-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/shop-category-nav.js?v=20260813-1' ); ?>"></script>\n<?php endif; ?>\n{hend}'''
+          block=f'''{hstart}\n<?php if ( function_exists( 'is_shop' ) && ( is_shop() || ( function_exists( 'is_product_category' ) && is_product_category() ) || is_post_type_archive( 'product' ) ) ) :\nrequire_once get_stylesheet_directory() . '/inc/shop-category-nav.php'; ?>\n<script>document.documentElement.classList.add('gramiss-shop-cleaning');</script>\n<link id="gramiss-shop-category-nav-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/shop-category-nav.css?v=20260813-1' ); ?>">\n<script id="gramiss-shop-category-nav-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/shop-category-nav.js?v=20260813-1' ); ?>"></script>\n<?php endif; ?>\n{hend}'''
           if hstart in header and hend in header:
               header_new=header.split(hstart,1)[0]+block+header.split(hend,1)[1]
           elif '</head>' in header:
               header_new=header.replace('</head>',block+'\n</head>',1)
           else: raise RuntimeError('Could not locate </head>')
 
-          save(f'functions.php.bak-shopcat-{stamp}',functions)
           save(f'header.php.bak-shopcat-{stamp}',header)
+          try:
+              old_php=read('inc/shop-category-nav.php')
+              save(f'inc/shop-category-nav.php.bak-{stamp}',old_php)
+          except Exception:
+              pass
           print('Backups created: '+stamp)
+          save('inc/shop-category-nav.php',php)
           save('assets/css/shop-category-nav.css',css)
           save('assets/js/shop-category-nav.js',js)
-          save('functions.php',functions_new)
           save('header.php',header_new)
 
-          lf=read('functions.php'); lh=read('header.php'); lc=read('assets/css/shop-category-nav.css'); lj=read('assets/js/shop-category-nav.js')
+          lp=read('inc/shop-category-nav.php'); lh=read('header.php'); lc=read('assets/css/shop-category-nav.css'); lj=read('assets/js/shop-category-nav.js')
           checks={
-            'native categories hook':'GRAMISS SHOP CATEGORY NAV PHP START' in lf and 'woocommerce_before_shop_loop' in lf and 'product_cat' in lf,
-            'all products link':'همه محصولات' in lf and 'wc_get_page_permalink' in lf,
-            'top-level categories':"'parent'     => 0" in lf,
+            'native categories hook':'GRAMISS_SHOP_CATEGORY_NAV_PHP_V1' in lp and 'woocommerce_before_shop_loop' in lp and 'product_cat' in lp,
+            'all products link':'همه محصولات' in lp and 'wc_get_page_permalink' in lp,
+            'top-level categories':"'parent'     => 0" in lp,
             'asset loader':'shop-category-nav.css?v=20260813-1' in lh and 'shop-category-nav.js?v=20260813-1' in lh,
+            'php loader':"/inc/shop-category-nav.php" in lh,
             'cleaning gate':'gramiss-shop-cleaning' in lh,
             'category css':'GRAMISS_SHOP_CATEGORY_NAV_V1' in lc and '.gramiss-shop-categories' in lc,
             'mobile swipe':'overflow-x:auto!important' in ''.join(lc.split()),
