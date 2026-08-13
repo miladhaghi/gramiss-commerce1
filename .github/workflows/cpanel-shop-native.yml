@@ -1,0 +1,224 @@
+name: cPanel Shop Native
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.head_ref == 'ops/shop-native'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy native WooCommerce Shop
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, ssl, time, urllib.parse, urllib.request
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S', time.gmtime())
+
+          def call(fn, params, post=False):
+              url=f'https://{host}:2083/execute/Fileman/{fn}'; data=urllib.parse.urlencode(params).encode(); last=None
+              for attempt in range(1,6):
+                  try:
+                      req=urllib.request.Request(url if post else url+'?'+data.decode(), data=data if post else None, method='POST' if post else 'GET')
+                      req.add_header('Authorization',f'cpanel {user}:{token}')
+                      if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+                      with urllib.request.urlopen(req,context=ctx,timeout=75) as r: payload=json.loads(r.read().decode())
+                      result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
+                      if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result.get('errors') if isinstance(result,dict) else result))
+                      return result.get('data')
+                  except Exception as exc:
+                      last=exc; print(f'Attempt {attempt}/5 {fn}: {exc}')
+                      if attempt<5: time.sleep(attempt*4)
+              raise last
+
+          def read(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else f'{root}/{parent}'
+              d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(d,dict):
+                  for key in ('content','file_content','data'):
+                      if isinstance(d.get(key),str): return d[key]
+              if isinstance(d,str): return d
+              raise RuntimeError('Unexpected content: '+rel)
+
+          def try_read(rel):
+              try: return read(rel)
+              except Exception: return None
+
+          def save(rel,content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else f'{root}/{parent}'
+              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+
+          native_php=r'''<?php
+          /* GRAMISS_SHOP_NATIVE_PHP_V1 */
+          if ( ! defined( 'ABSPATH' ) ) { exit; }
+
+          if ( ! function_exists( 'gramiss_is_shop_catalog_native' ) ) {
+              function gramiss_is_shop_catalog_native() {
+                  return function_exists( 'is_shop' ) && (
+                      is_shop() ||
+                      ( function_exists( 'is_product_taxonomy' ) && is_product_taxonomy() ) ||
+                      is_post_type_archive( 'product' ) ||
+                      ( is_search() && 'product' === get_query_var( 'post_type' ) )
+                  );
+              }
+          }
+
+          if ( gramiss_is_shop_catalog_native() ) {
+              add_filter( 'body_class', function( $classes ) {
+                  $classes[] = 'gramiss-shop-native';
+                  $classes[] = 'gse-shop-ready';
+                  return array_values( array_unique( $classes ) );
+              }, 999 );
+
+              add_filter( 'single_product_archive_thumbnail_size', function() { return 'full'; }, 999 );
+
+              remove_action( 'woocommerce_before_shop_loop', 'woocommerce_result_count', 20 );
+              remove_action( 'woocommerce_before_shop_loop', 'woocommerce_catalog_ordering', 30 );
+
+              add_action( 'woocommerce_before_shop_loop', function() {
+                  $total = (int) wc_get_loop_prop( 'total' );
+                  $orderby = isset( $_GET['orderby'] ) ? wc_clean( wp_unslash( $_GET['orderby'] ) ) : 'menu_order';
+                  $base = remove_query_arg( array( 'paged', 'product-page', 'orderby' ) );
+                  $sorts = array(
+                      'menu_order' => 'پیش‌فرض',
+                      'date'       => 'جدیدترین',
+                      'price'      => 'ارزان‌ترین',
+                      'price-desc' => 'گران‌ترین',
+                      'popularity' => 'پرفروش‌ترین',
+                  );
+                  echo '<section class="gse-catalog-toolbar gramiss-native-toolbar" aria-label="کنترل فروشگاه">';
+                  echo '<div class="gse-count">' . esc_html( $total ) . ' محصول</div>';
+                  echo '<form class="gse-search-wrap" role="search" method="get" action="' . esc_url( is_product_category() ? get_term_link( get_queried_object() ) : wc_get_page_permalink( 'shop' ) ) . '">';
+                  echo '<input class="gse-search-input" type="search" name="s" value="' . esc_attr( get_search_query() ) . '" placeholder="جست‌وجو در محصولات…" aria-label="جست‌وجو در محصولات">';
+                  echo '<input type="hidden" name="post_type" value="product">';
+                  echo '</form>';
+                  echo '<nav class="gse-sort-tabs" aria-label="مرتب‌سازی محصولات">';
+                  foreach ( $sorts as $value => $label ) {
+                      $url = 'menu_order' === $value ? $base : add_query_arg( 'orderby', $value, $base );
+                      $active = $orderby === $value || ( 'menu_order' === $value && ! isset( $_GET['orderby'] ) );
+                      echo '<a class="gse-sort-button' . ( $active ? ' is-active' : '' ) . '" href="' . esc_url( $url ) . '">' . esc_html( $label ) . '</a>';
+                  }
+                  echo '</nav></section>';
+              }, 20 );
+          }
+          '''
+
+          content_product=r'''<?php
+          /** GRAMISS_SHOP_NATIVE_CARD_V1 */
+          defined( 'ABSPATH' ) || exit;
+          global $product;
+          if ( ! is_a( $product, WC_Product::class ) || ! $product->is_visible() ) { return; }
+          ?>
+          <li <?php wc_product_class( 'gse-sculpted-card gse-small', $product ); ?>>
+            <div class="gse-card-surface">
+              <a href="<?php echo esc_url( get_permalink( $product->get_id() ) ); ?>" class="woocommerce-loop-product__link gse-product-link">
+                <div class="gse-media-frame">
+                  <?php echo wp_kses_post( $product->get_image( 'full', array( 'loading' => 'lazy', 'decoding' => 'async' ) ) ); ?>
+                </div>
+              </a>
+              <?php if ( $product->is_on_sale() ) : ?><span class="onsale"><?php esc_html_e( 'تخفیف', 'woocommerce' ); ?></span><?php endif; ?>
+              <div class="gse-action-orb"><?php woocommerce_template_loop_add_to_cart(); ?></div>
+              <div class="gse-info-panel">
+                <a class="gse-title-link" href="<?php echo esc_url( get_permalink( $product->get_id() ) ); ?>">
+                  <h2 class="woocommerce-loop-product__title"><?php echo esc_html( get_the_title() ); ?></h2>
+                </a>
+                <?php woocommerce_template_loop_price(); ?>
+              </div>
+            </div>
+          </li>
+          '''
+
+          native_css=r'''/* GRAMISS_SHOP_NATIVE_CSS_V1 */
+          :root{--gse-ink:#111318;--gse-muted:#777b82;--gse-line:rgba(17,19,24,.12)}
+          body.gramiss-shop-native,body.gramiss-shop-native #page,body.gramiss-shop-native .site,body.gramiss-shop-native .site-content,body.gramiss-shop-native #content,body.gramiss-shop-native #primary,body.gramiss-shop-native #main,body.gramiss-shop-native main.site-main,body.gramiss-shop-native .woocommerce,body.gramiss-shop-native .woocommerce-page{background:linear-gradient(180deg,#fff 0%,#f2f3f4 52%,#fff 100%)!important;background-color:#fff!important}
+          body.gramiss-shop-native #primary,body.gramiss-shop-native #main,body.gramiss-shop-native main.site-main{width:100%!important;max-width:none!important}
+          body.gramiss-shop-native #content::before,body.gramiss-shop-native #content::after,body.gramiss-shop-native .site-content::before,body.gramiss-shop-native .site-content::after,body.gramiss-shop-native #main::before,body.gramiss-shop-native #main::after,body.gramiss-shop-native main.site-main::before,body.gramiss-shop-native main.site-main::after,body.gramiss-shop-native .woocommerce::before,body.gramiss-shop-native .woocommerce::after{display:none!important;content:none!important;background:none!important;background-image:none!important;height:0!important;box-shadow:none!important;border:0!important}
+          body.gramiss-shop-native .woocommerce-products-header{background:transparent!important;background-image:none!important;margin-top:0!important;padding-top:0!important;box-shadow:none!important;border:0!important}
+          body.gramiss-shop-native .woocommerce-result-count,body.gramiss-shop-native .woocommerce-ordering{display:none!important}
+          body.gramiss-shop-native .gse-catalog-toolbar{width:min(100% - 48px,1480px)!important;margin:18px auto 24px!important;display:grid!important;grid-template-columns:auto minmax(260px,420px) 1fr!important;align-items:center!important;gap:18px!important;direction:rtl!important;background:transparent!important;color:var(--gse-ink)!important}
+          body.gramiss-shop-native .gse-count{white-space:nowrap!important;font-size:13px!important;font-weight:600!important;color:#70747a!important}
+          body.gramiss-shop-native .gse-search-wrap{position:relative!important;min-width:0!important;margin:0!important}
+          body.gramiss-shop-native .gse-search-input{appearance:none!important;width:100%!important;height:44px!important;border:1px solid #d9dbde!important;border-radius:22px!important;background:rgba(255,255,255,.9)!important;color:#16181c!important;padding:0 18px!important;font:inherit!important;font-size:13px!important;outline:none!important;box-shadow:none!important;direction:rtl!important}
+          body.gramiss-shop-native .gse-search-input:focus{border-color:#17191d!important;background:#fff!important}
+          body.gramiss-shop-native .gse-sort-tabs{min-width:0!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:6px!important;overflow-x:auto!important;scrollbar-width:none!important;padding:2px!important;direction:rtl!important}
+          body.gramiss-shop-native .gse-sort-tabs::-webkit-scrollbar{display:none!important}
+          body.gramiss-shop-native .gse-sort-button{display:inline-flex!important;align-items:center!important;justify-content:center!important;text-decoration:none!important;border:1px solid rgba(17,19,24,.08)!important;border-radius:999px!important;background:rgba(255,255,255,.76)!important;color:#71757b!important;min-height:38px!important;padding:0 14px!important;white-space:nowrap!important;font:inherit!important;font-size:12px!important;font-weight:650!important;box-shadow:none!important}
+          body.gramiss-shop-native .gse-sort-button:hover,body.gramiss-shop-native .gse-sort-button:focus-visible{color:#111318!important;background:#fff!important;border-color:rgba(17,19,24,.2)!important}
+          body.gramiss-shop-native .gse-sort-button.is-active{color:#fff!important;background:#111318!important;border-color:#111318!important}
+          body.gramiss-shop-native ul.products{width:min(100% - 48px,1480px)!important;margin:0 auto 72px!important;padding:0!important;list-style:none!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:26px 18px!important;align-items:start!important;direction:ltr!important;overflow:visible!important}
+          body.gramiss-shop-native ul.products::before,body.gramiss-shop-native ul.products::after{display:none!important;content:none!important}
+          body.gramiss-shop-native ul.products>li.product{position:relative!important;float:none!important;clear:none!important;width:auto!important;max-width:none!important;min-width:0!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;overflow:visible!important;direction:rtl!important;text-align:right!important;transform:none!important}
+          body.gramiss-shop-native .gse-card-surface{position:relative!important;min-height:100%!important;border-radius:28px!important;background:#fff!important;box-shadow:0 10px 28px rgba(17,19,24,.045)!important;overflow:hidden!important;border:1px solid rgba(17,19,24,.07)!important}
+          body.gramiss-shop-native .gse-card-surface::before{content:""!important;position:absolute!important;top:-16px!important;right:-16px!important;width:104px!important;height:104px!important;border-radius:50%!important;background:linear-gradient(180deg,#fff 0%,#f2f3f4 100%)!important;z-index:4!important;pointer-events:none!important}
+          body.gramiss-shop-native .gse-card-surface::after{content:""!important;position:absolute!important;left:0!important;bottom:0!important;width:46%!important;height:30%!important;background:#fff!important;border-top-right-radius:76px!important;z-index:2!important;pointer-events:none!important}
+          body.gramiss-shop-native .woocommerce-loop-product__link{display:block!important;position:relative!important;margin:0!important;padding:0!important;background:#fff!important;text-decoration:none!important;box-shadow:none!important}
+          body.gramiss-shop-native .gse-media-frame{position:relative!important;z-index:1!important;display:flex!important;align-items:center!important;justify-content:center!important;width:100%!important;height:350px!important;margin:0!important;padding:18px 16px 6px!important;background:#fff!important;background-color:#fff!important;overflow:hidden!important;border:0!important;box-shadow:none!important}
+          body.gramiss-shop-native .gse-media-frame img{display:block!important;width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:#fff!important;background-color:#fff!important;box-shadow:none!important;object-fit:contain!important;object-position:center!important;transform:none!important;transition:none!important;mix-blend-mode:normal!important;filter:none!important;opacity:1!important}
+          body.gramiss-shop-native .gse-info-panel{position:relative!important;z-index:5!important;width:90%!important;min-height:92px!important;margin:-2px 0 0 auto!important;padding:15px 16px 14px!important;background:#fff!important;border-top-right-radius:64px!important;display:flex!important;flex-direction:column!important;justify-content:flex-end!important;align-items:flex-start!important;text-align:left!important;direction:rtl!important}
+          body.gramiss-shop-native .gse-info-panel::after{content:""!important;position:absolute!important;top:-34px!important;right:-34px!important;width:68px!important;height:68px!important;border-radius:50%!important;background:#fff!important;z-index:-1!important}
+          body.gramiss-shop-native .gse-title-link{display:block!important;color:#15171b!important;text-decoration:none!important;max-width:100%!important;width:100%!important}
+          body.gramiss-shop-native .gse-info-panel .woocommerce-loop-product__title{margin:0 0 5px!important;padding:0!important;color:#15171b!important;line-height:1.45!important;font-size:12.5px!important;font-weight:750!important;letter-spacing:0!important;text-align:left!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+          body.gramiss-shop-native .gse-info-panel .price{display:block!important;margin:0!important;padding:0!important;color:#181a1e!important;font-size:11.5px!important;font-weight:700!important;line-height:1.5!important;text-align:left!important}
+          body.gramiss-shop-native .gse-info-panel .price del{opacity:.42!important;font-size:.9em!important}body.gramiss-shop-native .gse-info-panel .price ins{text-decoration:none!important}
+          body.gramiss-shop-native .gse-action-orb{position:absolute!important;top:18px!important;right:18px!important;z-index:8!important;width:52px!important;height:52px!important;border-radius:50%!important;display:flex!important;align-items:center!important;justify-content:center!important;background:#fff!important;border:1px solid rgba(17,19,24,.14)!important;box-shadow:0 4px 14px rgba(17,19,24,.06)!important}
+          body.gramiss-shop-native .gse-action-orb .button,body.gramiss-shop-native .gse-action-orb a.button,body.gramiss-shop-native .gse-action-orb .added_to_cart{position:relative!important;display:flex!important;align-items:center!important;justify-content:center!important;width:42px!important;height:42px!important;min-width:42px!important;min-height:42px!important;margin:0!important;padding:0!important;border-radius:50%!important;border:0!important;background:#111318!important;color:#fff!important;box-shadow:none!important;font-size:0!important;line-height:0!important;text-indent:-9999px!important;overflow:hidden!important;transform:none!important}
+          body.gramiss-shop-native .gse-action-orb .button::before,body.gramiss-shop-native .gse-action-orb a.button::before{content:""!important;position:absolute!important;left:50%!important;top:50%!important;width:16px!important;height:2px!important;background:#fff!important;transform:translate(-50%,-50%)!important;text-indent:0!important}
+          body.gramiss-shop-native .gse-action-orb .button::after,body.gramiss-shop-native .gse-action-orb a.button::after{content:""!important;position:absolute!important;left:50%!important;top:50%!important;width:2px!important;height:16px!important;background:#fff!important;transform:translate(-50%,-50%)!important;text-indent:0!important}
+          body.gramiss-shop-native .onsale{position:absolute!important;top:82px!important;right:18px!important;left:auto!important;z-index:7!important;min-width:0!important;min-height:0!important;width:auto!important;height:auto!important;margin:0!important;padding:5px 8px!important;border-radius:999px!important;background:#111318!important;color:#fff!important;font-size:10px!important;line-height:1!important}
+          @media(max-width:1100px){body.gramiss-shop-native ul.products{width:min(100% - 32px,1480px)!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:24px 14px!important}body.gramiss-shop-native .gse-catalog-toolbar{width:min(100% - 32px,1480px)!important;grid-template-columns:auto minmax(220px,330px) 1fr!important;gap:12px!important}}
+          @media(max-width:900px){body.gramiss-shop-native .gse-catalog-toolbar{width:calc(100% - 32px)!important;grid-template-columns:1fr auto!important;gap:12px!important;margin:16px auto 20px!important}body.gramiss-shop-native .gse-search-wrap{grid-column:1!important;grid-row:1!important}body.gramiss-shop-native .gse-count{grid-column:2!important;grid-row:1!important}body.gramiss-shop-native .gse-sort-tabs{grid-column:1/-1!important;grid-row:2!important}body.gramiss-shop-native ul.products{width:calc(100% - 32px)!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:18px 12px!important}body.gramiss-shop-native .gse-card-surface{border-radius:22px!important}body.gramiss-shop-native .gse-card-surface::before{width:82px!important;height:82px!important;top:-12px!important;right:-12px!important}body.gramiss-shop-native .gse-media-frame{height:clamp(220px,56vw,330px)!important;padding:12px 8px 0!important}body.gramiss-shop-native .gse-info-panel{width:88%!important;min-height:84px!important;padding:13px 11px 12px!important;border-top-right-radius:48px!important}body.gramiss-shop-native .gse-info-panel .woocommerce-loop-product__title{font-size:11.5px!important}body.gramiss-shop-native .gse-action-orb{top:12px!important;right:12px!important;width:44px!important;height:44px!important}body.gramiss-shop-native .gse-action-orb .button,body.gramiss-shop-native .gse-action-orb a.button{width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important}}
+          @media(max-width:359px){body.gramiss-shop-native ul.products{grid-template-columns:1fr!important}body.gramiss-shop-native .gse-catalog-toolbar{grid-template-columns:1fr!important}body.gramiss-shop-native .gse-search-wrap,body.gramiss-shop-native .gse-count,body.gramiss-shop-native .gse-sort-tabs{grid-column:1!important;grid-row:auto!important}}
+          '''
+
+          header=read('header.php')
+          start='<!-- GRAMISS SHOP EDITORIAL START -->'; end='<!-- GRAMISS SHOP EDITORIAL END -->'
+          block=start+"\n<?php\n$gramiss_shop_catalog = false;\nif ( function_exists( 'is_shop' ) ) { $gramiss_shop_catalog = is_shop() || ( function_exists( 'is_product_taxonomy' ) && is_product_taxonomy() ) || is_post_type_archive( 'product' ) || ( is_search() && 'product' === get_query_var( 'post_type' ) ); }\nif ( $gramiss_shop_catalog ) :\nrequire_once get_stylesheet_directory() . '/inc/shop-native.php'; ?>\n<link id=\"gramiss-shop-native-css\" rel=\"stylesheet\" href=\"<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/shop-native.css?v=20260813-1' ); ?>\">\n<?php endif; ?>\n"+end
+          if start in header and end in header:
+              header_new=header.split(start,1)[0]+block+header.split(end,1)[1]
+          elif '</head>' in header:
+              header_new=header.replace('</head>',block+'\n</head>',1)
+          else: raise RuntimeError('Shop editorial marker/head not found')
+
+          cstart='<!-- GRAMISS SHOP CATEGORY NAV START -->'; cend='<!-- GRAMISS SHOP CATEGORY NAV END -->'
+          if cstart in header_new and cend in header_new:
+              cblock=cstart+"\n<?php if ( function_exists( 'is_shop' ) && ( is_shop() || ( function_exists( 'is_product_category' ) && is_product_category() ) || is_post_type_archive( 'product' ) ) ) :\nrequire_once get_stylesheet_directory() . '/inc/shop-category-nav.php'; ?>\n<link id=\"gramiss-shop-category-nav-css\" rel=\"stylesheet\" href=\"<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/shop-category-nav.css?v=20260813-2' ); ?>\">\n<?php endif; ?>\n"+cend
+              header_new=header_new.split(cstart,1)[0]+cblock+header_new.split(cend,1)[1]
+
+          save(f'header.php.bak-shopnative-{stamp}',header)
+          old_template=try_read('woocommerce/content-product.php')
+          if old_template is not None: save(f'woocommerce/content-product.php.bak-shopnative-{stamp}',old_template)
+          old_php=try_read('inc/shop-native.php')
+          if old_php is not None: save(f'inc/shop-native.php.bak-{stamp}',old_php)
+          print('Backups created: '+stamp)
+
+          save('inc/shop-native.php',native_php)
+          save('woocommerce/content-product.php',content_product)
+          save('assets/css/shop-native.css',native_css)
+          save('header.php',header_new)
+
+          h=read('header.php'); p=read('inc/shop-native.php'); t=read('woocommerce/content-product.php'); c=read('assets/css/shop-native.css')
+          checks={
+              'native php':'GRAMISS_SHOP_NATIVE_PHP_V1' in p and 'remove_action' in p and 'gramiss-native-toolbar' in p,
+              'native card':'GRAMISS_SHOP_NATIVE_CARD_V1' in t and 'gse-card-surface' in t and 'gse-action-orb' in t and 'gse-info-panel' in t,
+              'four columns':'grid-template-columns:repeat(4,minmax(0,1fr))' in c,
+              'white media':'gse-media-frame' in c and 'background:#fff!important' in c,
+              'native loader':'shop-native.css?v=20260813-1' in h and '/inc/shop-native.php' in h,
+              'old shop js removed':'shop-sculpted.js' not in h,
+              'old boot gate removed':'gramiss-shop-first-paint-gate' not in h and 'gramiss-shop-booting' not in h,
+              'category js gate removed':'shop-category-nav.js' not in h and 'gramiss-shop-cleaning' not in h,
+              'server ready class':"$classes[] = 'gse-shop-ready'" in p,
+          }
+          for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
+          if not all(checks.values()): raise SystemExit('Native Shop verification failed')
+          print('LIVE SHOP NATIVE DEPLOYED AND VERIFIED')
+          PY
