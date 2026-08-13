@@ -1,0 +1,102 @@
+name: cPanel Shop Category Nav
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.head_ref == 'ops/shop-category-nav'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy native Shop categories and remove legacy taupe bands
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, ssl, time, urllib.parse, urllib.request
+          from pathlib import Path
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S', time.gmtime())
+
+          def call(fn, params, post=False):
+              url=f'https://{host}:2083/execute/Fileman/{fn}'; data=urllib.parse.urlencode(params).encode(); last=None
+              for attempt in range(1,6):
+                  try:
+                      req=urllib.request.Request(url if post else url+'?'+data.decode(), data=data if post else None, method='POST' if post else 'GET')
+                      req.add_header('Authorization',f'cpanel {user}:{token}')
+                      if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+                      with urllib.request.urlopen(req,context=ctx,timeout=75) as r: payload=json.loads(r.read().decode())
+                      result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
+                      if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result.get('errors') if isinstance(result,dict) else result))
+                      return result.get('data')
+                  except Exception as exc:
+                      last=exc; print(f'Attempt {attempt}/5 {fn}: {exc}')
+                      if attempt<5: time.sleep(attempt*4)
+              raise last
+
+          def read(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else f'{root}/{parent}'
+              d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(d,dict):
+                  for key in ('content','file_content','data'):
+                      if isinstance(d.get(key),str): return d[key]
+              if isinstance(d,str): return d
+              raise RuntimeError('Unexpected content: '+rel)
+
+          def save(rel,content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else f'{root}/{parent}'
+              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+
+          def replace_marked(base,start,end,block):
+              if start in base and end in base:
+                  return base.split(start,1)[0].rstrip()+'\n\n'+block.strip()+'\n'+base.split(end,1)[1].lstrip()
+              return base.rstrip()+'\n\n'+block.strip()+'\n'
+
+          css=Path('deploy/shop-category-nav/shop-category-nav.css').read_text(encoding='utf-8')
+          js=Path('deploy/shop-category-nav/shop-category-nav.js').read_text(encoding='utf-8')
+          php=Path('deploy/shop-category-nav/shop-category-nav.php').read_text(encoding='utf-8')
+          header=read('header.php'); functions=read('functions.php')
+
+          pstart='/* GRAMISS SHOP CATEGORY NAV PHP START */'; pend='/* GRAMISS SHOP CATEGORY NAV PHP END */'
+          functions_new=replace_marked(functions,pstart,pend,php)
+
+          hstart='<!-- GRAMISS SHOP CATEGORY NAV START -->'; hend='<!-- GRAMISS SHOP CATEGORY NAV END -->'
+          block=f'''{hstart}\n<?php if ( function_exists( 'is_shop' ) && ( is_shop() || ( function_exists( 'is_product_taxonomy' ) && is_product_taxonomy() ) || is_post_type_archive( 'product' ) ) ) : ?>\n<script>document.documentElement.classList.add('gramiss-shop-cleaning');</script>\n<link id="gramiss-shop-category-nav-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/shop-category-nav.css?v=20260813-1' ); ?>">\n<script id="gramiss-shop-category-nav-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/shop-category-nav.js?v=20260813-1' ); ?>"></script>\n<?php endif; ?>\n{hend}'''
+          if hstart in header and hend in header:
+              header_new=header.split(hstart,1)[0]+block+header.split(hend,1)[1]
+          elif '</head>' in header:
+              header_new=header.replace('</head>',block+'\n</head>',1)
+          else: raise RuntimeError('Could not locate </head>')
+
+          save(f'functions.php.bak-shopcat-{stamp}',functions)
+          save(f'header.php.bak-shopcat-{stamp}',header)
+          print('Backups created: '+stamp)
+          save('assets/css/shop-category-nav.css',css)
+          save('assets/js/shop-category-nav.js',js)
+          save('functions.php',functions_new)
+          save('header.php',header_new)
+
+          lf=read('functions.php'); lh=read('header.php'); lc=read('assets/css/shop-category-nav.css'); lj=read('assets/js/shop-category-nav.js')
+          checks={
+            'native categories hook':'GRAMISS SHOP CATEGORY NAV PHP START' in lf and 'woocommerce_before_shop_loop' in lf and 'product_cat' in lf,
+            'all products link':'همه محصولات' in lf and 'wc_get_page_permalink' in lf,
+            'top-level categories':"'parent'     => 0" in lf,
+            'asset loader':'shop-category-nav.css?v=20260813-1' in lh and 'shop-category-nav.js?v=20260813-1' in lh,
+            'cleaning gate':'gramiss-shop-cleaning' in lh,
+            'category css':'GRAMISS_SHOP_CATEGORY_NAV_V1' in lc and '.gramiss-shop-categories' in lc,
+            'mobile swipe':'overflow-x:auto!important' in ''.join(lc.split()),
+            'band cleanup js':'GRAMISS_SHOP_BAND_CLEANUP_V1' in lj and 'isTaupe' in lj and 'gse-legacy-band-hidden' in lj,
+            'pseudo cleanup':'gse-strip-host-clean' in lj and 'gse-strip-host-clean::before' in lc,
+          }
+          for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
+          if not all(checks.values()): raise SystemExit('Shop category nav verification failed')
+          print('LIVE SHOP CATEGORY NAV + BAND CLEANUP DEPLOYED AND VERIFIED')
+          PY
