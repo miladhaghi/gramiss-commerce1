@@ -21,7 +21,6 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           import json, os, ssl, time, urllib.parse, urllib.request
-          from pathlib import Path
 
           host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
           ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S', time.gmtime())
@@ -55,25 +54,82 @@ jobs:
               parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else f'{root}/{parent}'
               call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
 
-          css=Path('deploy/shop-category-nav/shop-category-nav.css').read_text(encoding='utf-8')
-          js=Path('deploy/shop-category-nav/shop-category-nav.js').read_text(encoding='utf-8')
-          php=Path('deploy/shop-category-nav/shop-category-nav.php').read_text(encoding='utf-8')
-          header=read('header.php')
+          php=r'''<?php
+          /* GRAMISS_SHOP_CATEGORY_NAV_PHP_V1 */
+          if ( ! defined( 'ABSPATH' ) ) { exit; }
+          if ( ! function_exists( 'gramiss_render_shop_category_nav' ) ) {
+              function gramiss_render_shop_category_nav() {
+                  if ( ! function_exists( 'is_shop' ) || ! ( is_shop() || ( function_exists( 'is_product_category' ) && is_product_category() ) || is_post_type_archive( 'product' ) ) ) { return; }
+                  $terms = get_terms( array(
+                      'taxonomy'   => 'product_cat',
+                      'hide_empty' => true,
+                      'parent'     => 0,
+                      'orderby'    => 'name',
+                      'order'      => 'ASC',
+                  ) );
+                  if ( is_wp_error( $terms ) ) { $terms = array(); }
+                  $active_id = ( function_exists( 'is_product_category' ) && is_product_category() ) ? (int) get_queried_object_id() : 0;
+                  $shop_url = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : home_url( '/?post_type=product' );
+                  echo '<nav class="gramiss-shop-categories" aria-label="دسته‌بندی محصولات"><div class="gramiss-shop-categories__inner">';
+                  echo '<a class="gramiss-shop-category' . ( 0 === $active_id ? ' is-active' : '' ) . '" href="' . esc_url( $shop_url ) . '">همه محصولات</a>';
+                  foreach ( $terms as $term ) {
+                      if ( 'uncategorized' === $term->slug ) { continue; }
+                      $url = get_term_link( $term ); if ( is_wp_error( $url ) ) { continue; }
+                      $class = 'gramiss-shop-category' . ( $active_id === (int) $term->term_id ? ' is-active' : '' );
+                      echo '<a class="' . esc_attr( $class ) . '" href="' . esc_url( $url ) . '">' . esc_html( $term->name ) . '</a>';
+                  }
+                  echo '</div></nav>';
+              }
+              add_action( 'woocommerce_before_shop_loop', 'gramiss_render_shop_category_nav', 6 );
+          }
+          '''
 
+          css=r'''/* GRAMISS_SHOP_CATEGORY_NAV_V1 */
+          html.gramiss-shop-cleaning body #content{opacity:0!important}
+          body.gse-shop-ready .gramiss-shop-categories{width:min(100% - 48px,1480px)!important;margin:8px auto 10px!important;padding:0!important;background:transparent!important;direction:rtl!important}
+          body.gse-shop-ready .gramiss-shop-categories__inner{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:7px!important;overflow-x:auto!important;overscroll-behavior-x:contain!important;scrollbar-width:none!important;padding:2px 0 4px!important;white-space:nowrap!important}
+          body.gse-shop-ready .gramiss-shop-categories__inner::-webkit-scrollbar{display:none!important}
+          body.gse-shop-ready .gramiss-shop-category{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:36px!important;padding:0 15px!important;border:1px solid rgba(17,19,24,.09)!important;border-radius:999px!important;background:rgba(255,255,255,.82)!important;color:#73777d!important;text-decoration:none!important;font-size:12px!important;font-weight:650!important;line-height:1!important;box-shadow:none!important;flex:0 0 auto!important}
+          body.gse-shop-ready .gramiss-shop-category:hover,body.gse-shop-ready .gramiss-shop-category:focus-visible{color:#111318!important;background:#fff!important;border-color:rgba(17,19,24,.2)!important}
+          body.gse-shop-ready .gramiss-shop-category.is-active{color:#fff!important;background:#111318!important;border-color:#111318!important}
+          body.gse-shop-ready .gse-catalog-toolbar{margin-top:8px!important}
+          body.gse-shop-ready .gse-legacy-band-hidden{display:none!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;background:none!important}
+          body.gse-shop-ready .gse-strip-host-clean::before,body.gse-shop-ready .gse-strip-host-clean::after{display:none!important;content:none!important;background:none!important;height:0!important}
+          body.gse-shop-ready #content::before,body.gse-shop-ready #content::after,body.gse-shop-ready .site-content::before,body.gse-shop-ready .site-content::after,body.gse-shop-ready main.site-main::before,body.gse-shop-ready main.site-main::after{background:none!important}
+          @media(max-width:900px){body.gse-shop-ready .gramiss-shop-categories{width:calc(100% - 32px)!important;margin:8px auto 6px!important}body.gse-shop-ready .gramiss-shop-category{min-height:34px!important;padding:0 13px!important;font-size:11px!important}}
+          '''
+
+          js=r'''/* GRAMISS_SHOP_BAND_CLEANUP_V1 */
+          (function(){'use strict';
+          function rgb(v){var m=String(v||'').match(/rgba?\((\d+)[, ]+(\d+)[, ]+(\d+)/i);return m?[+m[1],+m[2],+m[3]]:null}
+          function isTaupe(v){var c=rgb(v);if(!c)return false;var r=c[0],g=c[1],b=c[2],mx=Math.max(r,g,b),mn=Math.min(r,g,b);return r>=105&&r<=205&&g>=95&&g<=195&&b>=85&&b<=185&&(mx-mn)<=48&&r>=b}
+          function taupeStyle(s){return isTaupe(s.backgroundColor)||isTaupe(s.backgroundImage)}
+          function clean(){
+            try{
+              var header=document.querySelector('.site-header,#masthead,header');var hb=header?header.getBoundingClientRect().bottom:220;var maxTop=hb+145;
+              Array.prototype.forEach.call(document.querySelectorAll('div,section,aside,main'),function(el){
+                var r=el.getBoundingClientRect();if(r.width<innerWidth*.68||r.top<hb-8||r.top>maxTop||r.height<4||r.height>62)return;
+                var s=getComputedStyle(el);if(taupeStyle(s)&&String(el.textContent||'').trim().length<4){el.classList.add('gse-legacy-band-hidden');return}
+                ['::before','::after'].forEach(function(p){var ps=getComputedStyle(el,p),h=parseFloat(ps.height)||0;if(h>=4&&h<=62&&taupeStyle(ps)){el.classList.add('gse-strip-host-clean')}});
+              });
+            }finally{document.documentElement.classList.remove('gramiss-shop-cleaning')}
+          }
+          if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',clean,{once:true});else clean();
+          setTimeout(clean,250);setTimeout(clean,800);window.addEventListener('pageshow',clean);
+          })();
+          '''
+
+          header=read('header.php')
           hstart='<!-- GRAMISS SHOP CATEGORY NAV START -->'; hend='<!-- GRAMISS SHOP CATEGORY NAV END -->'
           block=f'''{hstart}\n<?php if ( function_exists( 'is_shop' ) && ( is_shop() || ( function_exists( 'is_product_category' ) && is_product_category() ) || is_post_type_archive( 'product' ) ) ) :\nrequire_once get_stylesheet_directory() . '/inc/shop-category-nav.php'; ?>\n<script>document.documentElement.classList.add('gramiss-shop-cleaning');</script>\n<link id="gramiss-shop-category-nav-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/shop-category-nav.css?v=20260813-1' ); ?>">\n<script id="gramiss-shop-category-nav-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/shop-category-nav.js?v=20260813-1' ); ?>"></script>\n<?php endif; ?>\n{hend}'''
-          if hstart in header and hend in header:
-              header_new=header.split(hstart,1)[0]+block+header.split(hend,1)[1]
-          elif '</head>' in header:
-              header_new=header.replace('</head>',block+'\n</head>',1)
+          if hstart in header and hend in header: header_new=header.split(hstart,1)[0]+block+header.split(hend,1)[1]
+          elif '</head>' in header: header_new=header.replace('</head>',block+'\n</head>',1)
           else: raise RuntimeError('Could not locate </head>')
 
           save(f'header.php.bak-shopcat-{stamp}',header)
           try:
-              old_php=read('inc/shop-category-nav.php')
-              save(f'inc/shop-category-nav.php.bak-{stamp}',old_php)
-          except Exception:
-              pass
+              old_php=read('inc/shop-category-nav.php'); save(f'inc/shop-category-nav.php.bak-{stamp}',old_php)
+          except Exception: pass
           print('Backups created: '+stamp)
           save('inc/shop-category-nav.php',php)
           save('assets/css/shop-category-nav.css',css)
@@ -81,15 +137,15 @@ jobs:
           save('header.php',header_new)
 
           lp=read('inc/shop-category-nav.php'); lh=read('header.php'); lc=read('assets/css/shop-category-nav.css'); lj=read('assets/js/shop-category-nav.js')
+          compact=''.join(lc.split())
           checks={
             'native categories hook':'GRAMISS_SHOP_CATEGORY_NAV_PHP_V1' in lp and 'woocommerce_before_shop_loop' in lp and 'product_cat' in lp,
             'all products link':'همه محصولات' in lp and 'wc_get_page_permalink' in lp,
             'top-level categories':"'parent'     => 0" in lp,
             'asset loader':'shop-category-nav.css?v=20260813-1' in lh and 'shop-category-nav.js?v=20260813-1' in lh,
             'php loader':"/inc/shop-category-nav.php" in lh,
-            'cleaning gate':'gramiss-shop-cleaning' in lh,
             'category css':'GRAMISS_SHOP_CATEGORY_NAV_V1' in lc and '.gramiss-shop-categories' in lc,
-            'mobile swipe':'overflow-x:auto!important' in ''.join(lc.split()),
+            'mobile swipe':'overflow-x:auto!important' in compact,
             'band cleanup js':'GRAMISS_SHOP_BAND_CLEANUP_V1' in lj and 'isTaupe' in lj and 'gse-legacy-band-hidden' in lj,
             'pseudo cleanup':'gse-strip-host-clean' in lj and 'gse-strip-host-clean::before' in lc,
           }
