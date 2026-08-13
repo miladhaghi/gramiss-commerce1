@@ -6,7 +6,7 @@ on:
 
 jobs:
   deploy:
-    if: github.head_ref == 'ops/shop-category-nav'
+    if: github.head_ref == 'ops/shop-related-final-polish'
     runs-on: ubuntu-latest
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
