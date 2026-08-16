@@ -1,0 +1,106 @@
+name: cPanel PDP Pants Size Integrated
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.head_ref == 'ops/pdp-pants-size-integrated'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - name: Integrate pants size into primary variation UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re, ssl, time, urllib.parse, urllib.request
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S', time.gmtime())
+
+          def call(func, params, post=False):
+              url=f'https://{host}:2083/execute/Fileman/{func}'
+              enc=urllib.parse.urlencode(params).encode()
+              last=None
+              for attempt in range(1,6):
+                  try:
+                      req=urllib.request.Request(url if post else url+'?'+enc.decode(), data=enc if post else None, method='POST' if post else 'GET')
+                      req.add_header('Authorization', f'cpanel {user}:{token}')
+                      if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+                      with urllib.request.urlopen(req, context=ctx, timeout=75) as r:
+                          payload=json.loads(r.read().decode('utf-8'))
+                      result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
+                      if not isinstance(result,dict) or result.get('status')!=1:
+                          raise RuntimeError(f'{func} failed: {result.get("errors") if isinstance(result,dict) else "unknown"}')
+                      return result.get('data')
+                  except Exception as exc:
+                      last=exc; print(f'Attempt {attempt}/5 failed for {func}: {exc}')
+                      if attempt<5: time.sleep(attempt*4)
+              raise last
+
+          def get_file(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else f'{root}/{parent}'
+              data=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(data,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(data.get(k),str): return data[k]
+              if isinstance(data,str): return data
+              raise RuntimeError(f'Unexpected content for {rel}')
+
+          def save_file(rel, content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else f'{root}/{parent}'
+              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},post=True)
+
+          js_rel='assets/js/product-runtime-variation-ui.js'
+          header=get_file('header.php')
+          js=get_file(js_rel)
+
+          save_file(f'header.php.bak-pantssize-integrated-{stamp}',header)
+          save_file(f'assets/js/product-runtime-variation-ui.js.bak-pantssize-integrated-{stamp}',js)
+          print('Backups created: '+stamp)
+
+          old="return key.indexOf('clothing-size')!==-1 || key.indexOf('pa_size')!==-1 || key.indexOf('attribute_size')!==-1 || key.indexOf('سایز')!==-1;"
+          new="return key.indexOf('clothing-size')!==-1 || key.indexOf('pants-size')!==-1 || key.indexOf('pants_size')!==-1 || key.indexOf('trouser-size')!==-1 || key.indexOf('trouser_size')!==-1 || key.indexOf('jeans-size')!==-1 || key.indexOf('jeans_size')!==-1 || key.indexOf('pa_size')!==-1 || key.indexOf('attribute_size')!==-1 || key.indexOf('سایز')!==-1;"
+          if old in js:
+              js_new=js.replace(old,new,1)
+          elif "key.indexOf('pants-size')" in js:
+              js_new=js
+          else:
+              raise RuntimeError('Primary isSizeSelect signature not found; refusing blind patch')
+
+          start='<!-- GRAMISS PDP TROUSER SIZE START -->'; end='<!-- GRAMISS PDP TROUSER SIZE END -->'
+          if start in header and end in header:
+              before,rest=header.split(start,1)
+              _,after=rest.split(end,1)
+              header_new=before+after
+          else:
+              header_new=header
+
+          header_new=re.sub(r'product-runtime-variation-ui\.js\?v=[0-9A-Za-z._-]+','product-runtime-variation-ui.js?v=20260816-2',header_new)
+
+          save_file(js_rel,js_new)
+          save_file('header.php',header_new)
+
+          live_js=get_file(js_rel); live_header=get_file('header.php')
+          checks={
+              'primary UI marker':'GRAMISS_PDP_VARIATION_UI_V1' in live_js,
+              'pants-size integrated':"key.indexOf('pants-size')" in live_js,
+              'trouser-size integrated':"key.indexOf('trouser-size')" in live_js,
+              'jeans-size integrated':"key.indexOf('jeans-size')" in live_js,
+              'native button class':'g3-size-option' in live_js,
+              'Woo select sync':"trigger('change')" in live_js,
+              'temporary loader removed':'GRAMISS PDP TROUSER SIZE START' not in live_header and 'product-trouser-size-ui.js' not in live_header,
+              'primary loader cache-busted':'product-runtime-variation-ui.js?v=20260816-2' in live_header,
+          }
+          for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
+          if not all(checks.values()): raise SystemExit('Integrated pants size UI verification failed')
+          print('LIVE PDP PANTS SIZE INTEGRATED INTO PRIMARY VARIATION UI AND VERIFIED')
+          PY
