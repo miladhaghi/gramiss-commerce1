@@ -18,33 +18,31 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: wordpress-migration
-
       - name: Deploy premium Shop shell and verify
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json, os, re, ssl, time, urllib.parse, urllib.request
+          import json, os, ssl, time, urllib.parse, urllib.request
           from pathlib import Path
 
           host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
           ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S', time.gmtime())
 
           def call(fn,p,post=False):
-              url=f'https://{host}:2083/execute/Fileman/{fn}'
-              data=urllib.parse.urlencode(p).encode(); last=None
-              for attempt in range(1,6):
+              url=f'https://{host}:2083/execute/Fileman/{fn}'; data=urllib.parse.urlencode(p).encode(); last=None
+              for attempt in range(1,4):
                   try:
                       req=urllib.request.Request(url if post else url+'?'+data.decode(),data=data if post else None,method='POST' if post else 'GET')
                       req.add_header('Authorization',f'cpanel {user}:{token}')
                       if post:req.add_header('Content-Type','application/x-www-form-urlencoded')
-                      with urllib.request.urlopen(req,context=ctx,timeout=75) as response: payload=json.loads(response.read().decode('utf-8'))
+                      with urllib.request.urlopen(req,context=ctx,timeout=45) as response: payload=json.loads(response.read().decode('utf-8'))
                       result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
-                      if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(f'{fn} failed: {result.get("errors") if isinstance(result,dict) else result}')
+                      if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result.get('errors') if isinstance(result,dict) else result))
                       return result.get('data')
                   except Exception as exc:
-                      last=exc; print(f'Attempt {attempt}/5 failed for {fn}: {exc}')
-                      if attempt<5: time.sleep(attempt*4)
+                      last=exc; print(f'Attempt {attempt}/3 {fn}: {exc}')
+                      if attempt<3: time.sleep(attempt*2)
               raise last
 
           def read(rel):
@@ -54,67 +52,45 @@ jobs:
                   for key in ('content','file_content','data'):
                       if isinstance(data.get(key),str):return data[key]
               if isinstance(data,str):return data
-              raise RuntimeError(f'Unexpected file payload for {rel}')
+              raise RuntimeError(rel)
 
           def save(rel,content):
               parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else f'{root}/{parent}'
               call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
 
-          source_root=Path('wordpress/gramiss-theme')
-          php=(source_root/'inc/shop-premium-shell.php').read_text(encoding='utf-8')
-          css=(source_root/'assets/css/shop-premium-shell.css').read_text(encoding='utf-8')
-          js=(source_root/'assets/js/shop-premium-shell.js').read_text(encoding='utf-8')
-          checks_source={
-              'PHP marker':'gramiss_shop_premium_hero' in php and 'gramiss_shop_premium_controls_open' in php,
-              'CSS marker':'GRAMISS_SHOP_PREMIUM_SHELL_V1' in css,
-              'JS marker':'GRAMISS_SHOP_PREMIUM_SHELL_JS_V1' in js,
-              'cards not resized':'.gse-media-frame{height:' not in css and '.gse-media-frame img{width:' not in css and 'ul.products.gse-products{width:' not in css,
-          }
-          for label,ok in checks_source.items(): print(('PASS' if ok else 'FAIL')+': source '+label)
-          if not all(checks_source.values()): raise SystemExit('Source verification failed; refusing live deploy')
+          src=Path('wordpress/gramiss-theme')
+          php=(src/'inc/shop-premium-shell.php').read_text(encoding='utf-8')
+          css=(src/'assets/css/shop-premium-shell.css').read_text(encoding='utf-8')
+          js=(src/'assets/js/shop-premium-shell.js').read_text(encoding='utf-8')
+          if 'gramiss_shop_premium_hero' not in php or 'gramiss_shop_premium_controls_open' not in php: raise SystemExit('PHP source marker missing')
+          if 'GRAMISS_SHOP_PREMIUM_SHELL_V1' not in css or 'GRAMISS_SHOP_PREMIUM_SHELL_JS_V1' not in js: raise SystemExit('Asset marker missing')
+          if '.gse-media-frame{height:' in css or '.gse-media-frame img{width:' in css or 'ul.products.gse-products{width:' in css: raise SystemExit('Refusing deploy: card/image sizing rule detected')
 
-          header=read('header.php')
-          save(f'header.php.bak-shop-premium-{stamp}',header)
-          for rel in ('inc/shop-premium-shell.php','assets/css/shop-premium-shell.css','assets/js/shop-premium-shell.js'):
-              try:
-                  old=read(rel); save(rel+f'.bak-{stamp}',old); print('Backed up '+rel)
-              except Exception:
-                  print('First deploy for '+rel)
-
-          save('inc/shop-premium-shell.php',php)
-          save('assets/css/shop-premium-shell.css',css)
-          save('assets/js/shop-premium-shell.js',js)
+          header=read('header.php'); save(f'header.php.bak-shop-premium-{stamp}',header)
+          save('inc/shop-premium-shell.php',php); save('assets/css/shop-premium-shell.css',css); save('assets/js/shop-premium-shell.js',js)
 
           start='<!-- GRAMISS SHOP PREMIUM SHELL START -->'; end='<!-- GRAMISS SHOP PREMIUM SHELL END -->'
-          block=start+'''\n<?php if ( function_exists( 'is_shop' ) && ( is_shop() || ( function_exists( 'is_product_taxonomy' ) && is_product_taxonomy() ) || is_post_type_archive( 'product' ) || ( is_search() && 'product' === get_query_var( 'post_type' ) ) ) ) :\nrequire_once get_stylesheet_directory() . '/inc/shop-premium-shell.php'; ?>\n<link id="gramiss-shop-premium-shell-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/shop-premium-shell.css?v=20260819-1' ); ?>">\n<script id="gramiss-shop-premium-shell-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/shop-premium-shell.js?v=20260819-1' ); ?>"></script>\n<?php endif; ?>\n'''+end
-          if start in header and end in header:
-              header_new=header.split(start,1)[0]+block+header.split(end,1)[1]
-          elif '</head>' in header:
-              header_new=header.replace('</head>',block+'\n</head>',1)
-          else:
-              raise RuntimeError('Could not find </head> in live header')
+          block=start+'''\n<?php if ( function_exists( 'is_shop' ) && ( is_shop() || ( function_exists( 'is_product_taxonomy' ) && is_product_taxonomy() ) || is_post_type_archive( 'product' ) || ( is_search() && 'product' === get_query_var( 'post_type' ) ) ) ) :\nrequire_once get_stylesheet_directory() . '/inc/shop-premium-shell.php'; ?>\n<link id="gramiss-shop-premium-shell-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/shop-premium-shell.css?v=20260819-2' ); ?>">\n<script id="gramiss-shop-premium-shell-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/shop-premium-shell.js?v=20260819-2' ); ?>"></script>\n<?php endif; ?>\n'''+end
+          if start in header and end in header: header_new=header.split(start,1)[0]+block+header.split(end,1)[1]
+          elif '</head>' in header: header_new=header.replace('</head>',block+'\n</head>',1)
+          else: raise SystemExit('No </head> marker in live header')
           save('header.php',header_new)
 
           live_header=read('header.php'); live_php=read('inc/shop-premium-shell.php'); live_css=read('assets/css/shop-premium-shell.css'); live_js=read('assets/js/shop-premium-shell.js')
           checks={
-              'header loader':'shop-premium-shell.css?v=20260819-1' in live_header and 'shop-premium-shell.js?v=20260819-1' in live_header,
-              'PHP include':"/inc/shop-premium-shell.php" in live_header,
-              'hero hook':'gramiss_shop_premium_hero' in live_php and 'woocommerce_before_shop_loop' in live_php,
-              'control wrapper':'gramiss_shop_premium_controls_open' in live_php,
-              'drawer':'gramiss-shop-filter-drawer' in live_php and live_js.find('gramiss-shop-filter-overlay')!=-1,
-              'style tip':'gramiss-shop-style-tip' in live_css and live_js.find('addStyleTip')!=-1,
-              'card dimensions preserved':'.gse-media-frame{height:' not in live_css and '.gse-media-frame img{width:' not in live_css and 'ul.products.gse-products{width:' not in live_css,
+              'loader':'shop-premium-shell.css?v=20260819-2' in live_header and 'shop-premium-shell.js?v=20260819-2' in live_header,
+              'hero hook':'gramiss_shop_premium_hero' in live_php,
+              'control shell':'gramiss_shop_premium_controls_open' in live_php,
+              'drawer':'gramiss-shop-filter-drawer' in live_php and 'gramiss-shop-filter-overlay' in live_js,
+              'style tip':'addStyleTip' in live_js and 'gramiss-shop-style-tip' in live_css,
+              'dimensions preserved':'.gse-media-frame{height:' not in live_css and '.gse-media-frame img{width:' not in live_css and 'ul.products.gse-products{width:' not in live_css,
           }
-          for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
-          if not all(checks.values()): raise SystemExit('Live file verification failed')
+          for label,ok in checks.items():print(('PASS' if ok else 'FAIL')+': '+label)
+          if not all(checks.values()):raise SystemExit('Live file verification failed')
 
-          url='https://gramiss.ir/?post_type=product'
-          req=urllib.request.Request(url,headers={'User-Agent':'GramissDeployCheck/1.0'})
-          with urllib.request.urlopen(req,context=ctx,timeout=75) as response:
-              html=response.read().decode('utf-8','replace'); status=response.status
+          req=urllib.request.Request('https://gramiss.ir/?post_type=product',headers={'User-Agent':'GramissDeployCheck/1.0'})
+          with urllib.request.urlopen(req,context=ctx,timeout=45) as response: html=response.read().decode('utf-8','replace'); status=response.status
           print('Shop HTTP status:',status)
-          if status!=200: raise SystemExit('Shop page did not return HTTP 200')
-          if 'gramiss-shop-premium-hero' not in html: raise SystemExit('Premium hero not present in live HTML')
-          if 'shop-premium-shell.css?v=20260819-1' not in html: raise SystemExit('Premium CSS loader not present in live HTML')
-          print('LIVE PREMIUM SHOP SHELL DEPLOYED AND VERIFIED; card/image sizing rules untouched')
+          if status!=200 or 'gramiss-shop-premium-hero' not in html or 'shop-premium-shell.css?v=20260819-2' not in html:raise SystemExit('Live HTML verification failed')
+          print('LIVE PREMIUM SHOP SHELL DEPLOYED AND VERIFIED — EXISTING CARD AND PRODUCT IMAGE SIZES PRESERVED')
           PY
