@@ -9,11 +9,17 @@ defined( 'ABSPATH' ) || exit;
 
 if ( ! function_exists( 'gramiss_shop_premium_is_catalog' ) ) {
     function gramiss_shop_premium_is_catalog(): bool {
-        return function_exists( 'is_shop' ) && (
-            is_shop() ||
-            ( function_exists( 'is_product_taxonomy' ) && is_product_taxonomy() ) ||
-            is_post_type_archive( 'product' ) ||
-            ( is_search() && 'product' === get_query_var( 'post_type' ) )
+        $query_archive = ! empty( $_GET['post_type'] )
+            && 'product' === sanitize_key( wp_unslash( $_GET['post_type'] ) )
+            && ( ! function_exists( 'is_singular' ) || ! is_singular( 'product' ) );
+
+        return $query_archive || (
+            function_exists( 'is_shop' ) && (
+                is_shop() ||
+                ( function_exists( 'is_product_taxonomy' ) && is_product_taxonomy() ) ||
+                is_post_type_archive( 'product' ) ||
+                ( is_search() && 'product' === get_query_var( 'post_type' ) )
+            )
         );
     }
 }
