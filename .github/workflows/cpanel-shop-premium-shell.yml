@@ -62,7 +62,7 @@ jobs:
           php=(src/'inc/shop-premium-shell.php').read_text(encoding='utf-8')
           css=(src/'assets/css/shop-premium-shell.css').read_text(encoding='utf-8')
           js=(src/'assets/js/shop-premium-shell.js').read_text(encoding='utf-8')
-          if 'gramiss_shop_premium_hero' not in php or 'gramiss_shop_premium_controls_open' not in php: raise SystemExit('PHP source marker missing')
+          if 'gramiss_shop_premium_hero' not in php or 'gramiss_shop_premium_controls_open' not in php or '$query_archive' not in php: raise SystemExit('PHP source marker missing')
           if 'GRAMISS_SHOP_PREMIUM_SHELL_V1' not in css or 'GRAMISS_SHOP_PREMIUM_SHELL_JS_V1' not in js: raise SystemExit('Asset marker missing')
           if '.gse-media-frame{height:' in css or '.gse-media-frame img{width:' in css or 'ul.products.gse-products{width:' in css: raise SystemExit('Refusing deploy: card/image sizing rule detected')
 
@@ -70,7 +70,7 @@ jobs:
           save('inc/shop-premium-shell.php',php); save('assets/css/shop-premium-shell.css',css); save('assets/js/shop-premium-shell.js',js)
 
           start='<!-- GRAMISS SHOP PREMIUM SHELL START -->'; end='<!-- GRAMISS SHOP PREMIUM SHELL END -->'
-          block=start+'''\n<?php if ( function_exists( 'is_shop' ) && ( is_shop() || ( function_exists( 'is_product_taxonomy' ) && is_product_taxonomy() ) || is_post_type_archive( 'product' ) || ( is_search() && 'product' === get_query_var( 'post_type' ) ) ) ) :\nrequire_once get_stylesheet_directory() . '/inc/shop-premium-shell.php'; ?>\n<link id="gramiss-shop-premium-shell-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/shop-premium-shell.css?v=20260819-2' ); ?>">\n<script id="gramiss-shop-premium-shell-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/shop-premium-shell.js?v=20260819-2' ); ?>"></script>\n<?php endif; ?>\n'''+end
+          block=start+'''\n<?php require_once get_stylesheet_directory() . '/inc/shop-premium-shell.php'; ?>\n<link id="gramiss-shop-premium-shell-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/shop-premium-shell.css?v=20260819-3' ); ?>">\n<script id="gramiss-shop-premium-shell-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/shop-premium-shell.js?v=20260819-3' ); ?>"></script>\n'''+end
           if start in header and end in header: header_new=header.split(start,1)[0]+block+header.split(end,1)[1]
           elif '</head>' in header: header_new=header.replace('</head>',block+'\n</head>',1)
           else: raise SystemExit('No </head> marker in live header')
@@ -78,8 +78,9 @@ jobs:
 
           live_header=read('header.php'); live_php=read('inc/shop-premium-shell.php'); live_css=read('assets/css/shop-premium-shell.css'); live_js=read('assets/js/shop-premium-shell.js')
           checks={
-              'loader':'shop-premium-shell.css?v=20260819-2' in live_header and 'shop-premium-shell.js?v=20260819-2' in live_header,
+              'unconditional loader':"require_once get_stylesheet_directory() . '/inc/shop-premium-shell.php';" in live_header and 'shop-premium-shell.css?v=20260819-3' in live_header and 'shop-premium-shell.js?v=20260819-3' in live_header,
               'hero hook':'gramiss_shop_premium_hero' in live_php,
+              'query archive detection':'$query_archive' in live_php and "'product' === sanitize_key" in live_php,
               'control shell':'gramiss_shop_premium_controls_open' in live_php,
               'drawer':'gramiss-shop-filter-drawer' in live_php and 'gramiss-shop-filter-overlay' in live_js,
               'style tip':'addStyleTip' in live_js and 'gramiss-shop-style-tip' in live_css,
@@ -88,9 +89,12 @@ jobs:
           for label,ok in checks.items():print(('PASS' if ok else 'FAIL')+': '+label)
           if not all(checks.values()):raise SystemExit('Live file verification failed')
 
-          req=urllib.request.Request('https://gramiss.ir/?post_type=product',headers={'User-Agent':'GramissDeployCheck/1.0'})
+          verify_url='https://gramiss.ir/?'+urllib.parse.urlencode({'post_type':'product','_gramiss_shell_check':stamp})
+          req=urllib.request.Request(verify_url,headers={'User-Agent':'GramissDeployCheck/1.0','Cache-Control':'no-cache'})
           with urllib.request.urlopen(req,context=ctx,timeout=45) as response: html=response.read().decode('utf-8','replace'); status=response.status
           print('Shop HTTP status:',status)
-          if status!=200 or 'gramiss-shop-premium-hero' not in html or 'shop-premium-shell.css?v=20260819-2' not in html:raise SystemExit('Live HTML verification failed')
+          print('Hero marker in HTML:', 'gramiss-shop-premium-hero' in html)
+          print('CSS loader in HTML:', 'shop-premium-shell.css?v=20260819-3' in html)
+          if status!=200 or 'gramiss-shop-premium-hero' not in html or 'shop-premium-shell.css?v=20260819-3' not in html:raise SystemExit('Live HTML verification failed')
           print('LIVE PREMIUM SHOP SHELL DEPLOYED AND VERIFIED — EXISTING CARD AND PRODUCT IMAGE SIZES PRESERVED')
           PY
