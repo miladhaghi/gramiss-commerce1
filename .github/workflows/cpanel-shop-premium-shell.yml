@@ -65,7 +65,7 @@ jobs:
           css=(source_root/'assets/css/shop-premium-shell.css').read_text(encoding='utf-8')
           js=(source_root/'assets/js/shop-premium-shell.js').read_text(encoding='utf-8')
           checks_source={
-              'PHP marker':'gramiss_shop_premium_hero' in php and 'gramiss_shop_control_shell' in php,
+              'PHP marker':'gramiss_shop_premium_hero' in php and 'gramiss_shop_premium_controls_open' in php,
               'CSS marker':'GRAMISS_SHOP_PREMIUM_SHELL_V1' in css,
               'JS marker':'GRAMISS_SHOP_PREMIUM_SHELL_JS_V1' in js,
               'cards not resized':'.gse-media-frame{height:' not in css and '.gse-media-frame img{width:' not in css and 'ul.products.gse-products{width:' not in css,
@@ -100,7 +100,7 @@ jobs:
               'header loader':'shop-premium-shell.css?v=20260819-1' in live_header and 'shop-premium-shell.js?v=20260819-1' in live_header,
               'PHP include':"/inc/shop-premium-shell.php" in live_header,
               'hero hook':'gramiss_shop_premium_hero' in live_php and 'woocommerce_before_shop_loop' in live_php,
-              'control wrapper':'gramiss_shop_control_shell' in live_php,
+              'control wrapper':'gramiss_shop_premium_controls_open' in live_php,
               'drawer':'gramiss-shop-filter-drawer' in live_php and live_js.find('gramiss-shop-filter-overlay')!=-1,
               'style tip':'gramiss-shop-style-tip' in live_css and live_js.find('addStyleTip')!=-1,
               'card dimensions preserved':'.gse-media-frame{height:' not in live_css and '.gse-media-frame img{width:' not in live_css and 'ul.products.gse-products{width:' not in live_css,
