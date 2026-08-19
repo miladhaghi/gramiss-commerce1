@@ -1,0 +1,124 @@
+name: cPanel Premium Cart Redesign
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.head_ref == 'ops/cart-premium-redesign'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - name: Checkout Gramiss source
+        uses: actions/checkout@v4
+        with:
+          ref: wordpress-migration
+
+      - name: Deploy premium cart redesign and verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re, ssl, time, urllib.parse, urllib.request
+          from pathlib import Path
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S', time.gmtime())
+
+          def call(func, params, post=False):
+              url=f'https://{host}:2083/execute/Fileman/{func}'
+              enc=urllib.parse.urlencode(params).encode()
+              last=None
+              for attempt in range(1,6):
+                  try:
+                      req=urllib.request.Request(url if post else url+'?'+enc.decode(), data=enc if post else None, method='POST' if post else 'GET')
+                      req.add_header('Authorization', f'cpanel {user}:{token}')
+                      if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+                      with urllib.request.urlopen(req, context=ctx, timeout=75) as r:
+                          payload=json.loads(r.read().decode('utf-8'))
+                      result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
+                      if not isinstance(result,dict) or result.get('status')!=1:
+                          raise RuntimeError(f'{func} failed: {result.get("errors") if isinstance(result,dict) else "unknown"}')
+                      return result.get('data')
+                  except Exception as exc:
+                      last=exc; print(f'Attempt {attempt}/5 failed for {func}: {exc}')
+                      if attempt<5: time.sleep(attempt*4)
+              raise last
+
+          def get_file(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else f'{root}/{parent}'
+              data=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(data,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(data.get(k),str): return data[k]
+              if isinstance(data,str): return data
+              raise RuntimeError(f'Unexpected content for {rel}')
+
+          def save_file(rel, content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else f'{root}/{parent}'
+              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},post=True)
+
+          source_rel='wordpress/gramiss-theme/inc/cart-premium.php'
+          source=Path(source_rel).read_text(encoding='utf-8')
+          if 'gramiss_premium_cart_assets' not in source or 'gramiss-cart-service-rail' not in source:
+              raise RuntimeError('Premium cart source verification failed before deploy')
+
+          loader_rel='inc/woocommerce.php'
+          live_loader=get_file(loader_rel)
+          save_file(f'inc/woocommerce.php.bak-cart-redesign-{stamp}',live_loader)
+          print('Loader backup created: '+stamp)
+
+          try:
+              old_cart=get_file('inc/cart-premium.php')
+              save_file(f'inc/cart-premium.php.bak-cart-redesign-{stamp}',old_cart)
+              print('Premium cart backup created')
+          except Exception:
+              print('No previous premium cart file found; first deploy')
+
+          save_file('inc/cart-premium.php',source)
+
+          start='/* GRAMISS PREMIUM CART LOADER START */'
+          end='/* GRAMISS PREMIUM CART LOADER END */'
+          block=start+"\nrequire_once get_template_directory() . '/inc/cart-premium.php';\n"+end
+          if start in live_loader and end in live_loader:
+              prefix=live_loader.split(start,1)[0]
+              suffix=live_loader.split(end,1)[1]
+              patched=prefix.rstrip()+'\n\n'+block+'\n'+suffix.lstrip()
+          else:
+              closing=re.search(r'\?>\s*$',live_loader)
+              if closing:
+                  patched=live_loader[:closing.start()].rstrip()+'\n\n'+block+'\n\n'+live_loader[closing.start():]
+              else:
+                  patched=live_loader.rstrip()+'\n\n'+block+'\n'
+          save_file(loader_rel,patched)
+
+          live_cart=get_file('inc/cart-premium.php'); live_loader2=get_file(loader_rel)
+          checks={
+              'premium cart file': 'gramiss_premium_cart_assets' in live_cart,
+              'service rail': 'gramiss-cart-service-rail' in live_cart,
+              'quantity stepper': 'gramiss-qty-plus' in live_cart,
+              'summary styling': 'خلاصه سفارش' in live_cart,
+              'loader include': "require_once get_template_directory() . '/inc/cart-premium.php';" in live_loader2,
+          }
+          for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
+          if not all(checks.values()): raise SystemExit('Live premium cart verification failed')
+
+          page_url='https://gramiss.ir/?page_id=10'
+          req=urllib.request.Request(page_url,headers={'User-Agent':'GramissDeployCheck/1.0'})
+          with urllib.request.urlopen(req,context=ctx,timeout=75) as response:
+              html=response.read().decode('utf-8','replace'); status=response.status
+          print(f'Cart page HTTP status: {status}')
+          if status!=200: raise SystemExit('Cart page did not return HTTP 200')
+          if 'gramiss-cart-service-rail' not in html and 'gramiss-cart-perks' not in html:
+              print('Cart is likely empty for the deploy session; checking CSS marker instead')
+              if 'body.woocommerce-cart .content-area' not in html:
+                  raise SystemExit('Premium cart CSS was not emitted on live cart page')
+          print('LIVE PREMIUM CART REDESIGN DEPLOYED AND VERIFIED')
+          PY
