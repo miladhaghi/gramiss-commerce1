@@ -1,4 +1,4 @@
-/* GRAMISS_SHOP_PREMIUM_SHELL_JS_V1 */
+/* GRAMISS_SHOP_PREMIUM_SHELL_JS_V2 */
 (function(){
   'use strict';
 
@@ -43,28 +43,82 @@
   function taupe(value){
     var c=rgb(value);if(!c)return false;
     var r=c[0],g=c[1],b=c[2];
-    return r>=105&&r<=205&&g>=92&&g<=190&&b>=78&&b<=176&&r>=g&&g>=b&&Math.max(r,g,b)-Math.min(r,g,b)<=58;
+    return r>=105&&r<=205&&g>=92&&g<=195&&b>=78&&b<=185&&r>=g&&g>=b&&Math.max(r,g,b)-Math.min(r,g,b)<=62;
   }
-  function cleanLegacyBand(){
-    var header=qs('.site-header,#masthead,header');
-    var bottom=header?header.getBoundingClientRect().bottom:190;
-    qsa('div,section,aside').forEach(function(el){
-      if(el.closest('.gramiss-shop-premium-hero,.gramiss-shop-control-shell'))return;
+  function taupeStyle(style){
+    if(!style)return false;
+    if(taupe(style.backgroundColor)||taupe(style.borderTopColor)||taupe(style.borderBottomColor))return true;
+    var bg=String(style.backgroundImage||'');
+    var matches=bg.match(/rgba?\([^)]*\)/g)||[];
+    return matches.some(taupe);
+  }
+  function ensurePseudoKillStyle(){
+    if(qs('#gramiss-shop-top-cleanup-style'))return;
+    var style=document.createElement('style');
+    style.id='gramiss-shop-top-cleanup-style';
+    style.textContent='body.gse-shop-ready .gramiss-strip-pseudo-kill::before,body.gse-shop-ready .gramiss-strip-pseudo-kill::after{display:none!important;content:none!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;background:none!important;box-shadow:none!important}';
+    document.head.appendChild(style);
+  }
+
+  function cleanLegacyTitle(){
+    var hero=qs('.gramiss-shop-premium-hero');
+    if(!hero)return;
+    var heroTop=hero.getBoundingClientRect().top;
+    var currentTitle=(qs('h1',hero)||{}).textContent||'فروشگاه';
+    currentTitle=String(currentTitle).trim();
+    qsa('h1,h2,.page-title,.woocommerce-products-header__title,.entry-title').forEach(function(el){
+      if(el.closest('.gramiss-shop-premium-hero'))return;
+      var text=String(el.textContent||'').trim();
+      if(text!==currentTitle&&text!=='فروشگاه')return;
       var rect=el.getBoundingClientRect();
-      if(rect.width<innerWidth*.78||rect.top<bottom-4||rect.top>bottom+120||rect.height<5||rect.height>48)return;
-      if(String(el.textContent||'').trim().length>2)return;
-      var s=getComputedStyle(el);
-      if(taupe(s.backgroundColor)){el.style.setProperty('display','none','important');}
+      if(rect.bottom>heroTop+8)return;
+      var parent=el.closest('.woocommerce-products-header,.page-header,.entry-header');
+      var target=parent||el;
+      target.style.setProperty('display','none','important');
+      target.style.setProperty('margin','0','important');
+      target.style.setProperty('padding','0','important');
+      target.style.setProperty('min-height','0','important');
+      target.setAttribute('aria-hidden','true');
     });
   }
+
+  function cleanLegacyBand(){
+    ensurePseudoKillStyle();
+    var header=qs('.site-header,#masthead,header');
+    var bottom=header?header.getBoundingClientRect().bottom:190;
+    var hero=qs('.gramiss-shop-premium-hero');
+    var heroTop=hero?hero.getBoundingClientRect().top:bottom+180;
+    qsa('body *').forEach(function(el){
+      if(el===header||el.closest('.gramiss-shop-premium-hero,.gramiss-shop-control-shell,.gramiss-shop-filter-overlay'))return;
+      var rect=el.getBoundingClientRect();
+      if(rect.width<innerWidth*.72||rect.top<bottom-8||rect.top>Math.min(heroTop+12,bottom+170)||rect.height<3||rect.height>70)return;
+      var text=String(el.textContent||'').trim();
+      var s=getComputedStyle(el);
+      if(text.length<=4&&taupeStyle(s)){
+        el.style.setProperty('display','none','important');
+        el.style.setProperty('height','0','important');
+        el.style.setProperty('min-height','0','important');
+        el.style.setProperty('margin','0','important');
+        el.style.setProperty('padding','0','important');
+        return;
+      }
+      var before=getComputedStyle(el,'::before');
+      var after=getComputedStyle(el,'::after');
+      var pseudoTaupe=(before&&before.content!=='none'&&taupeStyle(before))||(after&&after.content!=='none'&&taupeStyle(after));
+      if(pseudoTaupe){el.classList.add('gramiss-strip-pseudo-kill');}
+    });
+  }
+
+  function cleanTop(){cleanLegacyTitle();cleanLegacyBand();}
 
   function init(){
     moveFilterTrigger();
     addStyleTip();
     bindDrawer();
-    cleanLegacyBand();
-    setTimeout(cleanLegacyBand,250);
-    setTimeout(cleanLegacyBand,900);
+    cleanTop();
+    setTimeout(cleanTop,120);
+    setTimeout(cleanTop,420);
+    setTimeout(cleanTop,1100);
   }
 
   if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',init,{once:true});}
