@@ -1,10 +1,8 @@
-/* GRAMISS_SHOP_RUNTIME_FINAL_FIX_V1
- * Final Shop runtime corrections: no first-paint legacy flash, physical RTL hero alignment,
+/* GRAMISS_SHOP_RUNTIME_FINAL_FIX_V2
+ * Final Shop runtime corrections: no first-paint legacy flash, physically right-locked hero copy,
  * and optically centered sort pills. Product card and product image sizing are untouched.
  */
 
-/* The existing first-paint gate targets #content, but the current Shop markup uses main#primary.
-   Gate the real Shop main until shop-category-nav.js finishes its synchronous cleanup. */
 html.gramiss-shop-cleaning body.post-type-archive-product main#primary,
 html.gramiss-shop-cleaning body.woocommerce-shop main#primary,
 html.gramiss-shop-cleaning body.tax-product_cat main#primary,
@@ -12,7 +10,6 @@ html.gramiss-shop-cleaning body.tax-product_tag main#primary {
   opacity: 0 !important;
 }
 
-/* Remove the legacy archive title before first paint; the premium hero owns the page title. */
 body.post-type-archive-product main#primary > h1.page-title,
 body.woocommerce-shop main#primary > h1.page-title,
 body.tax-product_cat main#primary > h1.page-title,
@@ -23,8 +20,6 @@ body.tax-product_tag main#primary > h1.page-title {
   min-height: 0 !important;
 }
 
-/* Current main uses gramiss-commerce-main rather than site-main. Kill the stale decorative band pseudos
-   that were previously cleaned only after JavaScript ran. */
 body.post-type-archive-product main#primary::before,
 body.post-type-archive-product main#primary::after,
 body.woocommerce-shop main#primary::before,
@@ -47,26 +42,40 @@ body.gse-shop-ready .gramiss-commerce-main::after {
   box-shadow: none !important;
 }
 
-/* Use physical alignment here so RTL logical-margin semantics cannot push the copy to the left. */
-body.gse-shop-ready .gramiss-shop-premium-hero {
-  direction: ltr !important;
-  justify-content: flex-end !important;
-}
-body.gse-shop-ready .gramiss-shop-premium-hero__copy {
-  direction: rtl !important;
-  width: min(100%, 760px) !important;
-  max-width: 760px !important;
-  margin: 0 !important;
-  text-align: right !important;
-  align-self: center !important;
-}
-body.gse-shop-ready .gramiss-shop-premium-hero__eyebrow,
-body.gse-shop-ready .gramiss-shop-premium-hero h1,
-body.gse-shop-ready .gramiss-shop-premium-hero p {
-  text-align: right !important;
+/* Desktop: lock the copy to the physical right edge of the hero.
+   Absolute positioning intentionally bypasses older RTL/flex logical-margin rules. */
+@media (min-width: 901px) {
+  body.gse-shop-ready .gramiss-shop-premium-hero {
+    position: relative !important;
+    display: block !important;
+    direction: rtl !important;
+  }
+
+  body.gse-shop-ready .gramiss-shop-premium-hero__copy {
+    position: absolute !important;
+    top: 50% !important;
+    right: 44px !important;
+    left: auto !important;
+    bottom: auto !important;
+    transform: translateY(-50%) !important;
+    width: min(760px, calc(100% - 88px)) !important;
+    max-width: 760px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    direction: rtl !important;
+    text-align: right !important;
+  }
+
+  body.gse-shop-ready .gramiss-shop-premium-hero__eyebrow,
+  body.gse-shop-ready .gramiss-shop-premium-hero h1,
+  body.gse-shop-ready .gramiss-shop-premium-hero p {
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    text-align: right !important;
+  }
 }
 
-/* Center Persian labels both geometrically and optically inside sort pills. */
 body.gse-shop-ready .gramiss-shop-control-shell .gse-sort-button {
   box-sizing: border-box !important;
   height: 38px !important;
@@ -83,9 +92,20 @@ body.gse-shop-ready .gramiss-shop-control-shell .gse-sort-button {
 @media (max-width: 900px) {
   body.gse-shop-ready .gramiss-shop-premium-hero {
     direction: rtl !important;
+    display: flex !important;
     justify-content: flex-start !important;
   }
+
   body.gse-shop-ready .gramiss-shop-premium-hero__copy {
+    position: relative !important;
+    top: auto !important;
+    right: auto !important;
+    left: auto !important;
+    bottom: auto !important;
+    transform: none !important;
     width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    text-align: right !important;
   }
 }
