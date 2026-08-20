@@ -19,55 +19,23 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json, os, re, ssl, urllib.parse, urllib.request
-          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
-          ctx=ssl._create_unverified_context()
+          import json, os, ssl, urllib.parse, urllib.request
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/'); ctx=ssl._create_unverified_context()
           def call(fn,p):
-              url=f'https://{host}:2083/execute/Fileman/{fn}?'+urllib.parse.urlencode(p)
-              req=urllib.request.Request(url); req.add_header('Authorization',f'cpanel {user}:{token}')
-              with urllib.request.urlopen(req,context=ctx,timeout=45) as r: payload=json.loads(r.read().decode('utf-8'))
-              result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
-              if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(result)
-              return result.get('data')
+              u=f'https://{host}:2083/execute/Fileman/{fn}?'+urllib.parse.urlencode(p); q=urllib.request.Request(u); q.add_header('Authorization',f'cpanel {user}:{token}')
+              with urllib.request.urlopen(q,context=ctx,timeout=45) as r: x=json.loads(r.read().decode())
+              y=x.get('result') if isinstance(x.get('result'),dict) else x
+              if not isinstance(y,dict) or y.get('status')!=1: raise RuntimeError(y)
+              return y.get('data')
           def read(rel):
-              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else f'{root}/{parent}'
-              data=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
-              if isinstance(data,dict):
+              p,n=rel.rsplit('/',1); d=f'{root}/{p}'; x=call('get_file_content',{'dir':d,'file':n,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(x,dict):
                   for k in ('content','file_content','data'):
-                      if isinstance(data.get(k),str): return data[k]
-              return data if isinstance(data,str) else ''
-
-          files=[
-            'assets/css/shop.css','assets/css/shop-premium.css','assets/css/shop-sculpted.css',
-            'assets/css/shop-category-nav.css','assets/css/shop-premium-shell.css','assets/css/gramiss-release.css',
-            'style.css'
-          ]
-          needles=['gramiss-shop-cleaning','site-header::','site-header:before','site-header:after','gramiss-commerce-main::','#primary::','page-title','background:#b','background: #b','background-color:#b','background-color: #b']
-          for rel in files:
-              try: text=read(rel)
-              except Exception as e:
-                  print('MISSING',rel,e); continue
-              print('\n=== SCAN',rel,'===')
-              for i,line in enumerate(text.splitlines(),1):
-                  low=line.lower()
-                  if any(n in low for n in needles):
-                      print(f'{i}: {line[:1500]}')
-
-          header=read('header.php')
-          print('\n=== LIVE HEADER SHOP ASSET ORDER ===')
-          for line in header.splitlines():
-              low=line.lower()
-              if ('shop' in low or 'gramiss' in low) and ('<link' in low or '<script' in low): print(line.strip())
-
-          url='https://gramiss.ir/?post_type=product&_diag=runtime2'
-          req=urllib.request.Request(url,headers={'User-Agent':'GramissRuntimeDiagnostic/2.0','Cache-Control':'no-cache'})
-          with urllib.request.urlopen(req,context=ctx,timeout=45) as r: html=r.read().decode('utf-8','replace'); print('HTTP',r.status)
-          m=re.search(r'<body([^>]*)>',html,re.I)
-          print('=== BODY ATTRS ==='); print(m.group(1)[:1200] if m else 'NO BODY')
-
-          print('=== SERVED ALIGNMENT CSS ===')
-          cssurl='https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/css/shop-alignment-fix.css?v=20260820-1&_diag=2'
-          req=urllib.request.Request(cssurl,headers={'User-Agent':'GramissRuntimeDiagnostic/2.0','Cache-Control':'no-cache'})
-          with urllib.request.urlopen(req,context=ctx,timeout=45) as r:
-              served=r.read().decode('utf-8','replace'); print('ALIGN CSS HTTP',r.status); print(served[:5000])
+                      if isinstance(x.get(k),str): return x[k]
+              return x if isinstance(x,str) else ''
+          for rel in ['assets/js/shop-category-nav.js','assets/css/shop-category-nav.css']:
+              print('===',rel,'===')
+              t=read(rel)
+              for i,l in enumerate(t.splitlines(),1):
+                  if 'gramiss-shop-cleaning' in l or 'remove' in l.lower() or '#content' in l or '#primary' in l: print(f'{i}: {l[:1800]}')
           PY
