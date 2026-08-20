@@ -1,12 +1,12 @@
-name: cPanel Home Hero Diagnostic
+name: cPanel Home Hero V2 Deploy
 
 on:
   pull_request:
     branches: [main]
 
 jobs:
-  diagnose:
-    if: github.head_ref == 'ops/home-hero-diagnostic'
+  deploy:
+    if: github.head_ref == 'ops/home-hero-v2-deploy'
     runs-on: ubuntu-latest
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
@@ -17,5 +17,5 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: wordpress-migration
-      - name: Read live Home hero files
-        run: python3 deploy/home-hero/diagnose_live_hero.py
+      - name: Replace live Home hero with V2
+        run: python3 deploy/home-hero/deploy_home_hero_v2.py
