@@ -1,21 +1,11 @@
-/* GRAMISS HOME FLOATING HEADER V1 — progressive enhancement only. */
+/* GRAMISS HOME FLOATING HEADER V3 — no scroll-time layout work. */
 (function(){
   'use strict';
   var header=document.querySelector('.site-header--home-float');
   if(!header)return;
 
-  var ticking=false;
-  function sync(){
-    header.classList.toggle('is-compact',window.scrollY>54);
-    ticking=false;
-  }
-  function onScroll(){
-    if(ticking)return;
-    ticking=true;
-    window.requestAnimationFrame(sync);
-  }
-  sync();
-  window.addEventListener('scroll',onScroll,{passive:true});
+  /* No window scroll listener, no compact class, no layout mutation on scroll. */
+  header.classList.remove('is-compact');
 
   var count=header.querySelector('.gramiss-cart-count');
   if(count&&window.MutationObserver){
