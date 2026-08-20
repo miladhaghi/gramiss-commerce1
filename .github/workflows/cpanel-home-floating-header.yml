@@ -1,0 +1,178 @@
+name: cPanel Home Floating Header
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.head_ref == 'ops/home-floating-header-deploy'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: wordpress-migration
+
+      - name: Deploy server-rendered Home floating header
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re, ssl, time, urllib.parse, urllib.request
+          from pathlib import Path
+
+          host=os.environ['CPANEL_HOST']
+          user=os.environ['CPANEL_USER']
+          token=os.environ['CPANEL_TOKEN']
+          root=os.environ['THEME_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context()
+          stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
+
+          def call(fn,p,post=False):
+              url=f'https://{host}:2083/execute/Fileman/{fn}'
+              enc=urllib.parse.urlencode(p).encode()
+              last=None
+              for attempt in range(1,5):
+                  try:
+                      req=urllib.request.Request(
+                          url if post else url+'?'+enc.decode(),
+                          data=enc if post else None,
+                          method='POST' if post else 'GET'
+                      )
+                      req.add_header('Authorization',f'cpanel {user}:{token}')
+                      if post:req.add_header('Content-Type','application/x-www-form-urlencoded')
+                      with urllib.request.urlopen(req,context=ctx,timeout=60) as r:
+                          payload=json.loads(r.read().decode('utf-8'))
+                      result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
+                      if not isinstance(result,dict) or result.get('status')!=1:
+                          raise RuntimeError(str(result.get('errors') if isinstance(result,dict) else result))
+                      return result.get('data')
+                  except Exception as exc:
+                      last=exc
+                      print(f'Attempt {attempt}/4 {fn}: {exc}')
+                      if attempt<4:time.sleep(attempt*3)
+              raise last
+
+          def read(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else f'{root}/{parent}'
+              data=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(data,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(data.get(k),str):return data[k]
+              if isinstance(data,str):return data
+              raise RuntimeError('Unexpected file payload: '+rel)
+
+          def save(rel,content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else f'{root}/{parent}'
+              call('save_file_content',{
+                  'dir':directory,'file':name,'content':content,
+                  'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'
+              },True)
+
+          css=Path('wordpress/gramiss-theme/assets/css/home-floating-header.css').read_text(encoding='utf-8')
+          js=Path('wordpress/gramiss-theme/assets/js/home-floating-header.js').read_text(encoding='utf-8')
+          if 'GRAMISS HOME FLOATING HEADER V1' not in css or 'site-header--home-float' not in css:
+              raise SystemExit('Home header CSS source markers missing')
+          if 'progressive enhancement only' not in js or 'createElement' in js or 'innerHTML' in js:
+              raise SystemExit('Home header JS must be enhancement-only, not runtime replacement')
+
+          header=read('header.php')
+          save(f'header.php.bak-home-floating-{stamp}',header)
+          for rel in ['assets/css/home-floating-header.css','assets/js/home-floating-header.js']:
+              try:
+                  old=read(rel)
+                  save(f'{rel}.bak-{stamp}',old)
+              except Exception:
+                  pass
+
+          save('assets/css/home-floating-header.css',css)
+          save('assets/js/home-floating-header.js',js)
+
+          marker_start='<!-- GRAMISS HOME FLOATING HEADER ASSETS START -->'
+          marker_end='<!-- GRAMISS HOME FLOATING HEADER ASSETS END -->'
+          asset_block=marker_start+'''\n<?php if ( is_front_page() ) : ?>
+<link rel="stylesheet" id="gramiss-home-floating-header-css" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/home-floating-header.css?v=20260820-1' ); ?>" media="all">
+<script id="gramiss-home-floating-header-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/home-floating-header.js?v=20260820-1' ); ?>"></script>
+<?php endif; ?>\n'''+marker_end
+
+          patched=header
+          if marker_start in patched and marker_end in patched:
+              patched=patched.split(marker_start,1)[0]+asset_block+patched.split(marker_end,1)[1]
+          elif '</head>' in patched:
+              patched=patched.replace('</head>',asset_block+'\n</head>',1)
+          else:
+              raise SystemExit('No </head> in live header')
+
+          # Server-side modifier classes: the browser receives the new Home header identity in its first HTML.
+          # This does not create a second header and does not depend on JS.
+          if 'site-header--home-float' not in patched:
+              patched,n=re.subn(
+                  r'<header\s+class=["\']site-header["\']',
+                  '<header class="site-header<?php echo is_front_page() ? \' site-header--home-float\' : \'\'; ?>"',
+                  patched,count=1,flags=re.I
+              )
+              if n!=1:raise SystemExit('Could not patch live site-header class')
+
+          if 'header-inner--home-float' not in patched:
+              patched,n=re.subn(
+                  r'class=["\']gramiss-container\s+header-inner["\']',
+                  'class="gramiss-container header-inner<?php echo is_front_page() ? \' header-inner--home-float\' : \'\'; ?>"',
+                  patched,count=1,flags=re.I
+              )
+              if n!=1:raise SystemExit('Could not patch live header-inner class')
+
+          save('header.php',patched)
+
+          live_header=read('header.php')
+          live_css=read('assets/css/home-floating-header.css')
+          live_js=read('assets/js/home-floating-header.js')
+          checks={
+              'asset block in head': marker_start in live_header and marker_end in live_header,
+              'server-side outer class': "is_front_page() ? ' site-header--home-float'" in live_header,
+              'server-side inner class': "is_front_page() ? ' header-inner--home-float'" in live_header,
+              'render-blocking css': 'gramiss-home-floating-header-css' in live_header,
+              'enhancement js deferred': 'gramiss-home-floating-header-js' in live_header and ' defer ' in live_header,
+              'css installed': 'GRAMISS HOME FLOATING HEADER V1' in live_css,
+              'js does not replace dom': 'createElement' not in live_js and 'innerHTML' not in live_js,
+          }
+          for label,ok in checks.items():print(('PASS' if ok else 'FAIL')+': '+label)
+          if not all(checks.values()):raise SystemExit('Live file verification failed')
+
+          url='https://gramiss.ir/?_home_header='+stamp
+          req=urllib.request.Request(url,headers={'User-Agent':'GramissHomeHeaderCheck/1.0','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=60) as r:
+              html=r.read().decode('utf-8','replace'); status=r.status
+          print('Home HTTP status:',status)
+          if status!=200:raise SystemExit('Home did not return 200')
+
+          head_end=html.lower().find('</head>')
+          body_start=html.lower().find('<body')
+          css_pos=html.find('gramiss-home-floating-header-css')
+          header_pos=html.find('site-header site-header--home-float')
+          inner_pos=html.find('header-inner header-inner--home-float')
+          print('CSS position:',css_pos,'head end:',head_end,'body start:',body_start)
+          print('Server-rendered header position:',header_pos,'inner:',inner_pos)
+          if css_pos<0 or head_end<0 or css_pos>head_end:
+              raise SystemExit('Home CSS is not present in head before first paint')
+          if header_pos<0 or inner_pos<0:
+              raise SystemExit('Home modifier classes are not server-rendered in HTML')
+          if 'GRAMISS HOME FLOATING HEADER V1' in html:
+              print('Note: CSS marker appeared inline/unexpectedly')
+
+          css_url='https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/css/home-floating-header.css?v=20260820-1&_verify='+stamp
+          req=urllib.request.Request(css_url,headers={'User-Agent':'GramissHomeHeaderCheck/1.0','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=60) as r:
+              served_css=r.read().decode('utf-8','replace'); css_status=r.status
+          print('Home header CSS HTTP status:',css_status)
+          if css_status!=200 or 'GRAMISS HOME FLOATING HEADER V1' not in served_css:
+              raise SystemExit('Home header CSS serving verification failed')
+
+          print('LIVE HOME FLOATING HEADER DEPLOYED — SERVER RENDERED, NO LEGACY-TO-NEW SWAP')
+          PY
