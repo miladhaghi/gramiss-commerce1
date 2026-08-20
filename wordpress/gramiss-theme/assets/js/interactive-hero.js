@@ -1,126 +1,161 @@
 (() => {
-  const heroes = [...document.querySelectorAll('[data-g1-interactive-hero]')];
+  const heroes = [...document.querySelectorAll('[data-g1-floating-hero]')];
   if (!heroes.length) return;
 
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const coarse = window.matchMedia('(pointer: coarse)').matches;
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const GRAMISS_HOME_HERO_V2 = true;
 
   heroes.forEach((hero) => {
-    const stage = hero.querySelector('.g1-interactive-stage');
-    const art = hero.querySelector('.g1-interactive-art');
-    const links = [...hero.querySelectorAll('.g1-hero-object')];
-    if (!stage || !art || !links.length) return;
+    const track = hero.querySelector('[data-g1-floating-track]');
+    const products = [...hero.querySelectorAll('[data-g1-floating-product]')];
+    if (!track || !products.length) return;
 
-    let frame = 0;
+    let pointerFrame = 0;
+    let scrollFrame = 0;
     let idleFrame = 0;
+    let pointerInside = false;
     let idlePhase = Math.random() * Math.PI * 2;
 
-    const clearNearest = () => {
-      links.forEach((link) => link.classList.remove('is-near'));
-    };
+    const setProductMotion = (x, y, strength = 1) => {
+      const nx = clamp(x, -1, 1);
+      const ny = clamp(y, -1, 1);
 
-    const apply = (x, y, strength = 1) => {
-      const clampedX = clamp(x, -1, 1);
-      const clampedY = clamp(y, -1, 1);
-      const rotateY = clampedX * 3.8 * strength;
-      const rotateX = clampedY * -3 * strength;
-      const translateX = clampedX * 3.5 * strength;
-      const translateY = clampedY * 2.5 * strength;
+      hero.style.setProperty('--hero-light-x', `${(50 + nx * 8).toFixed(1)}%`);
+      hero.style.setProperty('--hero-light-y', `${(31 + ny * 5).toFixed(1)}%`);
+      hero.style.setProperty('--copy-x', `${(-nx * 2.2 * strength).toFixed(2)}px`);
+      hero.style.setProperty('--copy-y', `${(-ny * 1.5 * strength).toFixed(2)}px`);
 
-      stage.style.setProperty('--hero-ry', `${rotateY.toFixed(2)}deg`);
-      stage.style.setProperty('--hero-rx', `${rotateX.toFixed(2)}deg`);
-      stage.style.setProperty('--hero-tx', `${translateX.toFixed(2)}px`);
-      stage.style.setProperty('--hero-ty', `${translateY.toFixed(2)}px`);
-      stage.style.setProperty('--hero-light-x', `${(50 + clampedX * 25).toFixed(1)}%`);
-      stage.style.setProperty('--hero-light-y', `${(45 + clampedY * 20).toFixed(1)}%`);
-
-      links.forEach((link) => {
-        const depth = Number.parseFloat(link.dataset.depth || '1');
-        link.style.setProperty('--object-parallax-x', `${(clampedX * depth * 9 * strength).toFixed(2)}px`);
-        link.style.setProperty('--object-parallax-y', `${(clampedY * depth * 7 * strength).toFixed(2)}px`);
+      products.forEach((item, index) => {
+        const depth = Number.parseFloat(item.dataset.depth || '1');
+        const sign = index % 2 === 0 ? 1 : -1;
+        item.style.setProperty('--px', `${(nx * depth * 8.5 * strength).toFixed(2)}px`);
+        item.style.setProperty('--py', `${(ny * depth * 6.2 * strength).toFixed(2)}px`);
+        item.style.setProperty('--tilt', `${(nx * depth * .45 * sign * strength).toFixed(2)}deg`);
       });
     };
 
-    const nearestObject = (event) => {
-      const stageRect = stage.getBoundingClientRect();
-      let nearest = null;
-      let nearestDistance = Number.POSITIVE_INFINITY;
+    const resetPointerMotion = () => {
+      if (pointerFrame) cancelAnimationFrame(pointerFrame);
+      pointerFrame = requestAnimationFrame(() => setProductMotion(0, 0, 1));
+    };
 
-      links.forEach((link) => {
-        const label = link.querySelector('.g1-object-label');
-        const targetRect = label ? label.getBoundingClientRect() : link.getBoundingClientRect();
-        const centerX = targetRect.left + targetRect.width / 2;
-        const centerY = targetRect.top + targetRect.height / 2;
-        const distance = Math.hypot(event.clientX - centerX, event.clientY - centerY);
+    if (!coarse && !reduceMotion) {
+      hero.addEventListener('pointerenter', () => {
+        pointerInside = true;
+      });
 
-        if (distance < nearestDistance) {
-          nearest = link;
-          nearestDistance = distance;
+      hero.addEventListener('pointermove', (event) => {
+        const rect = hero.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const x = ((event.clientX - rect.left) / rect.width - .5) * 2;
+        const y = ((event.clientY - rect.top) / rect.height - .5) * 2;
+        cancelAnimationFrame(pointerFrame);
+        pointerFrame = requestAnimationFrame(() => setProductMotion(x, y, 1));
+      });
+
+      hero.addEventListener('pointerleave', () => {
+        pointerInside = false;
+        resetPointerMotion();
+      });
+    }
+
+    const updateActive = () => {
+      if (window.innerWidth > 820) return;
+      const rect = track.getBoundingClientRect();
+      const center = rect.left + track.clientWidth / 2;
+      let best = products[0];
+      let distance = Infinity;
+
+      products.forEach((item) => {
+        const itemRect = item.getBoundingClientRect();
+        const d = Math.abs((itemRect.left + itemRect.width / 2) - center);
+        if (d < distance) {
+          distance = d;
+          best = item;
         }
       });
 
-      const revealRadius = Math.max(92, Math.min(stageRect.width, stageRect.height) * .32);
-      links.forEach((link) => link.classList.toggle('is-near', link === nearest && nearestDistance <= revealRadius));
+      products.forEach((item) => item.classList.toggle('is-active', item === best));
     };
 
-    const pointerPosition = (event) => {
-      const rect = stage.getBoundingClientRect();
-      if (!rect.width || !rect.height) return { x: 0, y: 0 };
-      return {
-        x: ((event.clientX - rect.left) / rect.width - .5) * 2,
-        y: ((event.clientY - rect.top) / rect.height - .5) * 2,
-      };
+    const updateMobileScrollDepth = () => {
+      if (reduceMotion || window.innerWidth > 820) return;
+      const rect = hero.getBoundingClientRect();
+      const viewportCenter = window.innerHeight / 2;
+      const heroCenter = rect.top + rect.height / 2;
+      const progress = clamp((heroCenter - viewportCenter) / Math.max(window.innerHeight, 1), -1, 1);
+
+      products.forEach((item) => {
+        const depth = Number.parseFloat(item.dataset.depth || '1');
+        const media = item.querySelector('.g1-floating-product-media');
+        if (!media) return;
+        media.style.setProperty('--mobile-drift', `${(progress * depth * -5).toFixed(2)}px`);
+      });
     };
 
-    const reset = () => {
-      stage.classList.remove('is-active');
-      clearNearest();
-      if (frame) cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => apply(0, 0, 1));
+    const onScroll = () => {
+      cancelAnimationFrame(scrollFrame);
+      scrollFrame = requestAnimationFrame(() => {
+        updateActive();
+        updateMobileScrollDepth();
+      });
     };
 
-    stage.addEventListener('pointerenter', (event) => {
-      if (event.pointerType === 'touch') return;
-      stage.classList.add('is-active');
-    });
+    track.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
 
-    stage.addEventListener('pointermove', (event) => {
-      if (event.pointerType === 'touch' || coarsePointer) return;
-      const { x, y } = pointerPosition(event);
-      nearestObject(event);
-      if (reducedMotion) return;
-      if (frame) cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => apply(x, y, 1));
-    });
+    products.forEach((item) => {
+      item.addEventListener('dragstart', (event) => event.preventDefault());
+      let startX = 0;
+      let startY = 0;
+      let dragged = false;
 
-    stage.addEventListener('pointerleave', (event) => {
-      if (event.pointerType !== 'touch') reset();
-    });
+      item.addEventListener('pointerdown', (event) => {
+        startX = event.clientX;
+        startY = event.clientY;
+        dragged = false;
+      });
 
-    links.forEach((link) => {
-      link.addEventListener('focus', () => link.classList.add('is-hovered'));
-      link.addEventListener('blur', () => link.classList.remove('is-hovered'));
-      link.addEventListener('pointerenter', () => link.classList.add('is-hovered'));
-      link.addEventListener('pointerleave', () => link.classList.remove('is-hovered'));
-      link.addEventListener('dragstart', (event) => event.preventDefault());
+      item.addEventListener('pointermove', (event) => {
+        if (Math.hypot(event.clientX - startX, event.clientY - startY) > 9) dragged = true;
+      });
+
+      item.addEventListener('click', (event) => {
+        if (dragged) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+      });
     });
 
     const idle = () => {
-      if (reducedMotion || document.hidden || stage.matches(':hover') || stage.classList.contains('is-active')) {
+      if (reduceMotion || document.hidden || coarse || pointerInside) {
         idleFrame = requestAnimationFrame(idle);
         return;
       }
 
-      idlePhase += coarsePointer ? .007 : .004;
-      apply(Math.sin(idlePhase) * .14, Math.cos(idlePhase * .8) * .11, .58);
+      idlePhase += .0045;
+      const x = Math.sin(idlePhase) * .10;
+      const y = Math.cos(idlePhase * .78) * .075;
+      setProductMotion(x, y, .48);
       idleFrame = requestAnimationFrame(idle);
     };
 
-    if (!reducedMotion) idleFrame = requestAnimationFrame(idle);
+    requestAnimationFrame(() => {
+      updateActive();
+      updateMobileScrollDepth();
+      if (!reduceMotion && !coarse) idleFrame = requestAnimationFrame(idle);
+    });
 
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && !idleFrame && !reducedMotion) idleFrame = requestAnimationFrame(idle);
+      if (!document.hidden && !reduceMotion && !coarse && !idleFrame) {
+        idleFrame = requestAnimationFrame(idle);
+      }
     });
+
+    void GRAMISS_HOME_HERO_V2;
   });
 })();
