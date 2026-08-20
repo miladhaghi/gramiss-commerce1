@@ -5,7 +5,7 @@
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const coarse = window.matchMedia('(pointer: coarse)').matches;
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-  const GRAMISS_HOME_HERO_MOTION_V4 = true;
+  const GRAMISS_HOME_HERO_MOTION_V7 = true;
 
   heroes.forEach((hero) => {
     const track = hero.querySelector('[data-g1-floating-track]');
@@ -14,6 +14,8 @@
 
     let motionFrame = 0;
     let visible = true;
+    let pageScrolling = false;
+    let scrollIdleTimer = 0;
     let currentX = 0;
     let currentY = 0;
     let currentStrength = 0;
@@ -40,8 +42,20 @@
       });
     };
 
+    const stopMotionNow = () => {
+      if (motionFrame) cancelAnimationFrame(motionFrame);
+      motionFrame = 0;
+      currentX = 0;
+      currentY = 0;
+      currentStrength = 0;
+      targetX = 0;
+      targetY = 0;
+      targetStrength = 0;
+      renderMotion();
+    };
+
     const animateToTarget = () => {
-      if (reduceMotion || coarse || document.hidden || !visible) {
+      if (reduceMotion || coarse || pageScrolling || document.hidden || !visible) {
         motionFrame = 0;
         return;
       }
@@ -70,7 +84,7 @@
     };
 
     const requestMotion = () => {
-      if (!motionFrame && !reduceMotion && !coarse && visible && !document.hidden) {
+      if (!motionFrame && !reduceMotion && !coarse && !pageScrolling && visible && !document.hidden) {
         motionFrame = requestAnimationFrame(animateToTarget);
       }
     };
@@ -82,14 +96,46 @@
       requestMotion();
     };
 
+    const finishPageScroll = () => {
+      clearTimeout(scrollIdleTimer);
+      scrollIdleTimer = 0;
+      pageScrolling = false;
+      hero.classList.remove('is-page-scrolling');
+    };
+
+    const armScrollIdle = () => {
+      clearTimeout(scrollIdleTimer);
+      scrollIdleTimer = window.setTimeout(finishPageScroll, 145);
+    };
+
+    const beginPageScroll = () => {
+      if (!pageScrolling) {
+        pageScrolling = true;
+        hero.classList.add('is-page-scrolling');
+        hero.classList.remove('is-motion-tracking');
+        stopMotionNow();
+      }
+      armScrollIdle();
+    };
+
+    if (!coarse) {
+      // wheel fires before the browser advances the page, so hover is suspended
+      // before floating products can slide underneath a stationary mouse pointer.
+      window.addEventListener('wheel', beginPageScroll, { passive: true, capture: true });
+      // Covers scrollbar dragging, keyboard scrolling and other non-wheel scrolling.
+      window.addEventListener('scroll', beginPageScroll, { passive: true });
+    }
+
     if (!coarse && !reduceMotion) {
       hero.addEventListener('pointerenter', () => {
+        if (pageScrolling) return;
         targetStrength = 1;
         hero.classList.add('is-motion-tracking');
         requestMotion();
       }, { passive: true });
 
       hero.addEventListener('pointermove', (event) => {
+        if (pageScrolling) return;
         const rect = hero.getBoundingClientRect();
         if (!rect.width || !rect.height) return;
         targetX = clamp(((event.clientX - rect.left) / rect.width - .5) * 2, -1, 1);
@@ -100,7 +146,7 @@
 
       hero.addEventListener('pointerleave', () => {
         hero.classList.remove('is-motion-tracking');
-        resetMotion();
+        if (!pageScrolling) resetMotion();
       }, { passive: true });
     }
 
@@ -123,7 +169,6 @@
       products.forEach((item) => item.classList.toggle('is-active', item === best));
     };
 
-    // Horizontal mobile category rail only. No vertical-scroll-driven hero motion.
     let railFrame = 0;
     track.addEventListener('scroll', () => {
       if (window.innerWidth > 820) return;
@@ -175,12 +220,12 @@
       if (document.hidden) {
         if (motionFrame) cancelAnimationFrame(motionFrame);
         motionFrame = 0;
-      } else {
+      } else if (!pageScrolling) {
         requestMotion();
       }
     });
 
     requestAnimationFrame(updateActive);
-    void GRAMISS_HOME_HERO_MOTION_V4;
+    void GRAMISS_HOME_HERO_MOTION_V7;
   });
 })();
