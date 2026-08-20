@@ -1,0 +1,37 @@
+/* GRAMISS_SHOP_ALIGNMENT_FIX_V1
+ * Small alignment fixes only. No product-card or product-image sizing changes.
+ */
+
+/* Keep the Shop hero copy anchored to the right in RTL. */
+body.gse-shop-ready .gramiss-shop-premium-hero{
+  direction:rtl!important;
+}
+body.gse-shop-ready .gramiss-shop-premium-hero__copy{
+  width:min(100%,760px)!important;
+  max-width:760px!important;
+  margin:0!important;
+  margin-inline-end:auto!important;
+  text-align:right!important;
+  align-self:center!important;
+}
+body.gse-shop-ready .gramiss-shop-premium-hero__eyebrow{
+  width:100%!important;
+  text-align:right!important;
+}
+body.gse-shop-ready .gramiss-shop-premium-hero h1,
+body.gse-shop-ready .gramiss-shop-premium-hero p{
+  text-align:right!important;
+}
+
+/* True optical centering for the sort pills. */
+body.gse-shop-ready .gramiss-shop-control-shell .gse-sort-button{
+  height:38px!important;
+  min-height:38px!important;
+  padding:1px 14px 0!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
+  line-height:1!important;
+  vertical-align:middle!important;
+}
