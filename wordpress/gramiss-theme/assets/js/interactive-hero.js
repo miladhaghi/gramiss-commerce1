@@ -5,31 +5,27 @@
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const coarse = window.matchMedia('(pointer: coarse)').matches;
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-  const GRAMISS_HOME_HERO_MOTION_V3 = true;
+  const GRAMISS_HOME_HERO_MOTION_V4 = true;
 
   heroes.forEach((hero) => {
     const track = hero.querySelector('[data-g1-floating-track]');
     const products = [...hero.querySelectorAll('[data-g1-floating-product]')];
     if (!track || !products.length) return;
 
-    let scrollFrame = 0;
     let motionFrame = 0;
-    let pointerInside = false;
-    let idlePhase = Math.random() * Math.PI * 2;
-    let idleResumeAt = 0;
-
+    let visible = true;
     let currentX = 0;
     let currentY = 0;
+    let currentStrength = 0;
     let targetX = 0;
     let targetY = 0;
-    let currentStrength = 0;
     let targetStrength = 0;
 
-    const renderMotion = (x, y, strength) => {
-      const nx = clamp(x, -1, 1);
-      const ny = clamp(y, -1, 1);
+    const renderMotion = () => {
+      const nx = clamp(currentX, -1, 1);
+      const ny = clamp(currentY, -1, 1);
+      const strength = clamp(currentStrength, 0, 1);
 
-      // Move the already-rendered light layer instead of repainting its gradient.
       hero.style.setProperty('--hero-light-tx', `${(nx * 15 * strength).toFixed(2)}px`);
       hero.style.setProperty('--hero-light-ty', `${(ny * 10 * strength).toFixed(2)}px`);
       hero.style.setProperty('--copy-x', `${(-nx * 2.4 * strength).toFixed(2)}px`);
@@ -44,39 +40,54 @@
       });
     };
 
-    const motionLoop = (time) => {
-      if (reduceMotion || coarse || document.hidden) {
-        motionFrame = requestAnimationFrame(motionLoop);
+    const animateToTarget = () => {
+      if (reduceMotion || coarse || document.hidden || !visible) {
+        motionFrame = 0;
         return;
       }
 
-      if (!pointerInside && time >= idleResumeAt) {
-        idlePhase += .0036;
-        targetX = Math.sin(idlePhase) * .075;
-        targetY = Math.cos(idlePhase * .78) * .052;
-        targetStrength = .38;
+      currentX += (targetX - currentX) * .38;
+      currentY += (targetY - currentY) * .38;
+      currentStrength += (targetStrength - currentStrength) * .34;
+
+      if (Math.abs(targetX - currentX) < .0005) currentX = targetX;
+      if (Math.abs(targetY - currentY) < .0005) currentY = targetY;
+      if (Math.abs(targetStrength - currentStrength) < .0005) currentStrength = targetStrength;
+
+      renderMotion();
+
+      const settled =
+        Math.abs(targetX - currentX) < .001 &&
+        Math.abs(targetY - currentY) < .001 &&
+        Math.abs(targetStrength - currentStrength) < .001;
+
+      if (settled) {
+        motionFrame = 0;
+        return;
       }
 
-      // ~30% interpolation per frame feels connected to the pointer without looking robotic.
-      const follow = pointerInside ? .34 : .18;
-      currentX += (targetX - currentX) * follow;
-      currentY += (targetY - currentY) * follow;
-      currentStrength += (targetStrength - currentStrength) * (pointerInside ? .30 : .14);
+      motionFrame = requestAnimationFrame(animateToTarget);
+    };
 
-      if (Math.abs(targetX - currentX) < .0002) currentX = targetX;
-      if (Math.abs(targetY - currentY) < .0002) currentY = targetY;
-      if (Math.abs(targetStrength - currentStrength) < .0002) currentStrength = targetStrength;
+    const requestMotion = () => {
+      if (!motionFrame && !reduceMotion && !coarse && visible && !document.hidden) {
+        motionFrame = requestAnimationFrame(animateToTarget);
+      }
+    };
 
-      renderMotion(currentX, currentY, currentStrength);
-      motionFrame = requestAnimationFrame(motionLoop);
+    const resetMotion = () => {
+      targetX = 0;
+      targetY = 0;
+      targetStrength = 0;
+      requestMotion();
     };
 
     if (!coarse && !reduceMotion) {
       hero.addEventListener('pointerenter', () => {
-        pointerInside = true;
         targetStrength = 1;
         hero.classList.add('is-motion-tracking');
-      });
+        requestMotion();
+      }, { passive: true });
 
       hero.addEventListener('pointermove', (event) => {
         const rect = hero.getBoundingClientRect();
@@ -84,16 +95,13 @@
         targetX = clamp(((event.clientX - rect.left) / rect.width - .5) * 2, -1, 1);
         targetY = clamp(((event.clientY - rect.top) / rect.height - .5) * 2, -1, 1);
         targetStrength = 1;
+        requestMotion();
       }, { passive: true });
 
       hero.addEventListener('pointerleave', () => {
-        pointerInside = false;
-        targetX = 0;
-        targetY = 0;
-        targetStrength = 1;
-        idleResumeAt = performance.now() + 850;
         hero.classList.remove('is-motion-tracking');
-      });
+        resetMotion();
+      }, { passive: true });
     }
 
     const updateActive = () => {
@@ -115,32 +123,17 @@
       products.forEach((item) => item.classList.toggle('is-active', item === best));
     };
 
-    const updateMobileScrollDepth = () => {
-      if (reduceMotion || window.innerWidth > 820) return;
-      const rect = hero.getBoundingClientRect();
-      const viewportCenter = window.innerHeight / 2;
-      const heroCenter = rect.top + rect.height / 2;
-      const progress = clamp((heroCenter - viewportCenter) / Math.max(window.innerHeight, 1), -1, 1);
+    // Horizontal mobile category rail only. No vertical-scroll-driven hero motion.
+    let railFrame = 0;
+    track.addEventListener('scroll', () => {
+      if (window.innerWidth > 820) return;
+      cancelAnimationFrame(railFrame);
+      railFrame = requestAnimationFrame(updateActive);
+    }, { passive: true });
 
-      products.forEach((item) => {
-        const depth = Number.parseFloat(item.dataset.depth || '1');
-        const media = item.querySelector('.g1-floating-product-media');
-        if (!media) return;
-        media.style.setProperty('--mobile-drift', `${(progress * depth * -5).toFixed(2)}px`);
-      });
-    };
-
-    const onScroll = () => {
-      cancelAnimationFrame(scrollFrame);
-      scrollFrame = requestAnimationFrame(() => {
-        updateActive();
-        updateMobileScrollDepth();
-      });
-    };
-
-    track.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll, { passive: true });
+    window.addEventListener('resize', () => {
+      if (window.innerWidth <= 820) updateActive();
+    }, { passive: true });
 
     products.forEach((item) => {
       item.addEventListener('dragstart', (event) => event.preventDefault());
@@ -166,18 +159,28 @@
       });
     });
 
-    requestAnimationFrame(() => {
-      updateActive();
-      updateMobileScrollDepth();
-      if (!reduceMotion && !coarse) motionFrame = requestAnimationFrame(motionLoop);
-    });
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver((entries) => {
+        const entry = entries[0];
+        visible = Boolean(entry && entry.isIntersecting);
+        if (!visible) {
+          if (motionFrame) cancelAnimationFrame(motionFrame);
+          motionFrame = 0;
+        }
+      }, { rootMargin: '120px 0px', threshold: 0 });
+      observer.observe(hero);
+    }
 
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && !reduceMotion && !coarse && !motionFrame) {
-        motionFrame = requestAnimationFrame(motionLoop);
+      if (document.hidden) {
+        if (motionFrame) cancelAnimationFrame(motionFrame);
+        motionFrame = 0;
+      } else {
+        requestMotion();
       }
     });
 
-    void GRAMISS_HOME_HERO_MOTION_V3;
+    requestAnimationFrame(updateActive);
+    void GRAMISS_HOME_HERO_MOTION_V4;
   });
 })();
