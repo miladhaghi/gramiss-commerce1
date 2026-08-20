@@ -13,6 +13,7 @@ TOKEN = os.environ['CPANEL_TOKEN']
 ROOT = os.environ['THEME_ROOT'].strip('/')
 CTX = ssl._create_unverified_context()
 STAMP = time.strftime('%Y%m%d-%H%M%S', time.gmtime())
+VERSION = '20260820-2'
 
 
 def call(func, params, post=False):
@@ -77,24 +78,26 @@ def save_live(rel, content):
 css = Path('wordpress/gramiss-theme/assets/css/home-floating-header.css').read_text(encoding='utf-8')
 js = Path('wordpress/gramiss-theme/assets/js/home-floating-header.js').read_text(encoding='utf-8')
 
-if 'GRAMISS HOME FLOATING HEADER V1' not in css:
-    raise SystemExit('Home header CSS marker missing')
+if 'GRAMISS HOME FLOATING HEADER V2' not in css:
+    raise SystemExit('Home header CSS V2 marker missing')
 if 'site-header--home-float' not in css:
     raise SystemExit('Home header selector missing')
 if 'createElement' in js or 'innerHTML' in js:
     raise SystemExit('Home header JS must not build or replace DOM')
+if 'menu-toggle{display:none!important}' not in css.replace('\n', '').replace(' ', ''):
+    raise SystemExit('Desktop hamburger hide rule missing')
 
 header = read_live('header.php')
-save_live(f'header.php.bak-home-floating-{STAMP}', header)
+save_live(f'header.php.bak-home-floating-v2-{STAMP}', header)
 save_live('assets/css/home-floating-header.css', css)
 save_live('assets/js/home-floating-header.js', js)
 
 start = '<!-- GRAMISS HOME FLOATING HEADER ASSETS START -->'
 end = '<!-- GRAMISS HOME FLOATING HEADER ASSETS END -->'
-asset_block = start + """
+asset_block = start + f"""
 <?php if ( is_front_page() ) : ?>
-<link rel="stylesheet" id="gramiss-home-floating-header-css" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/home-floating-header.css?v=20260820-1' ); ?>" media="all">
-<script id="gramiss-home-floating-header-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/home-floating-header.js?v=20260820-1' ); ?>"></script>
+<link rel="stylesheet" id="gramiss-home-floating-header-css" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/home-floating-header.css?v={VERSION}' ); ?>" media="all">
+<script id="gramiss-home-floating-header-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/home-floating-header.js?v={VERSION}' ); ?>"></script>
 <?php endif; ?>
 """ + end
 
@@ -133,12 +136,17 @@ save_live('header.php', patched)
 live_header = read_live('header.php')
 live_css = read_live('assets/css/home-floating-header.css')
 live_js = read_live('assets/js/home-floating-header.js')
+compact_css = ''.join(live_css.split())
 
 checks = {
     'server-side outer class': "is_front_page() ? ' site-header--home-float'" in live_header,
     'server-side inner class': "is_front_page() ? ' header-inner--home-float'" in live_header,
     'render-blocking CSS in head': start in live_header and 'gramiss-home-floating-header-css' in live_header,
-    'CSS installed': 'GRAMISS HOME FLOATING HEADER V1' in live_css,
+    'cache version v2': f'home-floating-header.css?v={VERSION}' in live_header,
+    'CSS V2 installed': 'GRAMISS HOME FLOATING HEADER V2' in live_css,
+    'desktop hamburger hidden': '.menu-toggle{display:none!important}' in compact_css,
+    'desktop logo reduced': 'font-size:24px!important' in compact_css,
+    'header height reduced': 'min-height:82px!important' in compact_css,
     'JS enhancement only': 'createElement' not in live_js and 'innerHTML' not in live_js,
 }
 for label, ok in checks.items():
@@ -146,10 +154,10 @@ for label, ok in checks.items():
 if not all(checks.values()):
     raise SystemExit('Live file verification failed')
 
-home_url = 'https://gramiss.ir/?_home_header=' + STAMP
+home_url = 'https://gramiss.ir/?_home_header_v2=' + STAMP
 request = urllib.request.Request(home_url, headers={
     'Cache-Control': 'no-cache',
-    'User-Agent': 'GramissHomeHeaderDeploy/1.0',
+    'User-Agent': 'GramissHomeHeaderDeploy/2.0',
 })
 with urllib.request.urlopen(request, context=CTX, timeout=60) as response:
     html = response.read().decode('utf-8', 'replace')
@@ -168,21 +176,23 @@ if css_pos < 0 or head_end < 0 or css_pos > head_end:
     raise SystemExit('Home header CSS is not loaded in <head> before first paint')
 if header_pos < 0 or inner_pos < 0:
     raise SystemExit('Home header modifier classes are not server-rendered in first HTML')
+if f'home-floating-header.css?v={VERSION}' not in html:
+    raise SystemExit('Home HTML is not serving the V2 cache-busted header CSS')
 
 css_url = (
     'https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/css/'
-    'home-floating-header.css?v=20260820-1&_verify=' + STAMP
+    f'home-floating-header.css?v={VERSION}&_verify=' + STAMP
 )
 request = urllib.request.Request(css_url, headers={
     'Cache-Control': 'no-cache',
-    'User-Agent': 'GramissHomeHeaderDeploy/1.0',
+    'User-Agent': 'GramissHomeHeaderDeploy/2.0',
 })
 with urllib.request.urlopen(request, context=CTX, timeout=60) as response:
     served_css = response.read().decode('utf-8', 'replace')
     css_status = response.status
 
 print('Home header CSS HTTP status:', css_status)
-if css_status != 200 or 'GRAMISS HOME FLOATING HEADER V1' not in served_css:
-    raise SystemExit('Served Home header CSS verification failed')
+if css_status != 200 or 'GRAMISS HOME FLOATING HEADER V2' not in served_css:
+    raise SystemExit('Served Home header CSS V2 verification failed')
 
-print('SUCCESS: HOME FLOATING HEADER DEPLOYED FROM FIRST HTML; NO LEGACY-TO-NEW SWAP')
+print('SUCCESS: HOME FLOATING HEADER V2 DEPLOYED; BALANCED DESKTOP LAYOUT; NO LEGACY SWAP')
