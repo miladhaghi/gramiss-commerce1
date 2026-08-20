@@ -42,19 +42,16 @@ def read_live(rel):
     raise RuntimeError('Unexpected payload: ' + rel)
 
 front = read_live('front-page.php')
-css = read_live('assets/css/interactive-hero.css')
-js = read_live('assets/js/interactive-hero.js')
 
-hero_start = front.find('<section class="g1-hero')
+needle = '<section class="g1-floating-hero'
+hero_start = front.find(needle)
+if hero_start < 0:
+    hero_start = front.find('g1-floating-hero')
+    if hero_start >= 0:
+        hero_start = front.rfind('<section', 0, hero_start)
 hero_end = front.find('</section>', hero_start)
-hero_markup = front[hero_start:hero_end + len('</section>')] if hero_start >= 0 and hero_end >= 0 else 'HERO MARKUP NOT FOUND'
+hero_markup = front[hero_start:hero_end + len('</section>')] if hero_start >= 0 and hero_end >= 0 else 'FLOATING HERO MARKUP NOT FOUND'
 
-print('=== LIVE HERO MARKUP ===')
+print('=== LIVE FLOATING HERO MARKUP ===')
 print(hero_markup)
-print('=== END LIVE HERO MARKUP ===')
-print('=== LIVE INTERACTIVE HERO CSS ===')
-print(css)
-print('=== END LIVE INTERACTIVE HERO CSS ===')
-print('=== LIVE INTERACTIVE HERO JS ===')
-print(js)
-print('=== END LIVE INTERACTIVE HERO JS ===')
+print('=== END LIVE FLOATING HERO MARKUP ===')
