@@ -5,59 +5,94 @@
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const coarse = window.matchMedia('(pointer: coarse)').matches;
   const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
-  const GRAMISS_HOME_HERO_V2 = true;
+  const GRAMISS_HOME_HERO_MOTION_V3 = true;
 
   heroes.forEach((hero) => {
     const track = hero.querySelector('[data-g1-floating-track]');
     const products = [...hero.querySelectorAll('[data-g1-floating-product]')];
     if (!track || !products.length) return;
 
-    let pointerFrame = 0;
     let scrollFrame = 0;
-    let idleFrame = 0;
+    let motionFrame = 0;
     let pointerInside = false;
     let idlePhase = Math.random() * Math.PI * 2;
+    let idleResumeAt = 0;
 
-    const setProductMotion = (x, y, strength = 1) => {
+    let currentX = 0;
+    let currentY = 0;
+    let targetX = 0;
+    let targetY = 0;
+    let currentStrength = 0;
+    let targetStrength = 0;
+
+    const renderMotion = (x, y, strength) => {
       const nx = clamp(x, -1, 1);
       const ny = clamp(y, -1, 1);
 
-      hero.style.setProperty('--hero-light-x', `${(50 + nx * 8).toFixed(1)}%`);
-      hero.style.setProperty('--hero-light-y', `${(31 + ny * 5).toFixed(1)}%`);
-      hero.style.setProperty('--copy-x', `${(-nx * 2.2 * strength).toFixed(2)}px`);
-      hero.style.setProperty('--copy-y', `${(-ny * 1.5 * strength).toFixed(2)}px`);
+      // Move the already-rendered light layer instead of repainting its gradient.
+      hero.style.setProperty('--hero-light-tx', `${(nx * 15 * strength).toFixed(2)}px`);
+      hero.style.setProperty('--hero-light-ty', `${(ny * 10 * strength).toFixed(2)}px`);
+      hero.style.setProperty('--copy-x', `${(-nx * 2.4 * strength).toFixed(2)}px`);
+      hero.style.setProperty('--copy-y', `${(-ny * 1.6 * strength).toFixed(2)}px`);
 
       products.forEach((item, index) => {
         const depth = Number.parseFloat(item.dataset.depth || '1');
         const sign = index % 2 === 0 ? 1 : -1;
-        item.style.setProperty('--px', `${(nx * depth * 8.5 * strength).toFixed(2)}px`);
-        item.style.setProperty('--py', `${(ny * depth * 6.2 * strength).toFixed(2)}px`);
-        item.style.setProperty('--tilt', `${(nx * depth * .45 * sign * strength).toFixed(2)}deg`);
+        item.style.setProperty('--px', `${(nx * depth * 10.5 * strength).toFixed(2)}px`);
+        item.style.setProperty('--py', `${(ny * depth * 7.6 * strength).toFixed(2)}px`);
+        item.style.setProperty('--tilt', `${(nx * depth * .5 * sign * strength).toFixed(2)}deg`);
       });
     };
 
-    const resetPointerMotion = () => {
-      if (pointerFrame) cancelAnimationFrame(pointerFrame);
-      pointerFrame = requestAnimationFrame(() => setProductMotion(0, 0, 1));
+    const motionLoop = (time) => {
+      if (reduceMotion || coarse || document.hidden) {
+        motionFrame = requestAnimationFrame(motionLoop);
+        return;
+      }
+
+      if (!pointerInside && time >= idleResumeAt) {
+        idlePhase += .0036;
+        targetX = Math.sin(idlePhase) * .075;
+        targetY = Math.cos(idlePhase * .78) * .052;
+        targetStrength = .38;
+      }
+
+      // ~30% interpolation per frame feels connected to the pointer without looking robotic.
+      const follow = pointerInside ? .34 : .18;
+      currentX += (targetX - currentX) * follow;
+      currentY += (targetY - currentY) * follow;
+      currentStrength += (targetStrength - currentStrength) * (pointerInside ? .30 : .14);
+
+      if (Math.abs(targetX - currentX) < .0002) currentX = targetX;
+      if (Math.abs(targetY - currentY) < .0002) currentY = targetY;
+      if (Math.abs(targetStrength - currentStrength) < .0002) currentStrength = targetStrength;
+
+      renderMotion(currentX, currentY, currentStrength);
+      motionFrame = requestAnimationFrame(motionLoop);
     };
 
     if (!coarse && !reduceMotion) {
       hero.addEventListener('pointerenter', () => {
         pointerInside = true;
+        targetStrength = 1;
+        hero.classList.add('is-motion-tracking');
       });
 
       hero.addEventListener('pointermove', (event) => {
         const rect = hero.getBoundingClientRect();
         if (!rect.width || !rect.height) return;
-        const x = ((event.clientX - rect.left) / rect.width - .5) * 2;
-        const y = ((event.clientY - rect.top) / rect.height - .5) * 2;
-        cancelAnimationFrame(pointerFrame);
-        pointerFrame = requestAnimationFrame(() => setProductMotion(x, y, 1));
-      });
+        targetX = clamp(((event.clientX - rect.left) / rect.width - .5) * 2, -1, 1);
+        targetY = clamp(((event.clientY - rect.top) / rect.height - .5) * 2, -1, 1);
+        targetStrength = 1;
+      }, { passive: true });
 
       hero.addEventListener('pointerleave', () => {
         pointerInside = false;
-        resetPointerMotion();
+        targetX = 0;
+        targetY = 0;
+        targetStrength = 1;
+        idleResumeAt = performance.now() + 850;
+        hero.classList.remove('is-motion-tracking');
       });
     }
 
@@ -131,31 +166,18 @@
       });
     });
 
-    const idle = () => {
-      if (reduceMotion || document.hidden || coarse || pointerInside) {
-        idleFrame = requestAnimationFrame(idle);
-        return;
-      }
-
-      idlePhase += .0045;
-      const x = Math.sin(idlePhase) * .10;
-      const y = Math.cos(idlePhase * .78) * .075;
-      setProductMotion(x, y, .48);
-      idleFrame = requestAnimationFrame(idle);
-    };
-
     requestAnimationFrame(() => {
       updateActive();
       updateMobileScrollDepth();
-      if (!reduceMotion && !coarse) idleFrame = requestAnimationFrame(idle);
+      if (!reduceMotion && !coarse) motionFrame = requestAnimationFrame(motionLoop);
     });
 
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && !reduceMotion && !coarse && !idleFrame) {
-        idleFrame = requestAnimationFrame(idle);
+      if (!document.hidden && !reduceMotion && !coarse && !motionFrame) {
+        motionFrame = requestAnimationFrame(motionLoop);
       }
     });
 
-    void GRAMISS_HOME_HERO_V2;
+    void GRAMISS_HOME_HERO_MOTION_V3;
   });
 })();
