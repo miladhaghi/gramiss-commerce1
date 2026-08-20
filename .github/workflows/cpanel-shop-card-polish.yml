@@ -6,7 +6,7 @@ on:
 
 jobs:
   deploy:
-    if: github.head_ref == 'ops/shop-card-polish'
+    if: github.head_ref == 'ops/home-floating-header-deploy2'
     runs-on: ubuntu-latest
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
@@ -15,76 +15,82 @@ jobs:
       THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
     steps:
       - uses: actions/checkout@v4
-      - name: Polish Shop info panels and action plus
+        with:
+          ref: wordpress-migration
+      - name: Deploy server-rendered Home floating header
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import json, os, re, ssl, time, urllib.parse, urllib.request
           from pathlib import Path
-
           host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
-          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S', time.gmtime())
-
-          def call(fn, params, post=False):
-              url=f'https://{host}:2083/execute/Fileman/{fn}'
-              data=urllib.parse.urlencode(params).encode(); last=None
-              for attempt in range(1,6):
+          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
+          def call(fn,p,post=False):
+              u=f'https://{host}:2083/execute/Fileman/{fn}'; d=urllib.parse.urlencode(p).encode(); last=None
+              for i in range(1,5):
                   try:
-                      req=urllib.request.Request(url if post else url+'?'+data.decode(), data=data if post else None, method='POST' if post else 'GET')
-                      req.add_header('Authorization',f'cpanel {user}:{token}')
-                      if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
-                      with urllib.request.urlopen(req,context=ctx,timeout=75) as r: payload=json.loads(r.read().decode())
-                      result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
-                      if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result.get('errors') if isinstance(result,dict) else result))
-                      return result.get('data')
-                  except Exception as exc:
-                      last=exc; print(f'Attempt {attempt}/5 {fn}: {exc}')
-                      if attempt<5: time.sleep(attempt*4)
+                      q=urllib.request.Request(u if post else u+'?'+d.decode(),data=d if post else None,method='POST' if post else 'GET')
+                      q.add_header('Authorization',f'cpanel {user}:{token}')
+                      if post:q.add_header('Content-Type','application/x-www-form-urlencoded')
+                      with urllib.request.urlopen(q,context=ctx,timeout=60) as r:x=json.loads(r.read().decode('utf-8'))
+                      y=x.get('result') if isinstance(x.get('result'),dict) else x
+                      if not isinstance(y,dict) or y.get('status')!=1:raise RuntimeError(str(y.get('errors') if isinstance(y,dict) else y))
+                      return y.get('data')
+                  except Exception as e:
+                      last=e; print(f'attempt {i}: {e}')
+                      if i<4:time.sleep(i*3)
               raise last
-
           def read(rel):
-              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
-              directory=root if not parent else f'{root}/{parent}'
-              d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
-              if isinstance(d,dict):
-                  for key in ('content','file_content','data'):
-                      if isinstance(d.get(key),str): return d[key]
-              if isinstance(d,str): return d
-              raise RuntimeError('Unexpected content: '+rel)
+              p,n=rel.rsplit('/',1) if '/' in rel else ('',rel); dr=root if not p else f'{root}/{p}'
+              x=call('get_file_content',{'dir':dr,'file':n,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(x,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(x.get(k),str):return x[k]
+              if isinstance(x,str):return x
+              raise RuntimeError(rel)
+          def save(rel,c):
+              p,n=rel.rsplit('/',1) if '/' in rel else ('',rel); dr=root if not p else f'{root}/{p}'
+              call('save_file_content',{'dir':dr,'file':n,'content':c,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
 
-          def save(rel,content):
-              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
-              directory=root if not parent else f'{root}/{parent}'
-              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
-
-          patch=Path('deploy/shop-sculpted/shop-card-polish.css').read_text(encoding='utf-8').strip()
-          css=read('assets/css/shop-sculpted.css')
-          header=read('header.php')
-          start='/* GRAMISS_SHOP_CARD_POLISH_START */'; end='/* GRAMISS_SHOP_CARD_POLISH_END */'
-          if start in css and end in css:
-              css=css.split(start,1)[0].rstrip()+css.split(end,1)[1]
-          css_new=css.rstrip()+'\n\n'+start+'\n'+patch+'\n'+end+'\n'
-          header_new=re.sub(r'shop-sculpted\.css\?v=[0-9A-Za-z._-]+','shop-sculpted.css?v=20260812-7',header)
-          if header_new == header and 'shop-sculpted.css?v=20260812-7' not in header:
-              raise RuntimeError('Could not bump Shop CSS version')
-
-          save(f'assets/css/shop-sculpted.css.bak-cardpolish-{stamp}',read('assets/css/shop-sculpted.css'))
-          save(f'header.php.bak-cardpolish-{stamp}',header)
-          print('Backups created: '+stamp)
-          save('assets/css/shop-sculpted.css',css_new)
-          save('header.php',header_new)
-
-          live_css=read('assets/css/shop-sculpted.css'); live_header=read('header.php')
+          css=Path('wordpress/gramiss-theme/assets/css/home-floating-header.css').read_text(encoding='utf-8')
+          js=Path('wordpress/gramiss-theme/assets/js/home-floating-header.js').read_text(encoding='utf-8')
+          if 'GRAMISS HOME FLOATING HEADER V1' not in css:raise SystemExit('CSS marker missing')
+          if 'createElement' in js or 'innerHTML' in js:raise SystemExit('JS DOM replacement forbidden')
+          h=read('header.php'); save(f'header.php.bak-home-floating-{stamp}',h)
+          save('assets/css/home-floating-header.css',css); save('assets/js/home-floating-header.js',js)
+          s='<!-- GRAMISS HOME FLOATING HEADER ASSETS START -->'; e='<!-- GRAMISS HOME FLOATING HEADER ASSETS END -->'
+          b=s+'''\n<?php if ( is_front_page() ) : ?>
+<link rel="stylesheet" id="gramiss-home-floating-header-css" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/home-floating-header.css?v=20260820-1' ); ?>" media="all">
+<script id="gramiss-home-floating-header-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/home-floating-header.js?v=20260820-1' ); ?>"></script>
+<?php endif; ?>\n'''+e
+          if s in h and e in h:h=h.split(s,1)[0]+b+h.split(e,1)[1]
+          elif '</head>' in h:h=h.replace('</head>',b+'\n</head>',1)
+          else:raise SystemExit('No </head>')
+          if 'site-header--home-float' not in h:
+              h,n=re.subn(r'<header\s+class=["\']site-header["\']','<header class="site-header<?php echo is_front_page() ? \' site-header--home-float\' : \'\'; ?>"',h,count=1,flags=re.I)
+              if n!=1:raise SystemExit('outer patch failed')
+          if 'header-inner--home-float' not in h:
+              h,n=re.subn(r'class=["\']gramiss-container\s+header-inner["\']','class="gramiss-container header-inner<?php echo is_front_page() ? \' header-inner--home-float\' : \'\'; ?>"',h,count=1,flags=re.I)
+              if n!=1:raise SystemExit('inner patch failed')
+          save('header.php',h)
+          lh=read('header.php'); lc=read('assets/css/home-floating-header.css'); lj=read('assets/js/home-floating-header.js')
           checks={
-            'polish marker':'GRAMISS_SHOP_CARD_POLISH_V1' in live_css,
-            'wider info panel':'width:90%!important' in ''.join(live_css.split()),
-            'horizontal title':'white-space:nowrap!important' in ''.join(live_css.split()),
-            'geometric plus':'width:15px!important' in ''.join(live_css.split()) and 'height:15px!important' in ''.join(live_css.split()),
-            'center transform':'translate(-50%,-50%)' in live_css,
-            'cache bump':'shop-sculpted.css?v=20260812-7' in live_header,
+            'server outer':"is_front_page() ? ' site-header--home-float'" in lh,
+            'server inner':"is_front_page() ? ' header-inner--home-float'" in lh,
+            'head css':s in lh and 'gramiss-home-floating-header-css' in lh,
+            'css installed':'GRAMISS HOME FLOATING HEADER V1' in lc,
+            'js enhancement only':'createElement' not in lj and 'innerHTML' not in lj,
           }
-          for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
-          if not all(checks.values()): raise SystemExit('Shop card polish verification failed')
-          print('LIVE SHOP CARD POLISH DEPLOYED AND VERIFIED')
+          for k,v in checks.items():print(('PASS' if v else 'FAIL')+': '+k)
+          if not all(checks.values()):raise SystemExit('live file tests failed')
+          req=urllib.request.Request('https://gramiss.ir/?_hf='+stamp,headers={'Cache-Control':'no-cache','User-Agent':'GramissHeaderDeploy/3'})
+          with urllib.request.urlopen(req,context=ctx,timeout=60) as r:html=r.read().decode('utf-8','replace'); status=r.status
+          hp=html.lower().find('</head>'); cp=html.find('gramiss-home-floating-header-css'); op=html.find('site-header site-header--home-float'); ip=html.find('header-inner header-inner--home-float')
+          print('HTTP',status,'positions',cp,hp,op,ip)
+          if status!=200 or cp<0 or hp<0 or cp>hp or op<0 or ip<0:raise SystemExit('first HTML verification failed')
+          req=urllib.request.Request('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/css/home-floating-header.css?v=20260820-1&_v='+stamp,headers={'Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=60) as r:sc=r.read().decode('utf-8','replace'); st=r.status
+          if st!=200 or 'GRAMISS HOME FLOATING HEADER V1' not in sc:raise SystemExit('served css failed')
+          print('SUCCESS: Home floating header server-rendered live; no legacy-to-new swap')
           PY
