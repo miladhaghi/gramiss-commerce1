@@ -1,0 +1,333 @@
+/* GRAMISS HOME FLOATING HEADER V1
+ * Server-rendered Home header skin. Loaded in <head> before first paint.
+ * This replaces the visual treatment of the legacy header on the front page;
+ * it does not overlay or rebuild the header with JavaScript.
+ */
+
+body.home .g1-announcement,
+body.front-page .g1-announcement{
+  display:none!important;
+}
+
+body.home .site-header--home-float,
+body.front-page .site-header--home-float{
+  position:sticky;
+  top:0;
+  z-index:1000;
+  padding:18px 0 10px;
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  backdrop-filter:none!important;
+  transition:padding .32s cubic-bezier(.2,.8,.2,1);
+}
+
+body.home .site-header--home-float .header-inner--home-float,
+body.front-page .site-header--home-float .header-inner--home-float{
+  width:min(calc(100% - 88px),1488px)!important;
+  min-height:94px!important;
+  margin-inline:auto!important;
+  padding:0 22px!important;
+  display:grid!important;
+  grid-template-columns:minmax(360px,1fr) minmax(360px,430px) minmax(310px,1fr)!important;
+  grid-template-areas:"brand search actions"!important;
+  align-items:center!important;
+  column-gap:28px!important;
+  border:1px solid rgba(255,255,255,.64)!important;
+  border-radius:34px!important;
+  background:linear-gradient(110deg,rgba(226,215,203,.70),rgba(246,240,233,.74) 48%,rgba(221,210,198,.68))!important;
+  box-shadow:0 18px 54px rgba(48,39,32,.13),inset 0 1px 0 rgba(255,255,255,.82),inset 0 -1px 0 rgba(255,255,255,.20)!important;
+  -webkit-backdrop-filter:blur(24px) saturate(118%);
+  backdrop-filter:blur(24px) saturate(118%);
+  transition:min-height .32s cubic-bezier(.2,.8,.2,1),border-radius .32s cubic-bezier(.2,.8,.2,1),box-shadow .32s ease,background .32s ease;
+}
+
+body.home .site-header--home-float .header-cluster,
+body.front-page .site-header--home-float .header-cluster{
+  grid-area:brand!important;
+  min-width:0;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:30px!important;
+  direction:rtl;
+}
+
+body.home .site-header--home-float .wordmark,
+body.front-page .site-header--home-float .wordmark{
+  flex:0 0 auto;
+  font-family:Inter,Arial,sans-serif!important;
+  font-size:28px!important;
+  font-weight:800!important;
+  line-height:1!important;
+  letter-spacing:.16em!important;
+  color:#101319!important;
+  direction:ltr!important;
+  transform-origin:right center;
+  animation:gramiss-home-logo-arrive .58s cubic-bezier(.2,.8,.2,1) both;
+}
+
+body.home .site-header--home-float .primary-nav,
+body.front-page .site-header--home-float .primary-nav{
+  min-width:0;
+  flex:1 1 auto;
+}
+body.home .site-header--home-float .primary-nav ul,
+body.front-page .site-header--home-float .primary-nav ul{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:6px!important;
+  margin:0!important;
+  padding:0!important;
+  direction:ltr!important;
+}
+body.home .site-header--home-float .primary-nav li,
+body.front-page .site-header--home-float .primary-nav li{
+  list-style:none!important;
+}
+body.home .site-header--home-float .primary-nav a,
+body.front-page .site-header--home-float .primary-nav a{
+  min-height:44px;
+  padding:0 14px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  border:1px solid transparent!important;
+  border-radius:999px!important;
+  color:#22252a!important;
+  font-family:Inter,Arial,sans-serif!important;
+  font-size:12px!important;
+  font-weight:500!important;
+  line-height:1!important;
+  white-space:nowrap;
+  transition:background .22s ease,border-color .22s ease,transform .22s ease,box-shadow .22s ease;
+}
+body.home .site-header--home-float .primary-nav li:first-child a,
+body.front-page .site-header--home-float .primary-nav li:first-child a,
+body.home .site-header--home-float .primary-nav a:hover,
+body.front-page .site-header--home-float .primary-nav a:hover{
+  border-color:rgba(255,255,255,.52)!important;
+  background:rgba(255,255,255,.48)!important;
+  box-shadow:0 8px 18px rgba(31,25,21,.06),inset 0 1px 0 rgba(255,255,255,.68)!important;
+  transform:translateY(-1px);
+}
+
+body.home .site-header--home-float .g1-header-search,
+body.front-page .site-header--home-float .g1-header-search{
+  grid-area:search!important;
+  width:100%!important;
+  max-width:430px!important;
+  height:54px!important;
+  margin:0 auto!important;
+  padding:0 18px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:12px!important;
+  border:1px solid rgba(255,255,255,.60)!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.24)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.54),0 9px 24px rgba(34,28,23,.045)!important;
+  transition:background .22s ease,border-color .22s ease,box-shadow .22s ease,transform .22s ease;
+}
+body.home .site-header--home-float .g1-header-search:focus-within,
+body.front-page .site-header--home-float .g1-header-search:focus-within{
+  border-color:rgba(255,255,255,.88)!important;
+  background:rgba(255,255,255,.46)!important;
+  box-shadow:0 12px 30px rgba(34,28,23,.08),inset 0 1px 0 rgba(255,255,255,.75)!important;
+  transform:translateY(-1px);
+}
+body.home .site-header--home-float .g1-header-search svg,
+body.front-page .site-header--home-float .g1-header-search svg{
+  order:2;
+  width:19px!important;
+  height:19px!important;
+  flex:0 0 19px;
+  fill:none!important;
+  stroke:#555b62!important;
+  stroke-width:1.55!important;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+body.home .site-header--home-float .g1-header-search input[type="search"],
+body.front-page .site-header--home-float .g1-header-search input[type="search"]{
+  order:1;
+  min-width:0!important;
+  width:100%!important;
+  height:auto!important;
+  padding:0!important;
+  border:0!important;
+  outline:0!important;
+  background:transparent!important;
+  color:#202329!important;
+  font-size:11px!important;
+  line-height:1.4!important;
+  text-align:right!important;
+  box-shadow:none!important;
+}
+body.home .site-header--home-float .g1-header-search input::placeholder,
+body.front-page .site-header--home-float .g1-header-search input::placeholder{
+  color:rgba(55,57,62,.55)!important;
+  opacity:1;
+}
+
+body.home .site-header--home-float .header-actions,
+body.front-page .site-header--home-float .header-actions{
+  grid-area:actions!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:9px!important;
+  direction:rtl;
+}
+body.home .site-header--home-float .icon-link,
+body.home .site-header--home-float .search-toggle,
+body.home .site-header--home-float .menu-toggle,
+body.front-page .site-header--home-float .icon-link,
+body.front-page .site-header--home-float .search-toggle,
+body.front-page .site-header--home-float .menu-toggle{
+  width:48px!important;
+  height:48px!important;
+  flex:0 0 48px;
+  display:inline-grid!important;
+  place-items:center!important;
+  border:1px solid rgba(255,255,255,.36)!important;
+  border-radius:50%!important;
+  background:rgba(255,255,255,.18)!important;
+  color:#11151a!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.46)!important;
+  transition:transform .2s ease,background .2s ease,border-color .2s ease,box-shadow .2s ease!important;
+}
+body.home .site-header--home-float .icon-link:hover,
+body.home .site-header--home-float .search-toggle:hover,
+body.front-page .site-header--home-float .icon-link:hover,
+body.front-page .site-header--home-float .search-toggle:hover{
+  border-color:rgba(255,255,255,.72)!important;
+  background:rgba(255,255,255,.48)!important;
+  box-shadow:0 9px 22px rgba(31,25,21,.08),inset 0 1px 0 rgba(255,255,255,.72)!important;
+  transform:translateY(-2px);
+}
+body.home .site-header--home-float .icon-link svg,
+body.home .site-header--home-float .search-toggle svg,
+body.home .site-header--home-float .menu-toggle svg,
+body.front-page .site-header--home-float .icon-link svg,
+body.front-page .site-header--home-float .search-toggle svg,
+body.front-page .site-header--home-float .menu-toggle svg{
+  width:21px!important;
+  height:21px!important;
+  fill:none!important;
+  stroke:currentColor!important;
+  stroke-width:1.45!important;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+body.home .site-header--home-float .header-count,
+body.front-page .site-header--home-float .header-count{
+  top:-5px!important;
+  left:-2px!important;
+  min-width:20px!important;
+  height:20px!important;
+  padding:0 5px!important;
+  border:2px solid rgba(237,228,218,.92)!important;
+  border-radius:999px!important;
+  background:#171a1f!important;
+  color:#fff!important;
+  font:700 9px/1 Inter,Arial,sans-serif!important;
+  box-shadow:0 4px 12px rgba(16,19,25,.18)!important;
+}
+body.home .site-header--home-float .header-count.gramiss-count-pop,
+body.front-page .site-header--home-float .header-count.gramiss-count-pop{
+  animation:gramiss-cart-count-pop .42s cubic-bezier(.16,1.4,.35,1);
+}
+
+body.home .site-header--home-float.is-compact,
+body.front-page .site-header--home-float.is-compact{
+  padding-top:9px;
+  padding-bottom:7px;
+}
+body.home .site-header--home-float.is-compact .header-inner--home-float,
+body.front-page .site-header--home-float.is-compact .header-inner--home-float{
+  min-height:74px!important;
+  border-radius:27px!important;
+  background:linear-gradient(110deg,rgba(228,218,207,.82),rgba(249,245,240,.84) 48%,rgba(224,214,203,.80))!important;
+  box-shadow:0 12px 40px rgba(48,39,32,.14),inset 0 1px 0 rgba(255,255,255,.8)!important;
+}
+body.home .site-header--home-float.is-compact .wordmark,
+body.front-page .site-header--home-float.is-compact .wordmark{
+  transform:scale(.92);
+}
+body.home .site-header--home-float.is-compact .g1-header-search,
+body.front-page .site-header--home-float.is-compact .g1-header-search{
+  height:48px!important;
+}
+body.home .site-header--home-float.is-compact .icon-link,
+body.home .site-header--home-float.is-compact .search-toggle,
+body.front-page .site-header--home-float.is-compact .icon-link,
+body.front-page .site-header--home-float.is-compact .search-toggle{
+  width:43px!important;
+  height:43px!important;
+  flex-basis:43px;
+}
+
+@keyframes gramiss-home-logo-arrive{
+  0%{opacity:0;letter-spacing:.27em;transform:translateX(8px)}
+  100%{opacity:1;letter-spacing:.16em;transform:none}
+}
+@keyframes gramiss-cart-count-pop{
+  0%{transform:scale(.62)}
+  55%{transform:scale(1.22)}
+  100%{transform:scale(1)}
+}
+
+@media(max-width:1180px){
+  body.home .site-header--home-float .header-inner--home-float,
+  body.front-page .site-header--home-float .header-inner--home-float{
+    width:min(calc(100% - 44px),1120px)!important;
+    grid-template-columns:minmax(260px,1fr) minmax(300px,390px) auto!important;
+    column-gap:16px!important;
+    padding-inline:16px!important;
+  }
+  body.home .site-header--home-float .header-cluster,
+  body.front-page .site-header--home-float .header-cluster{gap:12px!important}
+  body.home .site-header--home-float .primary-nav,
+  body.front-page .site-header--home-float .primary-nav{display:none!important}
+  body.home .site-header--home-float .menu-toggle,
+  body.front-page .site-header--home-float .menu-toggle{display:inline-grid!important}
+}
+
+@media(max-width:760px){
+  body.home .site-header--home-float,
+  body.front-page .site-header--home-float{padding:10px 0 6px}
+  body.home .site-header--home-float .header-inner--home-float,
+  body.front-page .site-header--home-float .header-inner--home-float{
+    width:calc(100% - 20px)!important;
+    min-height:66px!important;
+    padding:0 10px!important;
+    grid-template-columns:1fr auto!important;
+    grid-template-areas:"brand actions"!important;
+    column-gap:10px!important;
+    border-radius:24px!important;
+  }
+  body.home .site-header--home-float .wordmark,
+  body.front-page .site-header--home-float .wordmark{font-size:20px!important;letter-spacing:.13em!important}
+  body.home .site-header--home-float .g1-header-search,
+  body.front-page .site-header--home-float .g1-header-search{display:none!important}
+  body.home .site-header--home-float .header-actions,
+  body.front-page .site-header--home-float .header-actions{gap:3px!important}
+  body.home .site-header--home-float .header-actions .account-link,
+  body.home .site-header--home-float .header-actions a[aria-label="مقایسه محصولات"],
+  body.front-page .site-header--home-float .header-actions .account-link,
+  body.front-page .site-header--home-float .header-actions a[aria-label="مقایسه محصولات"]{display:none!important}
+  body.home .site-header--home-float .icon-link,
+  body.home .site-header--home-float .search-toggle,
+  body.home .site-header--home-float .menu-toggle,
+  body.front-page .site-header--home-float .icon-link,
+  body.front-page .site-header--home-float .search-toggle,
+  body.front-page .site-header--home-float .menu-toggle{
+    width:40px!important;height:40px!important;flex-basis:40px
+  }
+}
+
+@media(prefers-reduced-motion:reduce){
+  body.home .site-header--home-float *,body.front-page .site-header--home-float *{animation:none!important;transition:none!important}
+}
