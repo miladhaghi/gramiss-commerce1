@@ -14,8 +14,13 @@ $compare_url   = $compare_page ? get_permalink( $compare_page ) : add_query_arg(
 $release_css   = get_template_directory_uri() . '/assets/css/gramiss-release.css';
 $release_ver   = gramiss_asset_version( '/assets/css/gramiss-release.css', (string) wp_get_theme()->get( 'Version' ) );
 $is_shop_view  = function_exists( 'is_shop' ) && ( is_shop() || is_product_taxonomy() || is_post_type_archive( 'product' ) );
+$is_home_view  = is_front_page();
 $shop_css      = get_template_directory_uri() . '/assets/css/shop.css';
 $shop_css_ver  = gramiss_asset_version( '/assets/css/shop.css', (string) wp_get_theme()->get( 'Version' ) );
+$home_header_css = get_template_directory_uri() . '/assets/css/home-floating-header.css';
+$home_header_css_ver = gramiss_asset_version( '/assets/css/home-floating-header.css', '20260820-1' );
+$home_header_js = get_template_directory_uri() . '/assets/js/home-floating-header.js';
+$home_header_js_ver = gramiss_asset_version( '/assets/js/home-floating-header.js', '20260820-1' );
 ?><!doctype html>
 <html <?php language_attributes(); ?> dir="rtl">
 <head>
@@ -24,6 +29,10 @@ $shop_css_ver  = gramiss_asset_version( '/assets/css/shop.css', (string) wp_get_
     <meta name="theme-color" content="#101319">
     <?php wp_head(); ?>
     <link rel="stylesheet" id="gramiss-release-css" href="<?php echo esc_url( add_query_arg( 'ver', $release_ver, $release_css ) ); ?>" media="all">
+    <?php if ( $is_home_view ) : ?>
+        <link rel="stylesheet" id="gramiss-home-floating-header-css" href="<?php echo esc_url( add_query_arg( 'ver', $home_header_css_ver, $home_header_css ) ); ?>" media="all">
+        <script id="gramiss-home-floating-header-js" defer src="<?php echo esc_url( add_query_arg( 'ver', $home_header_js_ver, $home_header_js ) ); ?>"></script>
+    <?php endif; ?>
     <?php if ( $is_shop_view ) : ?>
         <link rel="stylesheet" id="gramiss-shop-css" href="<?php echo esc_url( add_query_arg( 'ver', $shop_css_ver, $shop_css ) ); ?>" media="all">
     <?php endif; ?>
@@ -32,14 +41,16 @@ $shop_css_ver  = gramiss_asset_version( '/assets/css/shop.css', (string) wp_get_
 <?php wp_body_open(); ?>
 
 <a class="screen-reader-text" href="#primary">پرش به محتوای اصلی</a>
+<?php if ( ! $is_home_view ) : ?>
 <div class="g1-announcement">
     <span>انتخاب بهتر، خرید مطمئن‌تر</span>
     <span aria-hidden="true">/</span>
     <span>ارسال به سراسر ایران</span>
 </div>
+<?php endif; ?>
 
-<header class="site-header" aria-label="ناوبری اصلی">
-    <div class="gramiss-container header-inner">
+<header class="site-header<?php echo $is_home_view ? ' site-header--home-float' : ''; ?>" aria-label="ناوبری اصلی">
+    <div class="gramiss-container header-inner<?php echo $is_home_view ? ' header-inner--home-float' : ''; ?>">
         <div class="header-cluster">
             <button class="menu-toggle" type="button" aria-label="باز کردن منو" aria-controls="gramiss-mobile-panel" aria-expanded="false">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
