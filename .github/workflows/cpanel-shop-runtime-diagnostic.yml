@@ -36,25 +36,38 @@ jobs:
                   for k in ('content','file_content','data'):
                       if isinstance(data.get(k),str): return data[k]
               return data if isinstance(data,str) else ''
+
+          files=[
+            'assets/css/shop.css','assets/css/shop-premium.css','assets/css/shop-sculpted.css',
+            'assets/css/shop-category-nav.css','assets/css/shop-premium-shell.css','assets/css/gramiss-release.css',
+            'style.css'
+          ]
+          needles=['gramiss-shop-cleaning','site-header::','site-header:before','site-header:after','gramiss-commerce-main::','#primary::','page-title','background:#b','background: #b','background-color:#b','background-color: #b']
+          for rel in files:
+              try: text=read(rel)
+              except Exception as e:
+                  print('MISSING',rel,e); continue
+              print('\n=== SCAN',rel,'===')
+              for i,line in enumerate(text.splitlines(),1):
+                  low=line.lower()
+                  if any(n in low for n in needles):
+                      print(f'{i}: {line[:1500]}')
+
           header=read('header.php')
-          print('=== LIVE HEADER SHOP ASSET ORDER ===')
+          print('\n=== LIVE HEADER SHOP ASSET ORDER ===')
           for line in header.splitlines():
               low=line.lower()
               if ('shop' in low or 'gramiss' in low) and ('<link' in low or '<script' in low): print(line.strip())
-          url='https://gramiss.ir/?post_type=product&_diag=runtime'
-          req=urllib.request.Request(url,headers={'User-Agent':'GramissRuntimeDiagnostic/1.0','Cache-Control':'no-cache'})
+
+          url='https://gramiss.ir/?post_type=product&_diag=runtime2'
+          req=urllib.request.Request(url,headers={'User-Agent':'GramissRuntimeDiagnostic/2.0','Cache-Control':'no-cache'})
           with urllib.request.urlopen(req,context=ctx,timeout=45) as r: html=r.read().decode('utf-8','replace'); print('HTTP',r.status)
           m=re.search(r'<body([^>]*)>',html,re.I)
           print('=== BODY ATTRS ==='); print(m.group(1)[:1200] if m else 'NO BODY')
-          print('=== FRONTEND SHOP ASSETS IN DOCUMENT ORDER ===')
-          for tag in re.findall(r'<(?:link|script)\b[^>]*>',html,re.I):
-              if 'shop' in tag.lower() or 'gramiss' in tag.lower(): print(tag[:1200])
-          print('=== HTML AFTER SITE HEADER ===')
-          pos=html.lower().find('</header>')
-          chunk=html[pos:pos+7000] if pos!=-1 else html[:7000]
-          chunk=re.sub(r'\s+',' ',chunk)
-          print(chunk[:7000])
-          print('=== PREMIUM HERO / PAGE TITLE POSITIONS ===')
-          for needle in ['gramiss-shop-premium-hero','woocommerce-products-header','page-title','gse-shop-ready','shop-alignment-fix.css']:
-              print(needle, html.find(needle))
+
+          print('=== SERVED ALIGNMENT CSS ===')
+          cssurl='https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/css/shop-alignment-fix.css?v=20260820-1&_diag=2'
+          req=urllib.request.Request(cssurl,headers={'User-Agent':'GramissRuntimeDiagnostic/2.0','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=45) as r:
+              served=r.read().decode('utf-8','replace'); print('ALIGN CSS HTTP',r.status); print(served[:5000])
           PY
