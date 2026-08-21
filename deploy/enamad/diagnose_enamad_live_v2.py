@@ -22,12 +22,21 @@ print('LIVE footer trust wrapper:', 'class="footer-trust"' in footer)
 print('LIVE trustseal href:', 'trustseal.enamad.ir/?id=7094948' in footer)
 print('LIVE exact code token:', "code='xJ8HkTjjBF0ykbRRdp0yoXAzjUguqwgJ'" in footer)
 print('LIVE theme marker:', 'GRAMISS_ENAMAD_FOOTER_V1' in css)
-if 'footer-trust' in footer:
-    i=footer.index('footer-trust'); print('FOOTER CONTEXT:', footer[max(0,i-180):i+850])
-req=urllib.request.Request('https://gramiss.ir/?_enamad_diag=2',headers={'Cache-Control':'no-cache','User-Agent':'GramissEnamadDiag/2.0'})
-with urllib.request.urlopen(req,context=CTX,timeout=60) as r:
-    html=r.read().decode('utf-8','replace'); print('HOME HTTP:',r.status)
-print('SERVED wrapper:', 'class="footer-trust"' in html)
-print('SERVED trustseal:', 'trustseal.enamad.ir/?id=7094948' in html)
-if 'footer-trust' in html:
-    i=html.index('footer-trust'); print('HTML CONTEXT:', html[max(0,i-180):i+900])
+
+def fetch_url(label,url,headers=None):
+    h={'User-Agent':'GramissEnamadDiag/3.0'}
+    if headers: h.update(headers)
+    req=urllib.request.Request(url,headers=h)
+    with urllib.request.urlopen(req,context=CTX,timeout=60) as r:
+        body=r.read().decode('utf-8','replace')
+        print(label,'HTTP:',r.status)
+        print(label,'cache-control:',r.headers.get('Cache-Control'))
+        print(label,'age:',r.headers.get('Age'))
+        print(label,'x-cache:',r.headers.get('X-Cache'))
+        print(label,'cf-cache-status:',r.headers.get('CF-Cache-Status'))
+        print(label,'wrapper:', 'class="footer-trust"' in body)
+        print(label,'trustseal:', 'trustseal.enamad.ir/?id=7094948' in body)
+        return body
+fetch_url('PLAIN HOME','https://gramiss.ir/')
+fetch_url('NO-CACHE HOME','https://gramiss.ir/',{'Cache-Control':'no-cache','Pragma':'no-cache'})
+fetch_url('QUERY HOME','https://gramiss.ir/?_enamad_diag=3',{'Cache-Control':'no-cache'})
