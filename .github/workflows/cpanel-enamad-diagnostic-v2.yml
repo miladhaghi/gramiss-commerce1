@@ -1,12 +1,12 @@
-name: cPanel eNAMAD Diagnostic V2
+name: cPanel eNAMAD LiteSpeed Purge V2
 
 on:
   pull_request:
     branches: [main]
 
 jobs:
-  diagnose:
-    if: github.head_ref == 'ops/enamad-diagnose-v2'
+  purge:
+    if: github.head_ref == 'ops/enamad-purge-v2'
     runs-on: ubuntu-latest
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
@@ -17,5 +17,5 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: wordpress-migration
-      - name: Diagnose live eNAMAD footer
-        run: python3 deploy/enamad/diagnose_enamad_live_v2.py
+      - name: Purge LiteSpeed and verify eNAMAD on plain homepage
+        run: python3 deploy/enamad/purge_litespeed_enamad_v2.py
