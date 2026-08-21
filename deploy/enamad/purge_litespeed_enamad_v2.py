@@ -29,7 +29,7 @@ if ENAMAD_TOKEN not in footer or 'class="footer-trust"' not in footer:
 print('PASS: live footer contains eNAMAD block before purge')
 
 stamp=str(int(time.time()))
-filename=f'.gramiss-lscache-purge-{stamp}.php'
+filename=f'gramiss-lscache-purge-{stamp}.php'
 php="""<?php
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('X-LiteSpeed-Purge: public,*');
@@ -43,19 +43,19 @@ echo 'GRAMISS_LSCACHE_PURGED';
 @unlink(__FILE__);
 """
 save_file(PUBLIC,filename,php)
-print('Temporary purge endpoint created')
+print('Temporary purge endpoint created:', filename)
 url=f'https://gramiss.ir/{filename}?t={stamp}'
-req=urllib.request.Request(url,headers={'Cache-Control':'no-cache','Pragma':'no-cache','User-Agent':'GramissCachePurge/2.0'})
+req=urllib.request.Request(url,headers={'Cache-Control':'no-cache','Pragma':'no-cache','User-Agent':'Mozilla/5.0 GramissCachePurge/2.1'})
 with urllib.request.urlopen(req,context=CTX,timeout=60) as r:
     body=r.read().decode('utf-8','replace')
     print('Purge endpoint HTTP:',r.status)
     print('Purge response X-LiteSpeed-Purge:',r.headers.get('X-LiteSpeed-Purge'))
     if 'GRAMISS_LSCACHE_PURGED' not in body: raise SystemExit('Purge endpoint did not confirm execution')
-print('PASS: LiteSpeed purge endpoint executed')
+print('PASS: LiteSpeed purge endpoint executed and self-deleted')
 time.sleep(3)
 
 def fetch_home(label):
-    req=urllib.request.Request('https://gramiss.ir/',headers={'User-Agent':'GramissCacheVerify/2.0'})
+    req=urllib.request.Request('https://gramiss.ir/',headers={'User-Agent':'Mozilla/5.0 GramissCacheVerify/2.1'})
     with urllib.request.urlopen(req,context=CTX,timeout=60) as r:
         body=r.read().decode('utf-8','replace')
         state=r.headers.get('X-LiteSpeed-Cache')
