@@ -1,0 +1,21 @@
+name: cPanel eNAMAD Footer V1
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.head_ref == 'ops/enamad-footer-v1'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: wordpress-migration
+      - name: Deploy official eNAMAD footer snippet
+        run: python3 deploy/enamad/deploy_enamad_footer_v1.py
