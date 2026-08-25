@@ -1,0 +1,74 @@
+name: cPanel Home Emergency Restore
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  restore:
+    if: github.head_ref == 'ops/home-emergency-restore'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - name: Restore pre-Looks front page and verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, ssl, time, urllib.parse, urllib.request
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context()
+          backup='front-page.php.bak-home-looks-20260825-193543'
+          def call(fn,params,post=False):
+              url=f'https://{host}:2083/execute/Fileman/{fn}'; data=urllib.parse.urlencode(params).encode(); last=None
+              for attempt in range(1,6):
+                  try:
+                      req=urllib.request.Request(url if post else url+'?'+data.decode(),data=data if post else None,method='POST' if post else 'GET')
+                      req.add_header('Authorization',f'cpanel {user}:{token}')
+                      if post:req.add_header('Content-Type','application/x-www-form-urlencoded')
+                      with urllib.request.urlopen(req,context=ctx,timeout=75) as r: obj=json.loads(r.read().decode('utf-8','replace'))
+                      result=obj.get('result') if isinstance(obj.get('result'),dict) else obj
+                      if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
+                      return result.get('data')
+                  except Exception as e:
+                      last=e; print(f'Attempt {attempt}/5 {fn}: {e}')
+                      if attempt<5: time.sleep(attempt*3)
+              raise last
+          def read(name):
+              d=call('get_file_content',{'dir':root,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(d,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(d.get(k),str): return d[k]
+              if isinstance(d,str): return d
+              raise RuntimeError('Unexpected content for '+name)
+          def save(name,content):
+              call('save_file_content',{'dir':root,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+          pre=read(backup)
+          current=read('front-page.php')
+          if 'data-g1-looks' not in current: print('Current front-page already has no Looks marker')
+          if 'g1-interactive-hero' not in pre: raise SystemExit('Backup does not look like expected hero template')
+          save('front-page.php.bak-before-emergency-'+time.strftime('%Y%m%d-%H%M%S',time.gmtime()), current)
+          save('front-page.php',pre)
+          # purge LiteSpeed via one-use public script
+          public='public_html'; name='gramiss-purge-'+str(int(time.time()))+'.php'
+          php="<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php'; if(function_exists('do_action')){do_action('litespeed_purge_all');} echo 'OK'; @unlink(__FILE__);"
+          call('save_file_content',{'dir':public,'file':name,'content':php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+          req=urllib.request.Request('https://gramiss.ir/'+name+'?t='+str(int(time.time())),headers={'User-Agent':'GramissRestore/1','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=75) as r: print('purge',r.status,r.read().decode('utf-8','replace')[:100])
+          q='?restore_verify='+str(int(time.time()))
+          req=urllib.request.Request('https://gramiss.ir/'+q,headers={'User-Agent':'GramissRestoreVerify/1','Cache-Control':'no-cache','Pragma':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=90) as r: html=r.read().decode('utf-8','replace'); status=r.status
+          checks={
+              'HTTP 200':status==200,
+              'Looks removed':'data-g1-looks' not in html,
+              'hero present':'g1-interactive-hero' in html,
+              'hero headline':'کمتر حدس بزن' in html,
+          }
+          for k,v in checks.items(): print(('PASS' if v else 'FAIL')+': '+k)
+          if not all(checks.values()): raise SystemExit('Restore verification failed')
+          print('LIVE HOME RESTORED TO PRE-LOOKS BACKUP')
+          PY
