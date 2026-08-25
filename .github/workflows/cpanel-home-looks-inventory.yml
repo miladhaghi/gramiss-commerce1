@@ -1,0 +1,72 @@
+name: cPanel Home Looks Inventory
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  inventory:
+    if: github.head_ref == 'ops/home-looks-inventory'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      PUBLIC_ROOT: public_html
+    steps:
+      - name: Read live WooCommerce product inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, ssl, time, urllib.parse, urllib.request
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; public=os.environ['PUBLIC_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context()
+          def call(func,params,post=False):
+              url=f'https://{host}:2083/execute/Fileman/{func}'; enc=urllib.parse.urlencode(params).encode()
+              req=urllib.request.Request(url if post else url+'?'+enc.decode(),data=enc if post else None,method='POST' if post else 'GET')
+              req.add_header('Authorization',f'cpanel {user}:{token}')
+              if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+              with urllib.request.urlopen(req,context=ctx,timeout=75) as r: payload=json.loads(r.read().decode('utf-8'))
+              result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
+              if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
+              return result.get('data')
+          def save(rel,content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=public if not parent else f'{public}/{parent}'
+              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},post=True)
+          name=f'gramiss-looks-inventory-{int(time.time())}.php'
+          php=r'''<?php
+          header('Content-Type: application/json; charset=utf-8');
+          define('WP_USE_THEMES', false);
+          require __DIR__ . '/wp-load.php';
+          $out = array();
+          if ( function_exists('wc_get_products') ) {
+            foreach ( wc_get_products(array('status'=>'publish','limit'=>-1,'orderby'=>'ID','order'=>'ASC')) as $p ) {
+              $out[] = array(
+                'id' => $p->get_id(),
+                'name' => $p->get_name(),
+                'slug' => $p->get_slug(),
+                'sku' => $p->get_sku(),
+                'price' => $p->get_price(),
+                'stock' => $p->is_in_stock(),
+                'url' => $p->get_permalink(),
+              );
+            }
+          }
+          echo wp_json_encode($out, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT);
+          @unlink(__FILE__);
+          '''
+          save(name,php)
+          req=urllib.request.Request(f'https://gramiss.ir/{name}?t={int(time.time())}',headers={'User-Agent':'GramissLooksInventory/1','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=75) as r: body=r.read().decode('utf-8','replace')
+          data=json.loads(body)
+          print('PRODUCT_COUNT',len(data))
+          needles=['مسیح','کرپ','سیلک','ونس','سرمه','کتونی','کلاه','بول','بگ','جین','LV','لویی','ویت']
+          for p in data:
+              hay=(str(p.get('name',''))+' '+str(p.get('slug',''))+' '+str(p.get('sku',''))).lower()
+              if any(n.lower() in hay for n in needles):
+                  print(json.dumps(p,ensure_ascii=False))
+          print('FULL_INVENTORY_JSON_BEGIN')
+          print(json.dumps(data,ensure_ascii=False))
+          print('FULL_INVENTORY_JSON_END')
+          PY
