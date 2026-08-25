@@ -1,0 +1,152 @@
+name: cPanel PDP Premium V1
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.head_ref == 'ops/pdp-premium-v1'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+      PUBLIC_ROOT: public_html
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: wordpress-migration
+
+      - name: Deploy approved premium product page
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re, ssl, time, urllib.parse, urllib.request
+          from pathlib import Path
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']
+          root=os.environ['THEME_ROOT'].strip('/'); public=os.environ['PUBLIC_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
+
+          def call(func, params, post=False):
+              url=f'https://{host}:2083/execute/Fileman/{func}'
+              enc=urllib.parse.urlencode(params).encode(); last=None
+              for attempt in range(1,6):
+                  try:
+                      req=urllib.request.Request(url if post else url+'?'+enc.decode(),data=enc if post else None,method='POST' if post else 'GET')
+                      req.add_header('Authorization',f'cpanel {user}:{token}')
+                      if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+                      with urllib.request.urlopen(req,context=ctx,timeout=75) as r: payload=json.loads(r.read().decode('utf-8'))
+                      result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
+                      if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
+                      return result.get('data')
+                  except Exception as exc:
+                      last=exc; print(f'Attempt {attempt}/5 failed {func}: {exc}')
+                      if attempt<5: time.sleep(attempt*3)
+              raise last
+
+          def read_from(base,rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=base if not parent else f'{base}/{parent}'
+              d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(d,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(d.get(k),str): return d[k]
+              return d if isinstance(d,str) else ''
+
+          def save_to(base,rel,content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=base if not parent else f'{base}/{parent}'
+              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},post=True)
+
+          def read(rel): return read_from(root,rel)
+          def save(rel,content): save_to(root,rel,content)
+
+          css=Path('deploy/pdp-premium/product-runtime-premium.css').read_text(encoding='utf-8')
+          premium_js=Path('deploy/pdp-premium/product-runtime-premium.js').read_text(encoding='utf-8')
+          header=read('header.php')
+          runtime=read('assets/js/product-runtime-fix.js')
+
+          save(f'header.php.bak-pdppremium-{stamp}',header)
+          save(f'assets/js/product-runtime-fix.js.bak-pdppremium-{stamp}',runtime)
+          print('Backups created',stamp)
+
+          # Coordinate first paint with the premium enhancement as well as variation UI.
+          if "var premiumLoader=document.getElementById('gramiss-pdp-premium-js');" not in runtime:
+              needle="var variationLoader=document.getElementById('gramiss-pdp-variation-ui-js');\n    if(!force && variationForm && variationLoader && !root.classList.contains('gramiss-pdp-variations-ready')) return;"
+              repl="var variationLoader=document.getElementById('gramiss-pdp-variation-ui-js');\n    var premiumLoader=document.getElementById('gramiss-pdp-premium-js');\n    if(!force && premiumLoader && !root.classList.contains('gramiss-pdp-premium-ready')) return;\n    if(!force && variationForm && variationLoader && !root.classList.contains('gramiss-pdp-variations-ready')) return;"
+              if needle not in runtime: raise RuntimeError('releaseBoot coordination signature not found; refusing blind patch')
+              runtime=runtime.replace(needle,repl,1)
+          runtime=runtime.replace("document.addEventListener('gramiss:pdp-variations-ready',function(){ releaseBoot(true); });","document.addEventListener('gramiss:pdp-variations-ready',function(){ releaseBoot(); });\n  document.addEventListener('gramiss:pdp-premium-ready',function(){ releaseBoot(); });")
+
+          # Insert premium CSS+JS after compact/gradient CSS but before gallery + variation deferred scripts.
+          start='<!-- GRAMISS PDP PREMIUM V1 START -->'; end='<!-- GRAMISS PDP PREMIUM V1 END -->'
+          block=f'''{start}\n<link id="gramiss-pdp-premium-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/product-runtime-premium.css?v=20260826-1' ); ?>">\n<script id="gramiss-pdp-premium-js" defer src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/product-runtime-premium.js?v=20260826-1' ); ?>"></script>\n{end}'''
+          if start in header and end in header:
+              before=header.split(start,1)[0]; after=header.split(end,1)[1]; header=before+block+after
+          else:
+              anchor="<script id=\"gramiss-pdp-gallery-switch-js\" defer"
+              idx=header.find(anchor)
+              if idx<0: raise RuntimeError('PDP gallery loader anchor not found in header.php')
+              header=header[:idx]+block+'\n'+header[idx:]
+
+          # Cache-bust the coordinated runtime too.
+          header=re.sub(r'product-runtime-fix\.js\?v=[0-9A-Za-z._-]+','product-runtime-fix.js?v=20260826-3',header)
+
+          save('assets/css/product-runtime-premium.css',css)
+          save('assets/js/product-runtime-premium.js',premium_js)
+          save('assets/js/product-runtime-fix.js',runtime)
+          save('header.php',header)
+
+          # Verify live files before cache purge.
+          live_header=read('header.php'); live_runtime=read('assets/js/product-runtime-fix.js')
+          live_css=read('assets/css/product-runtime-premium.css'); live_pjs=read('assets/js/product-runtime-premium.js')
+          checks={
+              'premium css marker':'GRAMISS_PDP_PREMIUM_V1' in live_css,
+              'premium js marker':'GRAMISS_PDP_PREMIUM_V1' in live_pjs,
+              'premium loader':'gramiss-pdp-premium-css' in live_header and 'gramiss-pdp-premium-js' in live_header,
+              'premium before variation':live_header.find('gramiss-pdp-premium-js') < live_header.find('gramiss-pdp-variation-ui-js'),
+              'runtime waits premium':"premiumLoader=document.getElementById('gramiss-pdp-premium-js')" in live_runtime,
+              'runtime listens premium':"gramiss:pdp-premium-ready" in live_runtime,
+              'runtime no forced variation reveal':"gramiss:pdp-variations-ready',function(){ releaseBoot(true)" not in live_runtime,
+              'runtime cache bust':'product-runtime-fix.js?v=20260826-3' in live_header,
+          }
+          for k,v in checks.items(): print(('PASS' if v else 'FAIL')+': '+k)
+          if not all(checks.values()): raise SystemExit('Premium PDP live-file verification failed')
+
+          # Purge LiteSpeed so real product URLs cannot keep stale head markup.
+          purge_name=f'gramiss-pdp-premium-purge-{int(time.time())}.php'
+          purge_php="""<?php\nheader('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');\nheader('X-LiteSpeed-Purge: public,*');\ndefine('WP_USE_THEMES', false);\nrequire __DIR__ . '/wp-load.php';\nif (function_exists('do_action')) { do_action('litespeed_purge_all'); do_action('litespeed_purge_front'); }\necho 'GRAMISS_PDP_PREMIUM_CACHE_PURGED';\n@unlink(__FILE__);\n"""
+          save_to(public,purge_name,purge_php)
+          req=urllib.request.Request(f'https://gramiss.ir/{purge_name}?t={int(time.time())}',headers={'User-Agent':'Mozilla/5.0 GramissPremiumPurge/1.0','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=60) as r:
+              body=r.read().decode('utf-8','replace'); print('Purge HTTP',r.status)
+          if 'GRAMISS_PDP_PREMIUM_CACHE_PURGED' not in body: raise SystemExit('LiteSpeed purge did not confirm')
+          time.sleep(3)
+
+          def public_get(url):
+              req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0 GramissPremiumVerify/1.0','Cache-Control':'no-cache','Pragma':'no-cache'})
+              with urllib.request.urlopen(req,context=ctx,timeout=75) as r: return r.status,r.headers,r.read().decode('utf-8','replace')
+
+          products=['پیراهن-آستین-بلند-پارچه-سیلک','کتونی-سبک-ونس-سفید']
+          for slug in products:
+              url='https://gramiss.ir/?'+urllib.parse.urlencode({'product':slug})
+              for n in (1,2):
+                  status,headers,html=public_get(url)
+                  ok=('product-runtime-premium.css?v=20260826-1' in html and 'product-runtime-premium.js?v=20260826-1' in html and 'product-runtime-fix.js?v=20260826-3' in html)
+                  print(slug,'pass',n,'HTTP',status,'cache',headers.get('X-LiteSpeed-Cache'),'markers',ok)
+                  if status!=200 or not ok: raise SystemExit('Public PDP serves stale/invalid premium markup: '+slug)
+                  time.sleep(1)
+
+          status,_,served_css=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/css/product-runtime-premium.css?v=20260826-1')
+          if status!=200 or 'g3-product-helper-row' not in served_css or 'g3-premium-info-nav' not in served_css: raise SystemExit('Public premium CSS verification failed')
+          status,_,served_js=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/js/product-runtime-premium.js?v=20260826-1')
+          if status!=200 or 'makeEyebrow' not in served_js or 'makeTrustRow' not in served_js or 'enhanceQuantity' not in served_js: raise SystemExit('Public premium JS verification failed')
+          status,_,served_runtime=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/js/product-runtime-fix.js?v=20260826-3')
+          if status!=200 or 'gramiss-pdp-premium-ready' not in served_runtime: raise SystemExit('Public coordinated runtime verification failed')
+
+          print('SUCCESS: APPROVED PREMIUM PDP DEPLOYED, FIRST-PAINT COORDINATED, CACHE PURGED, SHIRT + SNEAKER VERIFIED')
+          PY
