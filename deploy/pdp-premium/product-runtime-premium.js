@@ -87,9 +87,10 @@
 
   function syncCTA(summary){
     var p=priceText(summary);
+    var label=p?('افزودن به سبد — '+p):'افزودن به سبد';
     qsa('.single_add_to_cart_button',summary).forEach(function(btn){
       if(!btn.dataset.g3OriginalLabel) btn.dataset.g3OriginalLabel=(btn.textContent||'افزودن به سبد').trim();
-      btn.textContent=p?('افزودن به سبد — '+p):'افزودن به سبد';
+      if((btn.textContent||'').trim()!==label) btn.textContent=label;
     });
   }
 
@@ -153,10 +154,19 @@
     summary.dataset.g3PriceSync='1';
     var form=qs('form.variations_form',summary);
     if(form){
-      form.addEventListener('change',function(){ setTimeout(function(){ syncCTA(summary); },20); });
-      var wrap=qs('.single_variation_wrap',form);
-      if(wrap && window.MutationObserver){
-        new MutationObserver(function(){ syncCTA(summary); }).observe(wrap,{subtree:true,childList:true,characterData:true,attributes:true});
+      var scheduled=false;
+      function queueSync(){
+        if(scheduled) return;
+        scheduled=true;
+        window.requestAnimationFrame(function(){
+          scheduled=false;
+          syncCTA(summary);
+        });
+      }
+      form.addEventListener('change',queueSync);
+      var priceArea=qs('.single_variation',form) || qs('.woocommerce-variation-price',form);
+      if(priceArea && window.MutationObserver){
+        new MutationObserver(queueSync).observe(priceArea,{subtree:true,childList:true,characterData:true});
       }
     }
   }
