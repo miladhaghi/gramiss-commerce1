@@ -1,0 +1,74 @@
+name: cPanel PDP First Paint Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  diagnose:
+    if: github.head_ref == 'ops/pdp-first-paint-diagnostic'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - name: Inspect live PDP first-paint chain
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, ssl, urllib.parse, urllib.request, re, time
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context()
+          def call(func, params, post=False):
+              url=f'https://{host}:2083/execute/Fileman/{func}'
+              enc=urllib.parse.urlencode(params).encode()
+              req=urllib.request.Request(url if post else url+'?'+enc.decode(), data=enc if post else None, method='POST' if post else 'GET')
+              req.add_header('Authorization',f'cpanel {user}:{token}')
+              if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+              with urllib.request.urlopen(req,context=ctx,timeout=60) as r: p=json.loads(r.read().decode())
+              result=p.get('result') if isinstance(p.get('result'),dict) else p
+              if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
+              return result.get('data')
+          def read(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else f'{root}/{parent}'
+              d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(d,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(d.get(k),str): return d[k]
+              return d if isinstance(d,str) else ''
+          header=read('header.php')
+          runtime=read('assets/js/product-runtime-fix.js')
+          variation=read('assets/js/product-runtime-variation-ui.js')
+          print('=== LIVE HEADER MARKERS ===')
+          for m in ['gramiss-pdp-first-paint-gate','gramiss-pdp-booting','product-runtime-fix.js','product-runtime-variation-ui.js','GRAMISS PDP RUNTIME REBUILD START']:
+              print(m, m in header)
+          for token in ['product-runtime-fix.js','product-runtime-variation-ui.js']:
+              i=header.find(token)
+              if i>=0: print('HEADER',token,header[max(0,i-450):i+650].replace('\n',' ')[:1200])
+          print('=== RUNTIME ===')
+          for m in ['GRAMISS_PDP_RUNTIME_V4',"classList.remove('gramiss-pdp-booting')",'data-gramiss-pdp-legacy-hidden','g3-related-zone']:
+              print(m, m in runtime)
+          idx=runtime.find("classList.remove('gramiss-pdp-booting')")
+          if idx>=0: print('RUNTIME RELEASE SNIPPET',runtime[max(0,idx-700):idx+700].replace('\n',' ')[:1600])
+          print('=== VARIATION UI ===')
+          for m in ['GRAMISS_PDP_VARIATION_UI_V1','g3-size-option',"trigger('change')",'shoe-size','sneaker-size']:
+              print(m, m in variation)
+          for needle in ['g3-size-option','function init','const init','var init']:
+              idx=variation.find(needle)
+              if idx>=0: print('VAR SNIPPET',needle,variation[max(0,idx-600):idx+1000].replace('\n',' ')[:1800]); break
+          slug='کتونی-سبک-ونس-سفید'
+          qs=urllib.parse.urlencode({'product':slug,'fpdiag':str(int(time.time()))})
+          req=urllib.request.Request('https://gramiss.ir/?'+qs,headers={'User-Agent':'Mozilla/5.0 GramissFirstPaintDiagnostic/1.0','Cache-Control':'no-cache','Pragma':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=60) as r:
+              html=r.read().decode('utf-8','replace'); headers=dict(r.headers.items())
+          print('=== PUBLIC PDP ===')
+          print('HTTP',len(html),headers.get('X-LiteSpeed-Cache') or headers.get('x-litespeed-cache'))
+          for m in ['gramiss-pdp-first-paint-gate','gramiss-pdp-booting','product-runtime-fix.js','product-runtime-variation-ui.js','g3-size-option']:
+              print('HTML',m,m in html)
+          hidx=html.find('product-runtime-fix.js')
+          if hidx>=0: print('HTML LOADER SNIPPET',html[max(0,hidx-900):hidx+1100].replace('\n',' ')[:2200])
+          PY
