@@ -14,7 +14,7 @@ jobs:
       CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
       PUBLIC_ROOT: public_html
     steps:
-      - name: Read live WooCommerce product inventory
+      - name: Read live WooCommerce candidate images
         shell: bash
         run: |
           set -euo pipefail
@@ -34,39 +34,30 @@ jobs:
           def save(rel,content):
               parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=public if not parent else f'{public}/{parent}'
               call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},post=True)
-          name=f'gramiss-looks-inventory-{int(time.time())}.php'
+          name=f'gramiss-looks-images-{int(time.time())}.php'
           php=r'''<?php
           header('Content-Type: application/json; charset=utf-8');
           define('WP_USE_THEMES', false);
           require __DIR__ . '/wp-load.php';
+          $ids = array(49,62,68,80,84,87,268,284,293,350,359,366,392,403,435);
           $out = array();
-          if ( function_exists('wc_get_products') ) {
-            foreach ( wc_get_products(array('status'=>'publish','limit'=>-1,'orderby'=>'ID','order'=>'ASC')) as $p ) {
-              $out[] = array(
-                'id' => $p->get_id(),
-                'name' => $p->get_name(),
-                'slug' => $p->get_slug(),
-                'sku' => $p->get_sku(),
-                'price' => $p->get_price(),
-                'stock' => $p->is_in_stock(),
-                'url' => $p->get_permalink(),
-              );
+          foreach ($ids as $id) {
+            $p = wc_get_product($id);
+            if (!$p) continue;
+            $images = array();
+            $all = array_merge(array($p->get_image_id()), $p->get_gallery_image_ids());
+            foreach (array_filter(array_unique($all)) as $aid) {
+              $images[] = wp_get_attachment_image_url($aid, 'full');
             }
+            $out[] = array('id'=>$id,'name'=>$p->get_name(),'url'=>$p->get_permalink(),'images'=>$images);
           }
           echo wp_json_encode($out, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT);
           @unlink(__FILE__);
           '''
           save(name,php)
-          req=urllib.request.Request(f'https://gramiss.ir/{name}?t={int(time.time())}',headers={'User-Agent':'GramissLooksInventory/1','Cache-Control':'no-cache'})
+          req=urllib.request.Request(f'https://gramiss.ir/{name}?t={int(time.time())}',headers={'User-Agent':'GramissLooksImages/1','Cache-Control':'no-cache'})
           with urllib.request.urlopen(req,context=ctx,timeout=75) as r: body=r.read().decode('utf-8','replace')
           data=json.loads(body)
-          print('PRODUCT_COUNT',len(data))
-          needles=['مسیح','کرپ','سیلک','ونس','سرمه','کتونی','کلاه','بول','بگ','جین','LV','لویی','ویت']
           for p in data:
-              hay=(str(p.get('name',''))+' '+str(p.get('slug',''))+' '+str(p.get('sku',''))).lower()
-              if any(n.lower() in hay for n in needles):
-                  print(json.dumps(p,ensure_ascii=False))
-          print('FULL_INVENTORY_JSON_BEGIN')
-          print(json.dumps(data,ensure_ascii=False))
-          print('FULL_INVENTORY_JSON_END')
+              print(json.dumps(p,ensure_ascii=False))
           PY
