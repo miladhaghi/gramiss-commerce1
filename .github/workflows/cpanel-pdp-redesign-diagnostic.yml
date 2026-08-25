@@ -1,0 +1,67 @@
+name: cPanel PDP Redesign Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  diagnose:
+    if: github.head_ref == 'ops/pdp-redesign-diagnostic'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - name: Inspect live PDP redesign surface
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, ssl, urllib.parse, urllib.request, re, time
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context()
+          def call(func, params):
+              url=f'https://{host}:2083/execute/Fileman/{func}?'+urllib.parse.urlencode(params)
+              req=urllib.request.Request(url); req.add_header('Authorization',f'cpanel {user}:{token}')
+              with urllib.request.urlopen(req,context=ctx,timeout=60) as r: p=json.loads(r.read().decode())
+              result=p.get('result') if isinstance(p.get('result'),dict) else p
+              if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
+              return result.get('data')
+          def read(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else f'{root}/{parent}'
+              d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(d,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(d.get(k),str): return d[k]
+              return d if isinstance(d,str) else ''
+          files=['assets/css/product-runtime-fix.css','assets/css/product-runtime-compact.css','assets/css/product-runtime-gradient-reverse.css','assets/js/product-runtime-fix.js','assets/js/product-runtime-variation-ui.js','header.php']
+          for f in files:
+              data=read(f)
+              print('\n===== FILE',f,'BYTES',len(data),'=====')
+              if f.endswith('.css'):
+                  print(data[:24000])
+              elif f.endswith('product-runtime-fix.js'):
+                  for needle in ['shell.className','summarySlot.className','gallerySlot.className','detailsZone.className','relatedZone.className','releaseBoot','sourceRoot.style']:
+                      i=data.find(needle)
+                      if i>=0: print('\nJS',needle,'::',data[max(0,i-700):i+1600])
+              elif f.endswith('product-runtime-variation-ui.js'):
+                  for needle in ['function buildGroup','function boot','g3-size-option','g3-color-option']:
+                      i=data.find(needle)
+                      if i>=0: print('\nVAR',needle,'::',data[max(0,i-500):i+1800])
+              else:
+                  for needle in ['gramiss-pdp-first-paint-style','product-runtime-fix.css','product-runtime-compact.css','product-runtime-variation-ui.js']:
+                      i=data.find(needle)
+                      if i>=0: print('\nHEADER',needle,'::',data[max(0,i-650):i+1450])
+          slug='پیراهن-آستین-بلند-پارچه-سیلک'
+          url='https://gramiss.ir/?'+urllib.parse.urlencode({'product':slug,'redesigndiag':str(int(time.time()))})
+          req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0 GramissRedesignDiag/1.0','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=60) as r: html=r.read().decode('utf-8','replace')
+          print('\n===== PUBLIC PDP STRUCTURE =====')
+          for needle in ['gramiss-pdp-runtime-v3','g3-purchase-zone','g3-summary-slot','g3-gallery-slot','g3-details-zone','g3-related-zone','variations_form cart','product_title entry-title']:
+              i=html.find(needle)
+              print('MARKER',needle,i)
+              if i>=0: print(html[max(0,i-900):i+2300].replace('\n',' ')[:3200])
+          PY
