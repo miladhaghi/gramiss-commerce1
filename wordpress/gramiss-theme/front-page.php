@@ -6,6 +6,20 @@
  */
 defined( 'ABSPATH' ) || exit;
 
+wp_enqueue_style(
+    'gramiss-home-looks',
+    get_template_directory_uri() . '/assets/css/home-looks.css',
+    array( 'gramiss-v1' ),
+    gramiss_asset_version( '/assets/css/home-looks.css', '1.0.0' )
+);
+wp_enqueue_script(
+    'gramiss-home-looks',
+    get_template_directory_uri() . '/assets/js/home-looks.js',
+    array(),
+    gramiss_asset_version( '/assets/js/home-looks.js', '1.0.0' ),
+    true
+);
+
 get_header();
 
 $shop_url     = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : home_url( '/shop/' );
@@ -57,6 +71,52 @@ $hero_objects = array(
         'url'    => gramiss_product_category_url( array( 'sneakers', 'shoes', 'کتونی', 'کفش' ), 'sneakers' ),
     ),
 );
+
+/* GRAMISS_HOME_LOOKS_V1 — real WooCommerce products, no hard-coded customer-facing prices. */
+$look_product = static function ( int $product_id ) {
+    if ( ! function_exists( 'wc_get_product' ) ) {
+        return null;
+    }
+    $product = wc_get_product( $product_id );
+    return $product instanceof WC_Product && 'publish' === $product->get_status() ? $product : null;
+};
+$look_street_items = array(
+    array( 'class' => 'is-top', 'side' => 'is-card-right', 'code' => 'LOOK 02 / TEE', 'label' => 'تیشرت', 'product' => $look_product( 392 ) ),
+    array( 'class' => 'is-pants', 'side' => 'is-card-right', 'code' => 'LOOK 02 / PANTS', 'label' => 'شلوار', 'product' => $look_product( 284 ) ),
+    array( 'class' => 'is-shoes', 'side' => 'is-card-right', 'code' => 'LOOK 02 / SNEAKERS', 'label' => 'کتونی', 'product' => $look_product( 435 ) ),
+    array( 'class' => 'is-cap is-pending', 'side' => 'is-card-right', 'code' => 'LOOK 02 / CAP', 'label' => 'کلاه فیت کپ', 'product' => null ),
+);
+$look_clean_items = array(
+    array( 'class' => 'is-top', 'side' => 'is-card-left', 'code' => 'LOOK 01 / SHIRT', 'label' => 'پیراهن', 'product' => $look_product( 350 ) ),
+    array( 'class' => 'is-pants', 'side' => 'is-card-left', 'code' => 'LOOK 01 / PANTS', 'label' => 'شلوار', 'product' => $look_product( 366 ) ),
+    array( 'class' => 'is-shoes', 'side' => 'is-card-left', 'code' => 'LOOK 01 / SNEAKERS', 'label' => 'کتونی', 'product' => $look_product( 403 ) ),
+);
+$render_look_hotspot = static function ( array $item ): void {
+    $product = $item['product'];
+    $classes = 'g1-look-hotspot ' . $item['class'] . ' ' . $item['side'];
+    ?>
+    <div class="<?php echo esc_attr( $classes ); ?>">
+        <button class="g1-look-hotspot-toggle" type="button" aria-expanded="false" aria-label="<?php echo esc_attr( 'نمایش ' . $item['label'] ); ?>"></button>
+        <div class="g1-look-product-card">
+            <small><span><?php echo esc_html( $item['code'] ); ?></span>
+                <?php if ( $product ) : ?>
+                    <b class="g1-look-stock<?php echo $product->is_in_stock() ? '' : ' is-out'; ?>"><?php echo $product->is_in_stock() ? 'IN STOCK' : 'OUT'; ?></b>
+                <?php else : ?>
+                    <b>SOON</b>
+                <?php endif; ?>
+            </small>
+            <?php if ( $product ) : ?>
+                <strong><?php echo esc_html( $product->get_name() ); ?></strong>
+                <span class="price"><?php echo wp_kses_post( $product->get_price_html() ); ?></span>
+                <a class="g1-look-product-link" href="<?php echo esc_url( $product->get_permalink() ); ?>">مشاهده محصول</a>
+            <?php else : ?>
+                <strong><?php echo esc_html( $item['label'] ); ?></strong>
+                <span class="g1-look-pending-copy">این آیتم هنوز به‌عنوان محصول مستقل در فروشگاه منتشر نشده.</span>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php
+};
 ?>
 <main id="primary" class="g1-home">
     <section class="g1-hero g1-reveal" aria-labelledby="g1-hero-title">
@@ -112,6 +172,29 @@ $hero_objects = array(
         <div><span>02</span><strong>اطلاعات شفاف محصول</strong></div>
         <div><span>03</span><strong>انتخاب بدون قضاوت</strong></div>
         <div><span>04</span><strong>پشتیبانی قبل از خرید</strong></div>
+    </section>
+
+    <section class="g1-looks g1-reveal" id="looks" data-g1-looks aria-labelledby="g1-looks-title">
+        <div class="g1-looks-stage">
+            <article class="g1-look g1-look-street" aria-label="Look 02 — Street">
+                <img class="g1-look-model" src="<?php echo esc_url( get_template_directory_uri() . '/assets/images/home/gramiss-look-02.webp' ); ?>" alt="استایل خیابانی Gramiss با تیشرت باکسی، شلوار بگ و کتونی" loading="lazy" decoding="async">
+                <span class="g1-look-label">LOOK 02 — STREET / RELAXED</span>
+                <?php foreach ( $look_street_items as $item ) { $render_look_hotspot( $item ); } ?>
+            </article>
+
+            <div class="g1-looks-copy">
+                <small class="g1-looks-kicker">GRAMISS LOOKS / 01</small>
+                <h2 id="g1-looks-title">استایل را لمس کن.</h2>
+                <p>روی هر آیتم برو؛ محصول واقعی، قیمت و وضعیت موجودی را ببین و مستقیم وارد صفحه همان محصول شو.</p>
+                <a class="g1-btn" href="<?php echo esc_url( $shop_url ); ?>">مشاهده استایل‌ها</a>
+            </div>
+
+            <article class="g1-look g1-look-clean" aria-label="Look 01 — Clean Old Money">
+                <img class="g1-look-model" src="<?php echo esc_url( get_template_directory_uri() . '/assets/images/home/gramiss-look-01.webp' ); ?>" alt="استایل Old Money گرامیس با پیراهن سیلک آبی، شلوار بگ کرم و کتونی سرمه‌ای" loading="lazy" decoding="async">
+                <span class="g1-look-label">LOOK 01 — CLEAN / OLD MONEY</span>
+                <?php foreach ( $look_clean_items as $item ) { $render_look_hotspot( $item ); } ?>
+            </article>
+        </div>
     </section>
 
     <section class="g1-section g1-reveal" id="collections">
