@@ -46,29 +46,29 @@ jobs:
           print('=== LIVE HEADER MARKERS ===')
           for m in ['gramiss-pdp-first-paint-gate','gramiss-pdp-booting','product-runtime-fix.js','product-runtime-variation-ui.js','GRAMISS PDP RUNTIME REBUILD START']:
               print(m, m in header)
-          for token in ['product-runtime-fix.js','product-runtime-variation-ui.js']:
-              i=header.find(token)
-              if i>=0: print('HEADER',token,header[max(0,i-450):i+650].replace('\n',' ')[:1200])
-          print('=== RUNTIME ===')
-          for m in ['GRAMISS_PDP_RUNTIME_V4',"classList.remove('gramiss-pdp-booting')",'data-gramiss-pdp-legacy-hidden','g3-related-zone']:
-              print(m, m in runtime)
-          idx=runtime.find("classList.remove('gramiss-pdp-booting')")
-          if idx>=0: print('RUNTIME RELEASE SNIPPET',runtime[max(0,idx-700):idx+700].replace('\n',' ')[:1600])
-          print('=== VARIATION UI ===')
-          for m in ['GRAMISS_PDP_VARIATION_UI_V1','g3-size-option',"trigger('change')",'shoe-size','sneaker-size']:
-              print(m, m in variation)
-          for needle in ['g3-size-option','function init','const init','var init']:
+          print('=== RUNTIME INIT TAIL ===')
+          init_idx=runtime.find('function init()')
+          if init_idx>=0: print(runtime[init_idx:init_idx+7500].replace('\n',' ')[:7500])
+          print('=== VARIATION INIT TAIL ===')
+          for needle in ['function init()','function init(', 'function boot(', 'function setup(']:
               idx=variation.find(needle)
-              if idx>=0: print('VAR SNIPPET',needle,variation[max(0,idx-600):idx+1000].replace('\n',' ')[:1800]); break
+              if idx>=0: print(variation[idx:idx+5200].replace('\n',' ')[:5200]); break
           slug='کتونی-سبک-ونس-سفید'
-          qs=urllib.parse.urlencode({'product':slug,'fpdiag':str(int(time.time()))})
-          req=urllib.request.Request('https://gramiss.ir/?'+qs,headers={'User-Agent':'Mozilla/5.0 GramissFirstPaintDiagnostic/1.0','Cache-Control':'no-cache','Pragma':'no-cache'})
+          qs=urllib.parse.urlencode({'product':slug,'fpdiag2':str(int(time.time()))})
+          req=urllib.request.Request('https://gramiss.ir/?'+qs,headers={'User-Agent':'Mozilla/5.0 GramissFirstPaintDiagnostic/2.0','Cache-Control':'no-cache','Pragma':'no-cache'})
           with urllib.request.urlopen(req,context=ctx,timeout=60) as r:
               html=r.read().decode('utf-8','replace'); headers=dict(r.headers.items())
-          print('=== PUBLIC PDP ===')
-          print('HTTP',len(html),headers.get('X-LiteSpeed-Cache') or headers.get('x-litespeed-cache'))
-          for m in ['gramiss-pdp-first-paint-gate','gramiss-pdp-booting','product-runtime-fix.js','product-runtime-variation-ui.js','g3-size-option']:
-              print('HTML',m,m in html)
-          hidx=html.find('product-runtime-fix.js')
-          if hidx>=0: print('HTML LOADER SNIPPET',html[max(0,hidx-900):hidx+1100].replace('\n',' ')[:2200])
+          print('=== PUBLIC STRUCTURE ===')
+          print('HTTP bytes',len(html),'cache',headers.get('X-LiteSpeed-Cache') or headers.get('x-litespeed-cache'))
+          body_m=re.search(r'<body[^>]*>',html,re.I)
+          if body_m: print('BODY',body_m.group(0)[:1200])
+          markers=['class="product type-product','woocommerce-product-gallery','summary entry-summary','product_title entry-title']
+          for m in markers:
+              i=html.find(m)
+              print('MARKER',m,i)
+              if i>=0: print('STRUCT',html[max(0,i-1800):i+1800].replace('\n',' ')[:3600])
+          for main_match in re.finditer(r'<main[^>]*>',html,re.I):
+              print('MAIN TAG',main_match.group(0)[:700])
+          for sec in ['gramiss-pdp-v2','gramiss-pdp-runtime-v3','g2-pdp-top']:
+              print('SERVER MARKER',sec,sec in html)
           PY
