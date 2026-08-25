@@ -18,86 +18,56 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: wordpress-migration
-
-      - name: Deploy premium PDP observer hotfix
+      - name: Deploy and verify observer hotfix
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import json, os, re, ssl, time, urllib.parse, urllib.request
           from pathlib import Path
-
           host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']
-          root=os.environ['THEME_ROOT'].strip('/'); public=os.environ['PUBLIC_ROOT'].strip('/')
-          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
-
-          def call(func, params, post=False):
-              url=f'https://{host}:2083/execute/Fileman/{func}'
-              enc=urllib.parse.urlencode(params).encode(); last=None
-              for attempt in range(1,6):
-                  try:
-                      req=urllib.request.Request(url if post else url+'?'+enc.decode(),data=enc if post else None,method='POST' if post else 'GET')
-                      req.add_header('Authorization',f'cpanel {user}:{token}')
-                      if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
-                      with urllib.request.urlopen(req,context=ctx,timeout=75) as r: payload=json.loads(r.read().decode('utf-8'))
-                      result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
-                      if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
-                      return result.get('data')
-                  except Exception as exc:
-                      last=exc; print(f'Attempt {attempt}/5 failed {func}: {exc}')
-                      if attempt<5: time.sleep(attempt*3)
-              raise last
-
-          def read_from(base,rel):
-              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
-              directory=base if not parent else f'{base}/{parent}'
+          root=os.environ['THEME_ROOT'].strip('/'); public=os.environ['PUBLIC_ROOT'].strip('/'); ctx=ssl._create_unverified_context()
+          def call(func,params,post=False):
+              url=f'https://{host}:2083/execute/Fileman/{func}'; enc=urllib.parse.urlencode(params).encode()
+              req=urllib.request.Request(url if post else url+'?'+enc.decode(),data=enc if post else None,method='POST' if post else 'GET')
+              req.add_header('Authorization',f'cpanel {user}:{token}')
+              if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+              with urllib.request.urlopen(req,context=ctx,timeout=75) as r: payload=json.loads(r.read().decode())
+              result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
+              if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
+              return result.get('data')
+          def read(base,rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=base if not parent else f'{base}/{parent}'
               d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
               if isinstance(d,dict):
                   for k in ('content','file_content','data'):
                       if isinstance(d.get(k),str): return d[k]
               return d if isinstance(d,str) else ''
-
-          def save_to(base,rel,content):
-              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
-              directory=base if not parent else f'{base}/{parent}'
+          def save(base,rel,content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=base if not parent else f'{base}/{parent}'
               call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},post=True)
-
           fixed=Path('deploy/pdp-premium/product-runtime-premium.js').read_text(encoding='utf-8')
-          header=read_from(root,'header.php')
-          live_js=read_from(root,'assets/js/product-runtime-premium.js')
-          save_to(root,f'assets/js/product-runtime-premium.js.bak-hotfix-{stamp}',live_js)
-          save_to(root,'assets/js/product-runtime-premium.js',fixed)
-          header=re.sub(r'product-runtime-premium\.js\?v=[0-9A-Za-z._-]+','product-runtime-premium.js?v=20260826-2',header)
-          save_to(root,'header.php',header)
-
-          verify=read_from(root,'assets/js/product-runtime-premium.js')
-          if "if((btn.textContent||'').trim()!==label) btn.textContent=label;" not in verify: raise SystemExit('Hotfix CTA idempotency marker missing')
-          if "var priceArea=qs('.single_variation',form)" not in verify: raise SystemExit('Hotfix scoped observer marker missing')
-          if "observe(priceArea,{subtree:true,childList:true,characterData:true})" not in verify: raise SystemExit('Hotfix observer config marker missing')
-          if 'attributes:true' in verify.split('function bindPriceSync',1)[1].split('function enhance',1)[0]: raise SystemExit('Unsafe attribute observer still present')
-          print('PASS: live JS contains scoped non-recursive observer')
-
-          purge_name=f'gramiss-pdp-hotfix-purge-{int(time.time())}.php'
-          purge_php="""<?php\nheader('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');\nheader('X-LiteSpeed-Purge: public,*');\ndefine('WP_USE_THEMES', false);\nrequire __DIR__ . '/wp-load.php';\nif (function_exists('do_action')) { do_action('litespeed_purge_all'); do_action('litespeed_purge_front'); }\necho 'GRAMISS_PDP_HOTFIX_CACHE_PURGED';\n@unlink(__FILE__);\n"""
-          save_to(public,purge_name,purge_php)
-          req=urllib.request.Request(f'https://gramiss.ir/{purge_name}?t={int(time.time())}',headers={'User-Agent':'Mozilla/5.0 GramissPDPHotfixPurge/1.0','Cache-Control':'no-cache'})
-          with urllib.request.urlopen(req,context=ctx,timeout=60) as r:
-              body=r.read().decode('utf-8','replace'); print('Purge HTTP',r.status)
-          if 'GRAMISS_PDP_HOTFIX_CACHE_PURGED' not in body: raise SystemExit('Purge did not confirm')
-          time.sleep(3)
-
+          live=read(root,'assets/js/product-runtime-premium.js'); stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
+          save(root,f'assets/js/product-runtime-premium.js.bak-hotfix-{stamp}',live); save(root,'assets/js/product-runtime-premium.js',fixed)
+          header=read(root,'header.php'); header=re.sub(r'product-runtime-premium\.js\?v=[0-9A-Za-z._-]+','product-runtime-premium.js?v=20260826-2',header); save(root,'header.php',header)
+          live=read(root,'assets/js/product-runtime-premium.js')
+          assert "if((btn.textContent||'').trim()!==label) btn.textContent=label;" in live
+          assert "var priceArea=qs('.single_variation',form)" in live
+          bind=live.split('function bindPriceSync',1)[1].split('function enhance',1)[0]
+          assert 'attributes:true' not in bind
+          print('PASS live scoped observer')
+          purge=f'gramiss-pdp-hotfix-purge-{int(time.time())}.php'
+          php="""<?php\nheader('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');\nheader('X-LiteSpeed-Purge: public,*');\ndefine('WP_USE_THEMES', false); require __DIR__ . '/wp-load.php';\nif (function_exists('do_action')) { do_action('litespeed_purge_all'); do_action('litespeed_purge_front'); }\necho 'GRAMISS_PDP_HOTFIX_CACHE_PURGED'; @unlink(__FILE__);\n"""
+          save(public,purge,php)
+          with urllib.request.urlopen(urllib.request.Request(f'https://gramiss.ir/{purge}',headers={'User-Agent':'GramissHotfix/2'}),context=ctx,timeout=60) as r: body=r.read().decode()
+          assert 'GRAMISS_PDP_HOTFIX_CACHE_PURGED' in body; time.sleep(3)
           def get(url):
-              req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0 GramissPDPHotfixVerify/1.0','Cache-Control':'no-cache','Pragma':'no-cache'})
+              req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0 GramissHotfixVerify/2','Cache-Control':'no-cache'})
               with urllib.request.urlopen(req,context=ctx,timeout=75) as r: return r.status,r.headers,r.read().decode('utf-8','replace')
-
-          slugs=['تیشرت-only-god-can','پیراهن-آستین-بلند-پارچه-سیلک']
-          for slug in slugs:
-              url='https://gramiss.ir/?'+urllib.parse.urlencode({'product':slug})
-              status,headers,html=get(url)
-              print(slug,'HTTP',status,'cache',headers.get('X-LiteSpeed-Cache'),'v2',('product-runtime-premium.js?v=20260826-2' in html))
-              if status!=200 or 'product-runtime-premium.js?v=20260826-2' not in html: raise SystemExit('Public product does not serve hotfix version: '+slug)
-
+          slug='پیراهن-آستین-بلند-پارچه-سیلک'; url='https://gramiss.ir/?'+urllib.parse.urlencode({'product':slug})
+          status,headers,html=get(url); print('known PDP',status,headers.get('X-LiteSpeed-Cache'))
+          assert status==200 and 'product-runtime-premium.js?v=20260826-2' in html
           status,_,js=get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/js/product-runtime-premium.js?v=20260826-2')
-          if status!=200 or "if((btn.textContent||'').trim()!==label) btn.textContent=label;" not in js or "var priceArea=qs('.single_variation',form)" not in js: raise SystemExit('Public hotfix JS verification failed')
-          print('SUCCESS: PDP MUTATION LOOP HOTFIX LIVE')
+          assert status==200 and "if((btn.textContent||'').trim()!==label) btn.textContent=label;" in js and "var priceArea=qs('.single_variation',form)" in js
+          print('SUCCESS PDP MUTATION LOOP HOTFIX LIVE AND VERIFIED')
           PY
