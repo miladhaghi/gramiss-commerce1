@@ -1,0 +1,134 @@
+name: cPanel Home Looks Deploy
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.head_ref == 'ops/home-looks-deploy'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      PUBLIC_ROOT: public_html
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: wordpress-migration
+      - name: Deploy and verify GRAMISS LOOKS
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, hashlib, json, os, secrets, ssl, time, urllib.parse, urllib.request
+          from pathlib import Path
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; public=os.environ['PUBLIC_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context()
+          src=Path('wordpress/gramiss-theme')
+          rels=[
+              'front-page.php',
+              'assets/css/home-looks.css',
+              'assets/js/home-looks.js',
+              'assets/images/home/gramiss-look-01.webp',
+              'assets/images/home/gramiss-look-02.webp',
+          ]
+          expected={rel:hashlib.sha256((src/rel).read_bytes()).hexdigest() for rel in rels}
+          payload={rel:base64.b64encode((src/rel).read_bytes()).decode('ascii') for rel in rels}
+          stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
+          nonce=secrets.token_urlsafe(24)
+
+          def call(fn,params,post=False):
+              url=f'https://{host}:2083/execute/Fileman/{fn}'; data=urllib.parse.urlencode(params).encode(); last=None
+              for attempt in range(1,6):
+                  try:
+                      req=urllib.request.Request(url if post else url+'?'+data.decode(),data=data if post else None,method='POST' if post else 'GET')
+                      req.add_header('Authorization',f'cpanel {user}:{token}')
+                      if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+                      with urllib.request.urlopen(req,context=ctx,timeout=90) as r: raw=r.read().decode('utf-8','replace')
+                      obj=json.loads(raw); result=obj.get('result') if isinstance(obj.get('result'),dict) else obj
+                      if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
+                      return result.get('data')
+                  except Exception as exc:
+                      last=exc; print(f'Attempt {attempt}/5 {fn}: {exc}')
+                      if attempt<5: time.sleep(attempt*3)
+              raise last
+
+          def save_public(name,content):
+              call('save_file_content',{'dir':public,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+
+          payload64=base64.b64encode(json.dumps(payload,separators=(',',':')).encode()).decode()
+          expected64=base64.b64encode(json.dumps(expected,separators=(',',':')).encode()).decode()
+          installer_name=f'.gramiss-home-looks-{stamp}-{secrets.token_hex(5)}.php'
+          installer=f'''<?php
+          ini_set('display_errors','0');
+          header('Content-Type: application/json; charset=utf-8');
+          if (!isset($_GET['k']) || !hash_equals('{nonce}', (string) $_GET['k'])) {{ http_response_code(403); echo '{{"ok":false}}'; exit; }}
+          $theme=__DIR__.'/wp-content/themes/gramiss-theme-next';
+          $stamp='{stamp}';
+          $payload=json_decode(base64_decode('{payload64}'),true);
+          $expected=json_decode(base64_decode('{expected64}'),true);
+          $out=array();
+          foreach ($payload as $rel=>$encoded) {{
+              $target=$theme.'/'.$rel; $dir=dirname($target);
+              if (!is_dir($dir) && !mkdir($dir,0755,true) && !is_dir($dir)) {{ throw new Exception('mkdir '.$rel); }}
+              if (file_exists($target)) {{ @copy($target,$target.'.bak-home-looks-'.$stamp); }}
+              $bytes=base64_decode($encoded,true); if ($bytes===false) {{ throw new Exception('decode '.$rel); }}
+              $tmp=$target.'.tmp-'.$stamp;
+              if (file_put_contents($tmp,$bytes,LOCK_EX)===false) {{ throw new Exception('write '.$rel); }}
+              $hash=hash_file('sha256',$tmp);
+              if (!isset($expected[$rel]) || !hash_equals($expected[$rel],$hash)) {{ @unlink($tmp); throw new Exception('hash '.$rel); }}
+              if (!@rename($tmp,$target)) {{ @unlink($tmp); throw new Exception('rename '.$rel); }}
+              $out[$rel]=array('sha256'=>hash_file('sha256',$target),'bytes'=>filesize($target));
+          }}
+          if (file_exists(__DIR__.'/wp-load.php')) {{ require_once __DIR__.'/wp-load.php'; if (function_exists('do_action')) {{ do_action('litespeed_purge_all'); }} }}
+          $response=array('ok'=>true,'stamp'=>$stamp,'files'=>$out,'marker'=>'GRAMISS_HOME_LOOKS_V1');
+          @unlink(__FILE__);
+          echo json_encode($response,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+          ?>'''
+          save_public(installer_name,installer)
+          install_url=f'https://gramiss.ir/{urllib.parse.quote(installer_name)}?k={urllib.parse.quote(nonce)}&t={int(time.time())}'
+          req=urllib.request.Request(install_url,headers={'User-Agent':'GramissHomeLooksDeploy/1','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=120) as r: install_body=r.read().decode('utf-8','replace')
+          result=json.loads(install_body)
+          if not result.get('ok'): raise SystemExit('Installer failed: '+install_body[:1000])
+          for rel,sha in expected.items():
+              got=((result.get('files') or {}).get(rel) or {}).get('sha256')
+              print(('PASS' if got==sha else 'FAIL')+f' hash {rel}: {got}')
+              if got!=sha: raise SystemExit('Live hash mismatch: '+rel)
+
+          def public_get(url):
+              req=urllib.request.Request(url,headers={'User-Agent':'GramissHomeLooksVerify/1','Cache-Control':'no-cache','Pragma':'no-cache'})
+              with urllib.request.urlopen(req,context=ctx,timeout=90) as r: return r.status,r.headers,r.read()
+
+          q=f'?gramiss_looks_verify={int(time.time())}'
+          status,headers,body=public_get('https://gramiss.ir/'+q)
+          html=body.decode('utf-8','replace')
+          checks={
+              'home HTTP 200':status==200,
+              'server-rendered looks marker':'data-g1-looks' in html,
+              'section title':'GRAMISS LOOKS / 01' in html and 'استایل را لمس کن.' in html,
+              'Look 02 label':'LOOK 02 — STREET / RELAXED' in html,
+              'Look 01 label':'LOOK 01 — CLEAN / OLD MONEY' in html,
+              'real Woo product':'تیشرت باکس طرح مسیح' in html,
+              'look images referenced':'gramiss-look-01.webp' in html and 'gramiss-look-02.webp' in html,
+              'looks before categories':html.find('data-g1-looks')!=-1 and html.find('id="collections"')!=-1 and html.find('data-g1-looks')<html.find('id="collections"'),
+          }
+          for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
+          if not all(checks.values()): raise SystemExit('Home HTML verification failed')
+
+          for rel,marker in [('assets/css/home-looks.css','GRAMISS_HOME_LOOKS_V1'),('assets/js/home-looks.js','GRAMISS_HOME_LOOKS_V1')]:
+              st,h,b=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/'+rel+'?v='+stamp)
+              text=b.decode('utf-8','replace'); ok=st==200 and marker in text
+              print(('PASS' if ok else 'FAIL')+': public '+rel)
+              if not ok: raise SystemExit('Public text asset failed: '+rel)
+
+          for rel in ['assets/images/home/gramiss-look-01.webp','assets/images/home/gramiss-look-02.webp']:
+              st,h,b=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/'+rel+'?v='+stamp)
+              sha=hashlib.sha256(b).hexdigest(); ok=st==200 and len(b)>5000 and sha==expected[rel]
+              print(('PASS' if ok else 'FAIL')+f': public {rel} bytes={len(b)} sha={sha}')
+              if not ok: raise SystemExit('Public image asset failed: '+rel)
+          print('LIVE GRAMISS LOOKS DEPLOYED AND VERIFIED')
+          PY
