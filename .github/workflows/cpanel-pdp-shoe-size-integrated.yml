@@ -1,0 +1,143 @@
+name: cPanel PDP Shoe Size Integrated
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.head_ref == 'ops/pdp-shoe-size-integrated'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - name: Integrate shoe size into primary variation UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re, ssl, time, urllib.parse, urllib.request
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S', time.gmtime())
+
+          def call(func, params, post=False):
+              url=f'https://{host}:2083/execute/Fileman/{func}'
+              enc=urllib.parse.urlencode(params).encode()
+              last=None
+              for attempt in range(1,6):
+                  try:
+                      req=urllib.request.Request(url if post else url+'?'+enc.decode(), data=enc if post else None, method='POST' if post else 'GET')
+                      req.add_header('Authorization', f'cpanel {user}:{token}')
+                      if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+                      with urllib.request.urlopen(req, context=ctx, timeout=75) as r:
+                          payload=json.loads(r.read().decode('utf-8'))
+                      result=payload.get('result') if isinstance(payload.get('result'),dict) else payload
+                      if not isinstance(result,dict) or result.get('status')!=1:
+                          raise RuntimeError(f'{func} failed: {result.get("errors") if isinstance(result,dict) else "unknown"}')
+                      return result.get('data')
+                  except Exception as exc:
+                      last=exc; print(f'Attempt {attempt}/5 failed for {func}: {exc}')
+                      if attempt<5: time.sleep(attempt*4)
+              raise last
+
+          def get_file(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else f'{root}/{parent}'
+              data=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(data,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(data.get(k),str): return data[k]
+              if isinstance(data,str): return data
+              raise RuntimeError(f'Unexpected content for {rel}')
+
+          def save_file(rel, content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else f'{root}/{parent}'
+              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},post=True)
+
+          js_rel='assets/js/product-runtime-variation-ui.js'
+          header=get_file('header.php')
+          js=get_file(js_rel)
+
+          save_file(f'header.php.bak-shoesize-integrated-{stamp}',header)
+          save_file(f'assets/js/product-runtime-variation-ui.js.bak-shoesize-integrated-{stamp}',js)
+          print('Backups created: '+stamp)
+
+          shoe_checks=(
+              "key.indexOf('shoe-size')",
+              "key.indexOf('sneaker-size')",
+              "key.indexOf('sayz-kfsh')",
+          )
+
+          if all(token in js for token in shoe_checks):
+              js_new=js
+              print('Shoe-size aliases already present; keeping JS body unchanged.')
+          else:
+              pattern=r"return key\.indexOf\('clothing-size'\)!==-1[^;]*;"
+              match=re.search(pattern,js)
+              if not match:
+                  raise RuntimeError('Primary isSizeSelect signature not found; refusing blind patch')
+
+              replacement=(
+                  "return key.indexOf('clothing-size')!==-1 || "
+                  "key.indexOf('pants-size')!==-1 || key.indexOf('pants_size')!==-1 || "
+                  "key.indexOf('trouser-size')!==-1 || key.indexOf('trouser_size')!==-1 || "
+                  "key.indexOf('jeans-size')!==-1 || key.indexOf('jeans_size')!==-1 || "
+                  "key.indexOf('shoe-size')!==-1 || key.indexOf('shoe_size')!==-1 || "
+                  "key.indexOf('shoes-size')!==-1 || key.indexOf('shoes_size')!==-1 || "
+                  "key.indexOf('sneaker-size')!==-1 || key.indexOf('sneaker_size')!==-1 || "
+                  "key.indexOf('sneakers-size')!==-1 || key.indexOf('sneakers_size')!==-1 || "
+                  "key.indexOf('footwear-size')!==-1 || key.indexOf('footwear_size')!==-1 || "
+                  "key.indexOf('kafsh-size')!==-1 || key.indexOf('kafsh_size')!==-1 || "
+                  "key.indexOf('sayz-kafsh')!==-1 || key.indexOf('sayz_kafsh')!==-1 || "
+                  "key.indexOf('sayz-kfsh')!==-1 || key.indexOf('sayz_kfsh')!==-1 || "
+                  "key.indexOf('pa_size')!==-1 || key.indexOf('attribute_size')!==-1 || "
+                  "key.indexOf('سایز')!==-1;"
+              )
+              js_new=js[:match.start()]+replacement+js[match.end():]
+
+          header_new=re.sub(r'product-runtime-variation-ui\.js\?v=[0-9A-Za-z._-]+','product-runtime-variation-ui.js?v=20260826-1',header)
+          if header_new==header and 'product-runtime-variation-ui.js?v=20260826-1' not in header:
+              raise RuntimeError('Variation UI loader not found in live header.php')
+
+          save_file(js_rel,js_new)
+          save_file('header.php',header_new)
+
+          live_js=get_file(js_rel); live_header=get_file('header.php')
+          checks={
+              'primary UI marker':'GRAMISS_PDP_VARIATION_UI_V1' in live_js,
+              'shoe-size integrated':"key.indexOf('shoe-size')" in live_js,
+              'sneaker-size integrated':"key.indexOf('sneaker-size')" in live_js,
+              'Persian-translit shoe size integrated':"key.indexOf('sayz-kfsh')" in live_js,
+              'pants size preserved':"key.indexOf('pants-size')" in live_js,
+              'native button class':'g3-size-option' in live_js,
+              'Woo select sync':"trigger('change')" in live_js,
+              'loader cache-busted':'product-runtime-variation-ui.js?v=20260826-1' in live_header,
+          }
+          for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
+          if not all(checks.values()): raise SystemExit('Integrated shoe size UI verification failed')
+
+          # Public-side verification with cache-busting. This verifies the exact JS now served by the live theme.
+          def public_get(url):
+              req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0 GramissDeployCheck/1.0','Cache-Control':'no-cache'})
+              with urllib.request.urlopen(req,context=ctx,timeout=75) as r:
+                  return r.status,r.read().decode('utf-8','replace')
+
+          time.sleep(3)
+          status,served_js=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/js/product-runtime-variation-ui.js?v=20260826-1&verify='+stamp)
+          print('Public JS HTTP:',status)
+          public_checks={
+              'public marker':'GRAMISS_PDP_VARIATION_UI_V1' in served_js,
+              'public shoe-size alias':"key.indexOf('shoe-size')" in served_js,
+              'public sneaker-size alias':"key.indexOf('sneaker-size')" in served_js,
+              'public size button class':'g3-size-option' in served_js,
+          }
+          for label,ok in public_checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
+          if status!=200 or not all(public_checks.values()): raise SystemExit('Public shoe-size JS verification failed')
+
+          print('LIVE PDP SHOE SIZE INTEGRATED INTO PRIMARY VARIATION UI AND VERIFIED')
+          PY
