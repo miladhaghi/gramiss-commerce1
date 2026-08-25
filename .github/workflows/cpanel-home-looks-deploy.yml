@@ -61,11 +61,12 @@ jobs:
 
           payload64=base64.b64encode(json.dumps(payload,separators=(',',':')).encode()).decode()
           expected64=base64.b64encode(json.dumps(expected,separators=(',',':')).encode()).decode()
-          installer_name=f'.gramiss-home-looks-{stamp}-{secrets.token_hex(5)}.php'
+          installer_name=f'gramiss-home-looks-{stamp}-{secrets.token_hex(5)}.php'
           installer=f'''<?php
           ini_set('display_errors','0');
           header('Content-Type: application/json; charset=utf-8');
           if (!isset($_GET['k']) || !hash_equals('{nonce}', (string) $_GET['k'])) {{ http_response_code(403); echo '{{"ok":false}}'; exit; }}
+          foreach ((glob(__DIR__.'/.gramiss-home-looks-*.php') ?: array()) as $old) {{ @unlink($old); }}
           $theme=__DIR__.'/wp-content/themes/gramiss-theme-next';
           $stamp='{stamp}';
           $payload=json_decode(base64_decode('{payload64}'),true);
