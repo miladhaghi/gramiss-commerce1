@@ -1,11 +1,11 @@
-name: cPanel Home Looks Enable Final
+name: cPanel PDP Mobile UX V1 Verified Route
 
 on:
   pull_request:
     branches: [main]
 
 jobs:
-  enable:
+  deploy:
     if: github.head_ref == 'ops/home-looks-enable-final'
     runs-on: ubuntu-latest
     env:
@@ -13,12 +13,10 @@ jobs:
       CPANEL_USER: gramissi
       CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
       THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
-      HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
-      LOOK1_SHA: 44c672733e5d54bee0da019a1b7414448428bb06673388a6062dc2de33f6ed3b
-      LOOK2_SHA: 09fc8d320cb4c274f86cb570ef4d36106af33eb1462865ee64ba7bd8b234275d
+      PUBLIC_ROOT: public_html
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ops/home-looks-enable-final
-      - name: Enable verified GRAMISS LOOKS
-        run: python3 .ops/home-looks-enable-final.py
+          ref: ops/pdp-mobile-ux-v1
+      - name: Deploy guarded mobile PDP UX
+        run: python3 deploy/pdp-mobile-v1/deploy.py
