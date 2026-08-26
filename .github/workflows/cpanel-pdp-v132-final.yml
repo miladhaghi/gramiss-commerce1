@@ -1,4 +1,4 @@
-name: cPanel PDP v1.3.2 Final Repair
+name: cPanel PDP Mobile UX V1 Stable Route
 
 on:
   push:
@@ -6,78 +6,18 @@ on:
     paths:
       - deploy/cpanel-pdp-v132-final-trigger.txt
 
-permissions:
-  contents: write
-
 jobs:
-  repair:
+  deploy:
     runs-on: ubuntu-latest
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
       CPANEL_USER: gramissi
       CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
       THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+      PUBLIC_ROOT: public_html
     steps:
       - uses: actions/checkout@v4
-      - name: Repair live PDP root flow and prove it
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import json, os, ssl, time, urllib.parse, urllib.request
-          from pathlib import Path
-          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
-          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()); bak=time.strftime('%Y%m%d-%H%M%S', time.gmtime())
-          def call(func,params,post=False):
-              url=f'https://{host}:2083/execute/Fileman/{func}'; enc=urllib.parse.urlencode(params).encode()
-              req=urllib.request.Request(url if post else url+'?'+enc.decode(),data=enc if post else None,method='POST' if post else 'GET')
-              req.add_header('Authorization',f'cpanel {user}:{token}')
-              if post:req.add_header('Content-Type','application/x-www-form-urlencoded')
-              with urllib.request.urlopen(req,context=ctx,timeout=45) as r:p=json.loads(r.read().decode())
-              result=p.get('result') if isinstance(p.get('result'),dict) else p
-              if not isinstance(result,dict) or result.get('status')!=1:raise RuntimeError(f'{func} failed: {result.get("errors") if isinstance(result,dict) else "unknown"}')
-              return result.get('data')
-          def get_file(rel):
-              parent,name=rel.rsplit('/',1); data=call('get_file_content',{'dir':f'{root}/{parent}','file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
-              if isinstance(data,dict):
-                  for k in ('content','file_content','data'):
-                      if isinstance(data.get(k),str):return data[k]
-              if isinstance(data,str):return data
-              raise RuntimeError('Unexpected content response')
-          def save_file(rel,content):
-              parent,name=rel.rsplit('/',1); call('save_file_content',{'dir':f'{root}/{parent}','file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},post=True)
-          rel='assets/css/product-detail.css'; css=get_file(rel); marker='/* Gramiss PDP root-flow final override v1.3.2 */'
-          patch=r'''/* Gramiss PDP root-flow final override v1.3.2 */
-body.single-product .g1-product-page div.product.g1-pdp-product{display:block!important;grid-template-columns:none!important;grid-template-rows:none!important;grid-auto-columns:auto!important;grid-auto-rows:auto!important;column-gap:0!important;row-gap:0!important;width:100%!important;max-width:none!important;float:none!important;position:relative!important;overflow:visible!important}
-body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-main{display:grid!important;grid-template-columns:minmax(330px,.82fr) minmax(0,1.18fr)!important;grid-template-rows:auto!important;column-gap:clamp(26px,3.6vw,58px)!important;width:100%!important;min-width:0!important;align-items:start!important;direction:ltr!important;position:relative!important}
-body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-main>.g1-pdp-summary{grid-column:1!important;grid-row:1!important;position:static!important;float:none!important;width:100%!important;min-width:0!important;margin:0!important;direction:rtl!important}
-body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-main>.g1-pdp-gallery-col{grid-column:2!important;grid-row:1!important;position:relative!important;float:none!important;width:100%!important;min-width:0!important}
-body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-after{display:block!important;grid-column:auto!important;grid-row:auto!important;position:relative!important;float:none!important;clear:both!important;width:100%!important;max-width:none!important;min-width:0!important;transform:none!important;margin:clamp(72px,8vw,112px) 0 0!important;padding:0!important}
-body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-after>.woocommerce-tabs,body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-after>.related.products,body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-after>.up-sells,body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-after>.upsells{display:block!important;position:static!important;float:none!important;clear:both!important;width:100%!important;max-width:none!important;transform:none!important}
-@media(max-width:760px){body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-main{display:flex!important;flex-direction:column!important;gap:22px!important;direction:rtl!important}body.single-product .g1-product-page div.product.g1-pdp-product>.g1-pdp-after{margin-top:56px!important}}
-'''
-          base=css.split(marker,1)[0].rstrip() if marker in css else css.rstrip()
-          desired=base+'\n\n'+patch+'\n'
-          save_file(f'assets/css/product-detail.css.bak-{bak}',css)
-          save_file(rel,desired)
-          live=get_file(rel)
-          checks={
-            'marker':marker in live,
-            'strong-root':'div.product.g1-pdp-product{display:block!important' in live,
-            'grid-off':'grid-template-columns:none!important' in live,
-            'after-fullwidth':'>.g1-pdp-after{display:block!important' in live,
-            'main-two-column':'>.g1-pdp-main{display:grid!important' in live
-          }
-          failed=[k for k,v in checks.items() if not v]
-          if failed:raise RuntimeError('Live verification failed: '+', '.join(failed))
-          Path('deploy/pdp-v132-live-status.txt').write_text('PASS\nverified_at='+stamp+'\nmarker=v1.3.2\nroot_display=block\nafter_flow=sequential\n',encoding='utf-8')
-          print('LIVE PDP v1.3.2 REPAIRED AND VERIFIED')
-          PY
-      - name: Commit proof status
-        shell: bash
-        run: |
-          git config user.name "gramiss-deploy-bot"
-          git config user.email "actions@users.noreply.github.com"
-          git add deploy/pdp-v132-live-status.txt
-          git commit -m "chore: record live PDP v1.3.2 verification" || exit 0
-          git push
+        with:
+          ref: ops/pdp-mobile-ux-v1
+      - name: Deploy guarded mobile PDP UX
+        run: python3 deploy/pdp-mobile-v1/deploy.py
