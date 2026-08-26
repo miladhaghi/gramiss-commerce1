@@ -67,12 +67,6 @@ jobs:
           def save_live(rel,content):
               parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
               directory=root if not parent else root+'/'+parent
-              if parent:
-                  cur=root
-                  for part in parent.split('/'):
-                      cur += '/'+part
-                      try: call('create_directory',{'path':cur},True)
-                      except Exception: pass
               call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
 
           front=read_live('front-page.php')
@@ -114,14 +108,16 @@ jobs:
               images[key]=raw
 
           save_live('front-page.php.bak-before-looks-surgical-'+stamp,front)
-          save_live('template-parts/home-looks.php',partial)
-          save_live('assets/css/home-looks.css',css)
-          save_live('assets/js/home-looks.js',js)
 
-          image_payload={f'assets/images/home/{name}':base64.b64encode(raw).decode() for name,raw in images.items()}
-          image_expected={rel:hashlib.sha256(base64.b64decode(encoded)).hexdigest() for rel,encoded in image_payload.items()}
-          payload64=base64.b64encode(json.dumps(image_payload,separators=(',',':')).encode()).decode()
-          expected64=base64.b64encode(json.dumps(image_expected,separators=(',',':')).encode()).decode()
+          payload={
+              'template-parts/home-looks.php':base64.b64encode(partial.encode()).decode(),
+              'assets/css/home-looks.css':base64.b64encode(css.encode()).decode(),
+              'assets/js/home-looks.js':base64.b64encode(js.encode()).decode(),
+              **{f'assets/images/home/{name}':base64.b64encode(raw).decode() for name,raw in images.items()},
+          }
+          expected={rel:hashlib.sha256(base64.b64decode(encoded)).hexdigest() for rel,encoded in payload.items()}
+          payload64=base64.b64encode(json.dumps(payload,separators=(',',':')).encode()).decode()
+          expected64=base64.b64encode(json.dumps(expected,separators=(',',':')).encode()).decode()
           nonce=hashlib.sha256((stamp+expected_img['gramiss-look-01.webp']+expected_img['gramiss-look-02.webp']).encode()).hexdigest()
           installer_name='gramiss-looks-assets-'+stamp+'.php'
           installer=f'''<?php
@@ -145,7 +141,7 @@ jobs:
           with urllib.request.urlopen(req,context=ctx,timeout=120) as r:
               install=json.loads(r.read().decode('utf-8','replace'))
           if not install.get('ok'): raise SystemExit('Installer failed')
-          for rel,sha in image_expected.items():
+          for rel,sha in expected.items():
               got=((install.get('files') or {}).get(rel) or {}).get('sha256')
               if got != sha: raise SystemExit('Live asset hash mismatch: '+rel)
               print('PASS live asset',rel,got)
