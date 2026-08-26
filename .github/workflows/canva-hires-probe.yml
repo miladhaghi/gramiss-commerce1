@@ -18,17 +18,13 @@ jobs:
           for n in 1 2; do
             eval "u=\$L$n"
             code=$(curl -L --retry 2 --connect-timeout 15 --max-time 60 -sS -w '%{http_code}' -o "look$n.webp" "$u")
-            echo "LOOK$n HTTP=$code bytes=$(wc -c < look$n.webp)"
+            bytes=$(wc -c < "look$n.webp")
+            header=$(xxd -p -l 12 "look$n.webp")
+            echo "LOOK$n HTTP=$code bytes=$bytes header=$header"
             file "look$n.webp" || true
-            python3 - "$n" <<'PY'
-import sys, pathlib
-p=pathlib.Path('look'+sys.argv[1]+'.webp')
-b=p.read_bytes()
-print('HEADER', b[:16])
-if not (b.startswith(b'RIFF') and b[8:12] == b'WEBP'):
-    raise SystemExit('NOT_WEBP')
-PY
             test "$code" = 200
-            test $(wc -c < "look$n.webp") -gt 20000
+            test "$bytes" -gt 20000
+            test "${header:0:8}" = '52494646'
+            test "${header:16:8}" = '57454250'
           done
           echo 'CANVA_HIRES_OK'
