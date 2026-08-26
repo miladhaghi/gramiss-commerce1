@@ -1,0 +1,34 @@
+name: Canva Hires Probe
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  probe:
+    if: github.head_ref == 'ops/home-looks-surgical-v7'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe approved Look assets without touching Live
+        shell: bash
+        run: |
+          set -euo pipefail
+          L1='https://media.canva.com/v2/image-resize/format:WEBP/height:900/quality:88/uri:ifs%3A%2F%2FM%2Fadbefa02-8ca1-41b7-a704-5b1866b0de9b/watermark:F/width:600?csig=AAAAAAAAAAAAAAAAAAAAAHzt6Mvix79jLk-njco78eQb-pHkyPctXNrjwYFoHQJr&exp=1787763397&osig=AAAAAAAAAAAAAAAAAAAAALmmRNcIf8OoKiWZwwo5wNuKhA9jP-LAIYUm6ePSYhDA&signer=media-rpc&x-canva-quality=thumbnail'
+          L2='https://media.canva.com/v2/image-resize/format:WEBP/height:900/quality:88/uri:ifs%3A%2F%2FM%2Fa3e4f996-9234-4cc7-9892-1b1354b39586/watermark:F/width:600?csig=AAAAAAAAAAAAAAAAAAAAAOk2Vx-j06jmikfIsPQopR7bw5A0t9PoTF5_QmWIeYM1&exp=1787767107&osig=AAAAAAAAAAAAAAAAAAAAABWQpB1Sp8T7HxxtmXNg0JD32zdFaQz5KINuoaNFPFbU&signer=media-rpc&x-canva-quality=thumbnail'
+          for n in 1 2; do
+            eval "u=\$L$n"
+            code=$(curl -L --retry 2 --connect-timeout 15 --max-time 60 -sS -w '%{http_code}' -o "look$n.webp" "$u")
+            echo "LOOK$n HTTP=$code bytes=$(wc -c < look$n.webp)"
+            file "look$n.webp" || true
+            python3 - "$n" <<'PY'
+import sys, pathlib
+p=pathlib.Path('look'+sys.argv[1]+'.webp')
+b=p.read_bytes()
+print('HEADER', b[:16])
+if not (b.startswith(b'RIFF') and b[8:12] == b'WEBP'):
+    raise SystemExit('NOT_WEBP')
+PY
+            test "$code" = 200
+            test $(wc -c < "look$n.webp") -gt 20000
+          done
+          echo 'CANVA_HIRES_OK'
