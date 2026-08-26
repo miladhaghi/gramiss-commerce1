@@ -19,69 +19,17 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import hashlib, json, os, re, ssl, time, urllib.parse, urllib.request
-
+          import base64, hashlib, json, os, re, ssl, time, urllib.parse, urllib.request
           host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']
-          root=os.environ['THEME_ROOT'].strip('/')
-          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
-          css_marker='GRAMISS_HOME_LOOKS_CARD_CTA_V1'
-          js_marker='GRAMISS_HOME_LOOKS_CARD_TAP_V1'
-
-          css_patch=r'''
-
-/* GRAMISS_HOME_LOOKS_CARD_CTA_V1 */
-@media (max-width:650px){
-  .g1-looks__product-card:not(.is-soon){cursor:pointer;touch-action:pan-y;transition:opacity .16s ease,box-shadow .18s ease,background-color .18s ease}
-  .g1-looks__product-card.g1-card-pressing{opacity:.975!important;box-shadow:0 18px 46px rgba(53,35,23,.16),0 2px 8px rgba(53,35,23,.08)!important}
-  .g1-looks__product-card>a{min-height:52px!important;margin-top:4px;padding-top:14px!important;border-top:1px solid rgba(47,32,22,.12);display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px;font-weight:800!important;text-decoration:none!important}
-  .g1-looks__product-card>a span{flex:0 0 38px;width:38px;height:38px;border-radius:999px;display:grid;place-items:center;background:#25170f;color:#fff;font-size:16px;line-height:1;box-shadow:0 8px 20px rgba(37,23,15,.16)}
-  .g1-looks__spot.is-active .g1-looks__product-card>a span{animation:g1LooksArrowNudge .46s ease-out .18s 1}
-}
-@keyframes g1LooksArrowNudge{0%,100%{transform:translate(0,0)}48%{transform:translate(3px,-3px)}}
-@media (prefers-reduced-motion:reduce){.g1-looks__spot.is-active .g1-looks__product-card>a span{animation:none!important}}
-'''
-
-          js_patch=r'''
-
-/* GRAMISS_HOME_LOOKS_CARD_TAP_V1 */
-(() => {
-  'use strict';
-  const root=document.querySelector('[data-g1-looks]');
-  if(!root||!window.matchMedia)return;
-  const mobile=()=>window.matchMedia('(max-width:650px)').matches;
-  const interactive='a,button,input,select,textarea,label';
-  root.querySelectorAll('.g1-looks__product-card:not(.is-soon)').forEach((card)=>{
-    const link=Array.from(card.children).find((el)=>el.tagName==='A'&&el.href);
-    if(!link)return;
-    card.classList.add('g1-card-linkable');
-    let pointerId=null,startX=0,startY=0,moved=false;
-    const reset=()=>{pointerId=null;moved=false;card.classList.remove('g1-card-pressing')};
-    card.addEventListener('pointerdown',(event)=>{
-      if(!mobile()||(typeof event.button==='number'&&event.button!==0)||event.target.closest(interactive))return;
-      pointerId=event.pointerId;startX=event.clientX;startY=event.clientY;moved=false;card.classList.add('g1-card-pressing');
-    },{passive:true});
-    card.addEventListener('pointermove',(event)=>{
-      if(event.pointerId!==pointerId)return;
-      if(Math.hypot(event.clientX-startX,event.clientY-startY)>10){moved=true;card.classList.remove('g1-card-pressing')}
-    },{passive:true});
-    card.addEventListener('pointercancel',reset,{passive:true});
-    card.addEventListener('pointerup',(event)=>{
-      if(event.pointerId!==pointerId)return;
-      const selection=window.getSelection?window.getSelection().toString().trim():'';
-      const shouldOpen=mobile()&&!moved&&!selection&&!event.target.closest(interactive);
-      reset();
-      if(shouldOpen)window.setTimeout(()=>link.click(),55);
-    },{passive:true});
-  });
-})();
-'''
-
+          root=os.environ['THEME_ROOT'].strip('/'); ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
+          css_marker='GRAMISS_HOME_LOOKS_CARD_CTA_V1'; js_marker='GRAMISS_HOME_LOOKS_CARD_TAP_V1'
+          css_patch=base64.b64decode('LyogR1JBTUlTU19IT01FX0xPT0tTX0NBUkRfQ1RBX1YxICovCkBtZWRpYSAobWF4LXdpZHRoOjY1MHB4KXsKICAuZzEtbG9va3NfX3Byb2R1Y3QtY2FyZDpub3QoLmlzLXNvb24pe2N1cnNvcjpwb2ludGVyO3RvdWNoLWFjdGlvbjpwYW4teTt0cmFuc2l0aW9uOm9wYWNpdHkgLjE2cyBlYXNlLGJveC1zaGFkb3cgLjE4cyBlYXNlLGJhY2tncm91bmQtY29sb3IgLjE4cyBlYXNlfQogIC5nMS1sb29rc19fcHJvZHVjdC1jYXJkLmcxLWNhcmQtcHJlc3Npbmd7b3BhY2l0eTouOTc1IWltcG9ydGFudDtib3gtc2hhZG93OjAgMThweCA0NnB4IHJnYmEoNTMsMzUsMjMsLjE2KSwwIDJweCA4cHggcmdiYSg1MywzNSwyMywuMDgpIWltcG9ydGFudH0KICAuZzEtbG9va3NfX3Byb2R1Y3QtY2FyZD5he21pbi1oZWlnaHQ6NTJweCFpbXBvcnRhbnQ7bWFyZ2luLXRvcDo0cHg7cGFkZGluZy10b3A6MTRweCFpbXBvcnRhbnQ7Ym9yZGVyLXRvcDoxcHggc29saWQgcmdiYSg0NywzMiwyMiwuMTIpO2Rpc3BsYXk6ZmxleCFpbXBvcnRhbnQ7YWxpZ24taXRlbXM6Y2VudGVyIWltcG9ydGFudDtqdXN0aWZ5LWNvbnRlbnQ6c3BhY2UtYmV0d2VlbiFpbXBvcnRhbnQ7Z2FwOjEycHg7Zm9udC13ZWlnaHQ6ODAwIWltcG9ydGFudDt0ZXh0LWRlY29yYXRpb246bm9uZSFpbXBvcnRhbnR9CiAgLmcxLWxvb2tzX19wcm9kdWN0LWNhcmQ+YSBzcGFue2ZsZXg6MCAwIDM4cHg7d2lkdGg6MzhweDtoZWlnaHQ6MzhweDtib3JkZXItcmFkaXVzOjk5OXB4O2Rpc3BsYXk6Z3JpZDtwbGFjZS1pdGVtczpjZW50ZXI7YmFja2dyb3VuZDojMjUxNzBmO2NvbG9yOiNmZmY7Zm9udC1zaXplOjE2cHg7bGluZS1oZWlnaHQ6MTtib3gtc2hhZG93OjAgOHB4IDIwcHggcmdiYSgzNywyMywxNSwuMTYpfQogIC5nMS1sb29rc19fc3BvdC5pcy1hY3RpdmUgLmcxLWxvb2tzX19wcm9kdWN0LWNhcmQ+YSBzcGFue2FuaW1hdGlvbjpnMUxvb2tzQXJyb3dOdWRnZSAuNDZzIGVhc2Utb3V0IC4xOHMgMX0KfQpAa2V5ZnJhbWVzIGcxTG9va3NBcnJvd051ZGdlezAlLDEwMCV7dHJhbnNmb3JtOnRyYW5zbGF0ZSgwLDApfTQ4JXt0cmFuc2Zvcm06dHJhbnNsYXRlKDNweCwtM3B4KX19CkBtZWRpYSAocHJlZmVycy1yZWR1Y2VkLW1vdGlvbjpyZWR1Y2Upey5nMS1sb29rc19fc3BvdC5pcy1hY3RpdmUgLmcxLWxvb2tzX19wcm9kdWN0LWNhcmQ+YSBzcGFue2FuaW1hdGlvbjpub25lIWltcG9ydGFudH19').decode()
+          js_patch=base64.b64decode('LyogR1JBTUlTU19IT01FX0xPT0tTX0NBUkRfVEFQX1YxICovCigoKSA9PiB7CiAgJ3VzZSBzdHJpY3QnOwogIGNvbnN0IHJvb3Q9ZG9jdW1lbnQucXVlcnlTZWxlY3RvcignW2RhdGEtZzEtbG9va3NdJyk7CiAgaWYoIXJvb3R8fCF3aW5kb3cubWF0Y2hNZWRpYSlyZXR1cm47CiAgY29uc3QgbW9iaWxlPSgpPT53aW5kb3cubWF0Y2hNZWRpYSgnKG1heC13aWR0aDo2NTBweCknKS5tYXRjaGVzOwogIGNvbnN0IGludGVyYWN0aXZlPSdhLGJ1dHRvbixpbnB1dCxzZWxlY3QsdGV4dGFyZWEsbGFiZWwnOwogIHJvb3QucXVlcnlTZWxlY3RvckFsbCgnLmcxLWxvb2tzX19wcm9kdWN0LWNhcmQ6bm90KC5pcy1zb29uKScpLmZvckVhY2goKGNhcmQpPT57CiAgICBjb25zdCBsaW5rPUFycmF5LmZyb20oY2FyZC5jaGlsZHJlbikuZmluZCgoZWwpPT5lbC50YWdOYW1lPT09J0EnJiZlbC5ocmVmKTsKICAgIGlmKCFsaW5rKXJldHVybjsKICAgIGNhcmQuY2xhc3NMaXN0LmFkZCgnZzEtY2FyZC1saW5rYWJsZScpOwogICAgbGV0IHBvaW50ZXJJZD1udWxsLHN0YXJ0WD0wLHN0YXJ0WT0wLG1vdmVkPWZhbHNlOwogICAgY29uc3QgcmVzZXQ9KCk9Pntwb2ludGVySWQ9bnVsbDttb3ZlZD1mYWxzZTtjYXJkLmNsYXNzTGlzdC5yZW1vdmUoJ2cxLWNhcmQtcHJlc3NpbmcnKX07CiAgICBjYXJkLmFkZEV2ZW50TGlzdGVuZXIoJ3BvaW50ZXJkb3duJywoZXZlbnQpPT57CiAgICAgIGlmKCFtb2JpbGUoKXx8KHR5cGVvZiBldmVudC5idXR0b249PT0nbnVtYmVyJyYmZXZlbnQuYnV0dG9uIT09MCl8fGV2ZW50LnRhcmdldC5jbG9zZXN0KGludGVyYWN0aXZlKSlyZXR1cm47CiAgICAgIHBvaW50ZXJJZD1ldmVudC5wb2ludGVySWQ7c3RhcnRYPWV2ZW50LmNsaWVudFg7c3RhcnRZPWV2ZW50LmNsaWVudFk7bW92ZWQ9ZmFsc2U7Y2FyZC5jbGFzc0xpc3QuYWRkKCdnMS1jYXJkLXByZXNzaW5nJyk7CiAgICB9LHtwYXNzaXZlOnRydWV9KTsKICAgIGNhcmQuYWRkRXZlbnRMaXN0ZW5lcigncG9pbnRlcm1vdmUnLChldmVudCk9PnsKICAgICAgaWYoZXZlbnQucG9pbnRlcklkIT09cG9pbnRlcklkKXJldHVybjsKICAgICAgaWYoTWF0aC5oeXBvdChldmVudC5jbGllbnRYLXN0YXJ0WCxldmVudC5jbGllbnRZLXN0YXJ0WSk+MTApe21vdmVkPXRydWU7Y2FyZC5jbGFzc0xpc3QucmVtb3ZlKCdnMS1jYXJkLXByZXNzaW5nJyl9CiAgICB9LHtwYXNzaXZlOnRydWV9KTsKICAgIGNhcmQuYWRkRXZlbnRMaXN0ZW5lcigncG9pbnRlcmNhbmNlbCcscmVzZXQse3Bhc3NpdmU6dHJ1ZX0pOwogICAgY2FyZC5hZGRFdmVudExpc3RlbmVyKCdwb2ludGVydXAnLChldmVudCk9PnsKICAgICAgaWYoZXZlbnQucG9pbnRlcklkIT09cG9pbnRlcklkKXJldHVybjsKICAgICAgY29uc3Qgc2VsZWN0aW9uPXdpbmRvdy5nZXRTZWxlY3Rpb24/d2luZG93LmdldFNlbGVjdGlvbigpLnRvU3RyaW5nKCkudHJpbSgpOicnOwogICAgICBjb25zdCBzaG91bGRPcGVuPW1vYmlsZSgpJiYhbW92ZWQmJiFzZWxlY3Rpb24mJiFldmVudC50YXJnZXQuY2xvc2VzdChpbnRlcmFjdGl2ZSk7CiAgICAgIHJlc2V0KCk7CiAgICAgIGlmKHNob3VsZE9wZW4pd2luZG93LnNldFRpbWVvdXQoKCk9PmxpbmsuY2xpY2soKSw1NSk7CiAgICB9LHtwYXNzaXZlOnRydWV9KTsKICB9KTsKfSkoKTs=').decode()
           def call(fn,params,post=False):
               url=f'https://{host}:2083/execute/Fileman/{fn}'; data=urllib.parse.urlencode(params).encode(); last=None
               for attempt in range(1,6):
                   try:
-                      req=urllib.request.Request(url if post else url+'?'+data.decode(),data=data if post else None,method='POST' if post else 'GET')
-                      req.add_header('Authorization',f'cpanel {user}:{token}')
+                      req=urllib.request.Request(url if post else url+'?'+data.decode(),data=data if post else None,method='POST' if post else 'GET'); req.add_header('Authorization',f'cpanel {user}:{token}')
                       if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
                       with urllib.request.urlopen(req,context=ctx,timeout=90) as r: obj=json.loads(r.read().decode('utf-8','replace'))
                       result=obj.get('result') if isinstance(obj.get('result'),dict) else obj
@@ -91,58 +39,37 @@ jobs:
                       last=exc; print(f'Attempt {attempt}/5 {fn}: {exc}')
                       if attempt<5: time.sleep(attempt*3)
               raise last
-
           def read_live(rel):
-              parent,name=rel.rsplit('/',1); directory=root+'/'+parent
-              d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              parent,name=rel.rsplit('/',1); d=call('get_file_content',{'dir':root+'/'+parent,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
               if isinstance(d,dict):
                   for k in ('content','file_content','data'):
                       if isinstance(d.get(k),str): return d[k]
               if isinstance(d,str): return d
               raise RuntimeError('Unexpected live content: '+rel)
-
           def save_live(rel,content):
-              parent,name=rel.rsplit('/',1); directory=root+'/'+parent
-              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
-
+              parent,name=rel.rsplit('/',1); call('save_file_content',{'dir':root+'/'+parent,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
           def public_get(url):
-              req=urllib.request.Request(url,headers={'User-Agent':'GramissLooksCardTap/1','Cache-Control':'no-cache','Pragma':'no-cache'})
-              with urllib.request.urlopen(req,context=ctx,timeout=90) as r:return r.status,r.read()
-
-          st,b=public_get('https://gramiss.ir/?card_tap_pre='+str(int(time.time())))
-          html=b.decode('utf-8','replace')
-          pre={'home':st==200,'hero':'g1-floating-hero' in html,'signal':'g1-signal-strip' in html,'looks':'data-g1-looks' in html,'collections':'id="collections"' in html,'order':html.find('g1-signal-strip')<html.find('data-g1-looks')<html.find('id="collections"')}
-          for label,ok in pre.items():print(('PASS' if ok else 'FAIL')+': pre '+label)
-          if not all(pre.values()):raise SystemExit('ABORT preflight')
-
-          css_rel='assets/css/home-looks.css';js_rel='assets/js/home-looks.js';partial_rel='template-parts/home-looks.php'
-          css=read_live(css_rel);js=read_live(js_rel);partial=read_live(partial_rel)
-          if 'GRAMISS_HOME_LOOKS_MOBILE_CARD_FIX_V1' not in css:raise SystemExit('ABORT mobile sheet fix missing')
-          if 'GRAMISS_HOME_LOOKS_SURGICAL_V2' not in js or 'GRAMISS_HOME_LOOKS_SURGICAL_V2' not in partial:raise SystemExit('ABORT source mismatch')
-
-          save_live(css_rel+'.bak-card-tap-'+stamp,css);save_live(js_rel+'.bak-card-tap-'+stamp,js);save_live(partial_rel+'.bak-card-tap-'+stamp,partial)
-          new_css=css if css_marker in css else css.rstrip()+css_patch
-          new_js=js if js_marker in js else js.rstrip()+js_patch
-          new_partial,n1=re.subn(r'/assets/css/home-looks\.css\?v=[^\'\"]+','/assets/css/home-looks.css?v=2.3.0',partial,count=1)
-          new_partial,n2=re.subn(r'/assets/js/home-looks\.js\?v=[^\'\"]+','/assets/js/home-looks.js?v=2.3.0',new_partial,count=1)
-          if n1!=1 or n2!=1:raise SystemExit('ABORT asset URL patch mismatch')
-          save_live(css_rel,new_css);save_live(js_rel,new_js);save_live(partial_rel,new_partial)
-          if css_marker not in read_live(css_rel) or js_marker not in read_live(js_rel):raise SystemExit('write verify failed')
-          print('PASS production writes and backups')
-
-          purge='gramiss-purge-card-tap-'+stamp+'.php'
-          php="<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php'; if(function_exists('do_action')){do_action('litespeed_purge_all');} echo 'OK'; @unlink(__FILE__);"
-          call('save_file_content',{'dir':'public_html','file':purge,'content':php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
-          with urllib.request.urlopen(urllib.request.Request('https://gramiss.ir/'+purge+'?t='+str(int(time.time())),headers={'User-Agent':'GramissLooksCardTap/1'}),context=ctx,timeout=90) as r:print('PURGE',r.status,r.read().decode()[:50])
-
-          st,b=public_get('https://gramiss.ir/?card_tap_post='+str(int(time.time())))
-          html=b.decode('utf-8','replace')
-          post={'home':st==200,'hero':'g1-floating-hero' in html,'signal':'g1-signal-strip' in html,'looks':'data-g1-looks' in html,'collections':'id="collections"' in html,'css23':'home-looks.css?v=2.3.0' in html,'js23':'home-looks.js?v=2.3.0' in html,'order':html.find('g1-signal-strip')<html.find('data-g1-looks')<html.find('id="collections"')}
-          for label,ok in post.items():print(('PASS' if ok else 'FAIL')+': post '+label)
-          if not all(post.values()):raise SystemExit('post verify failed')
+              req=urllib.request.Request(url,headers={'User-Agent':'GramissLooksCardTap/1','Cache-Control':'no-cache','Pragma':'no-cache'}); 
+              with urllib.request.urlopen(req,context=ctx,timeout=90) as r: return r.status,r.read()
+          st,b=public_get('https://gramiss.ir/?card_tap_pre='+str(int(time.time()))); html=b.decode('utf-8','replace')
+          checks=[st==200,'g1-floating-hero' in html,'g1-signal-strip' in html,'data-g1-looks' in html,'id="collections"' in html,html.find('g1-signal-strip')<html.find('data-g1-looks')<html.find('id="collections"')]
+          if not all(checks): raise SystemExit('ABORT preflight')
+          css_rel='assets/css/home-looks.css'; js_rel='assets/js/home-looks.js'; partial_rel='template-parts/home-looks.php'; css=read_live(css_rel); js=read_live(js_rel); partial=read_live(partial_rel)
+          if 'GRAMISS_HOME_LOOKS_MOBILE_CARD_FIX_V1' not in css or 'GRAMISS_HOME_LOOKS_SURGICAL_V2' not in js or 'GRAMISS_HOME_LOOKS_SURGICAL_V2' not in partial: raise SystemExit('ABORT source mismatch')
+          save_live(css_rel+'.bak-card-tap-'+stamp,css); save_live(js_rel+'.bak-card-tap-'+stamp,js); save_live(partial_rel+'.bak-card-tap-'+stamp,partial)
+          new_css=css if css_marker in css else css.rstrip()+'\n\n'+css_patch; new_js=js if js_marker in js else js.rstrip()+'\n\n'+js_patch
+          new_partial,n1=re.subn(r'/assets/css/home-looks\.css\?v=[^\'\"]+','/assets/css/home-looks.css?v=2.3.0',partial,count=1); new_partial,n2=re.subn(r'/assets/js/home-looks\.js\?v=[^\'\"]+','/assets/js/home-looks.js?v=2.3.0',new_partial,count=1)
+          if n1!=1 or n2!=1: raise SystemExit('ABORT asset URL patch mismatch')
+          save_live(css_rel,new_css); save_live(js_rel,new_js); save_live(partial_rel,new_partial)
+          if css_marker not in read_live(css_rel) or js_marker not in read_live(js_rel): raise SystemExit('write verify failed')
+          purge='gramiss-purge-card-tap-'+stamp+'.php'; php="<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php'; if(function_exists('do_action')){do_action('litespeed_purge_all');} echo 'OK'; @unlink(__FILE__);"; call('save_file_content',{'dir':'public_html','file':purge,'content':php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+          with urllib.request.urlopen(urllib.request.Request('https://gramiss.ir/'+purge+'?t='+str(int(time.time())),headers={'User-Agent':'GramissLooksCardTap/1'}),context=ctx,timeout=90) as r: print('PURGE',r.status)
+          st,b=public_get('https://gramiss.ir/?card_tap_post='+str(int(time.time()))); html=b.decode('utf-8','replace')
+          checks=[st==200,'g1-floating-hero' in html,'g1-signal-strip' in html,'data-g1-looks' in html,'id="collections"' in html,'home-looks.css?v=2.3.0' in html,'home-looks.js?v=2.3.0' in html,html.find('g1-signal-strip')<html.find('data-g1-looks')<html.find('id="collections"')]
+          if not all(checks): raise SystemExit('post verify failed')
           st,b=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/css/home-looks.css?v=2.3.0&x='+stamp)
-          if st!=200 or css_marker.encode() not in b:raise SystemExit('public CSS failed')
+          if st!=200 or css_marker.encode() not in b: raise SystemExit('public CSS failed')
           st,b=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/js/home-looks.js?v=2.3.0&x='+stamp)
-          if st!=200 or js_marker.encode() not in b:raise SystemExit('public JS failed')
+          if st!=200 or js_marker.encode() not in b: raise SystemExit('public JS failed')
           print('LIVE HOME LOOKS TAPPABLE CARD V1 DEPLOYED')
           PY
