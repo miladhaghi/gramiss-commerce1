@@ -1,0 +1,1 @@
+trigger Home Looks tappable card deploy v1
