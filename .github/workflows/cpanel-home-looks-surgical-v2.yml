@@ -1,12 +1,12 @@
 name: cPanel Home Looks Tappable Card V1
 
 on:
-  pull_request:
-    branches: [main]
+  push:
+    branches: [ops/home-looks-card-tap-v1]
 
 jobs:
   deploy:
-    if: github.head_ref == 'ops/home-looks-card-tap-v1'
+    if: github.ref == 'refs/heads/ops/home-looks-card-tap-v1'
     runs-on: ubuntu-latest
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
