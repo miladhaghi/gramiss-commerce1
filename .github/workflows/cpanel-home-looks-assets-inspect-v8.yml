@@ -1,0 +1,29 @@
+name: cPanel Home Looks Assets Inspect v8
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  inspect:
+    if: github.head_ref == 'ops/home-looks-surgical-v8'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect public Home Look assets only
+        shell: bash
+        run: |
+          set -euo pipefail
+          for n in 01 02; do
+            url="https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/images/home/gramiss-look-${n}.webp?inspect=${GITHUB_RUN_ID}"
+            code=$(curl -L --retry 2 --connect-timeout 15 --max-time 60 -sS -w '%{http_code}' -o "look-${n}.webp" "$url")
+            bytes=$(wc -c < "look-${n}.webp")
+            sha=$(sha256sum "look-${n}.webp" | awk '{print $1}')
+            header=$(xxd -p -l 12 "look-${n}.webp" || true)
+            echo "LOOK${n} HTTP=${code} bytes=${bytes} sha256=${sha} header=${header}"
+            file "look-${n}.webp" || true
+          done
+          code=$(curl -L --retry 2 --connect-timeout 15 --max-time 60 -sS -w '%{http_code}' -o home.html "https://gramiss.ir/?inspect_looks=${GITHUB_RUN_ID}")
+          echo "HOME HTTP=${code} bytes=$(wc -c < home.html)"
+          grep -o 'gramiss-look-[^"'"' ]*\.webp' home.html | sort -u || true
+          grep -q 'g1-floating-hero' home.html && echo HERO_MARKER_PRESENT || true
+          grep -q 'data-g1-looks' home.html && echo LOOKS_MARKER_PRESENT || true
