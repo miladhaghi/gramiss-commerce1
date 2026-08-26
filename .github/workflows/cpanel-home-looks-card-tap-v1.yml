@@ -1,0 +1,148 @@
+name: cPanel Home Looks Card Tap V1
+
+on:
+  push:
+    branches:
+      - ops/home-looks-card-tap-deploy-v1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - name: Deploy tappable mobile Home Looks cards
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, os, re, ssl, time, urllib.parse, urllib.request
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']
+          root=os.environ['THEME_ROOT'].strip('/')
+          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
+          css_marker='GRAMISS_HOME_LOOKS_CARD_CTA_V1'
+          js_marker='GRAMISS_HOME_LOOKS_CARD_TAP_V1'
+
+          css_patch=r'''
+
+/* GRAMISS_HOME_LOOKS_CARD_CTA_V1 */
+@media (max-width:650px){
+  .g1-looks__product-card:not(.is-soon){cursor:pointer;touch-action:pan-y;transition:opacity .16s ease,box-shadow .18s ease,background-color .18s ease}
+  .g1-looks__product-card.g1-card-pressing{opacity:.975!important;box-shadow:0 18px 46px rgba(53,35,23,.16),0 2px 8px rgba(53,35,23,.08)!important}
+  .g1-looks__product-card>a{min-height:52px!important;margin-top:4px;padding-top:14px!important;border-top:1px solid rgba(47,32,22,.12);display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px;font-weight:800!important;text-decoration:none!important}
+  .g1-looks__product-card>a span{flex:0 0 38px;width:38px;height:38px;border-radius:999px;display:grid;place-items:center;background:#25170f;color:#fff;font-size:16px;line-height:1;box-shadow:0 8px 20px rgba(37,23,15,.16)}
+  .g1-looks__spot.is-active .g1-looks__product-card>a span{animation:g1LooksArrowNudge .46s ease-out .18s 1}
+}
+@keyframes g1LooksArrowNudge{0%,100%{transform:translate(0,0)}48%{transform:translate(3px,-3px)}}
+@media (prefers-reduced-motion:reduce){.g1-looks__spot.is-active .g1-looks__product-card>a span{animation:none!important}}
+'''
+
+          js_patch=r'''
+
+/* GRAMISS_HOME_LOOKS_CARD_TAP_V1 */
+(() => {
+  'use strict';
+  const root=document.querySelector('[data-g1-looks]');
+  if(!root||!window.matchMedia)return;
+  const mobile=()=>window.matchMedia('(max-width:650px)').matches;
+  const interactive='a,button,input,select,textarea,label';
+  root.querySelectorAll('.g1-looks__product-card:not(.is-soon)').forEach((card)=>{
+    const link=Array.from(card.children).find((el)=>el.tagName==='A'&&el.href);
+    if(!link)return;
+    card.classList.add('g1-card-linkable');
+    let pointerId=null,startX=0,startY=0,moved=false;
+    const reset=()=>{pointerId=null;moved=false;card.classList.remove('g1-card-pressing')};
+    card.addEventListener('pointerdown',(event)=>{
+      if(!mobile()||(typeof event.button==='number'&&event.button!==0)||event.target.closest(interactive))return;
+      pointerId=event.pointerId;startX=event.clientX;startY=event.clientY;moved=false;card.classList.add('g1-card-pressing');
+    },{passive:true});
+    card.addEventListener('pointermove',(event)=>{
+      if(event.pointerId!==pointerId)return;
+      if(Math.hypot(event.clientX-startX,event.clientY-startY)>10){moved=true;card.classList.remove('g1-card-pressing')}
+    },{passive:true});
+    card.addEventListener('pointercancel',reset,{passive:true});
+    card.addEventListener('pointerup',(event)=>{
+      if(event.pointerId!==pointerId)return;
+      const selection=window.getSelection?window.getSelection().toString().trim():'';
+      const shouldOpen=mobile()&&!moved&&!selection&&!event.target.closest(interactive);
+      reset();
+      if(shouldOpen)window.setTimeout(()=>link.click(),55);
+    },{passive:true});
+  });
+})();
+'''
+
+          def call(fn,params,post=False):
+              url=f'https://{host}:2083/execute/Fileman/{fn}'; data=urllib.parse.urlencode(params).encode(); last=None
+              for attempt in range(1,6):
+                  try:
+                      req=urllib.request.Request(url if post else url+'?'+data.decode(),data=data if post else None,method='POST' if post else 'GET')
+                      req.add_header('Authorization',f'cpanel {user}:{token}')
+                      if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+                      with urllib.request.urlopen(req,context=ctx,timeout=90) as r: obj=json.loads(r.read().decode('utf-8','replace'))
+                      result=obj.get('result') if isinstance(obj.get('result'),dict) else obj
+                      if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
+                      return result.get('data')
+                  except Exception as exc:
+                      last=exc; print(f'Attempt {attempt}/5 {fn}: {exc}')
+                      if attempt<5: time.sleep(attempt*3)
+              raise last
+
+          def read_live(rel):
+              parent,name=rel.rsplit('/',1); directory=root+'/'+parent
+              d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(d,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(d.get(k),str): return d[k]
+              if isinstance(d,str): return d
+              raise RuntimeError('Unexpected live content: '+rel)
+
+          def save_live(rel,content):
+              parent,name=rel.rsplit('/',1); directory=root+'/'+parent
+              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+
+          def public_get(url):
+              req=urllib.request.Request(url,headers={'User-Agent':'GramissLooksCardTap/1','Cache-Control':'no-cache','Pragma':'no-cache'})
+              with urllib.request.urlopen(req,context=ctx,timeout=90) as r:return r.status,r.read()
+
+          st,b=public_get('https://gramiss.ir/?card_tap_pre='+str(int(time.time())))
+          html=b.decode('utf-8','replace')
+          pre={'home':st==200,'hero':'g1-floating-hero' in html,'signal':'g1-signal-strip' in html,'looks':'data-g1-looks' in html,'collections':'id="collections"' in html,'order':html.find('g1-signal-strip')<html.find('data-g1-looks')<html.find('id="collections"')}
+          for label,ok in pre.items():print(('PASS' if ok else 'FAIL')+': pre '+label)
+          if not all(pre.values()):raise SystemExit('ABORT preflight')
+
+          css_rel='assets/css/home-looks.css';js_rel='assets/js/home-looks.js';partial_rel='template-parts/home-looks.php'
+          css=read_live(css_rel);js=read_live(js_rel);partial=read_live(partial_rel)
+          if 'GRAMISS_HOME_LOOKS_MOBILE_CARD_FIX_V1' not in css:raise SystemExit('ABORT mobile sheet fix missing')
+          if 'GRAMISS_HOME_LOOKS_SURGICAL_V2' not in js or 'GRAMISS_HOME_LOOKS_SURGICAL_V2' not in partial:raise SystemExit('ABORT source mismatch')
+
+          save_live(css_rel+'.bak-card-tap-'+stamp,css);save_live(js_rel+'.bak-card-tap-'+stamp,js);save_live(partial_rel+'.bak-card-tap-'+stamp,partial)
+          new_css=css if css_marker in css else css.rstrip()+css_patch
+          new_js=js if js_marker in js else js.rstrip()+js_patch
+          new_partial,n1=re.subn(r'/assets/css/home-looks\.css\?v=[^\'\"]+','/assets/css/home-looks.css?v=2.3.0',partial,count=1)
+          new_partial,n2=re.subn(r'/assets/js/home-looks\.js\?v=[^\'\"]+','/assets/js/home-looks.js?v=2.3.0',new_partial,count=1)
+          if n1!=1 or n2!=1:raise SystemExit('ABORT asset URL patch mismatch')
+          save_live(css_rel,new_css);save_live(js_rel,new_js);save_live(partial_rel,new_partial)
+          if css_marker not in read_live(css_rel) or js_marker not in read_live(js_rel):raise SystemExit('write verify failed')
+          print('PASS production writes and backups')
+
+          purge='gramiss-purge-card-tap-'+stamp+'.php'
+          php="<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php'; if(function_exists('do_action')){do_action('litespeed_purge_all');} echo 'OK'; @unlink(__FILE__);"
+          call('save_file_content',{'dir':'public_html','file':purge,'content':php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+          with urllib.request.urlopen(urllib.request.Request('https://gramiss.ir/'+purge+'?t='+str(int(time.time())),headers={'User-Agent':'GramissLooksCardTap/1'}),context=ctx,timeout=90) as r:print('PURGE',r.status,r.read().decode()[:50])
+
+          st,b=public_get('https://gramiss.ir/?card_tap_post='+str(int(time.time())))
+          html=b.decode('utf-8','replace')
+          post={'home':st==200,'hero':'g1-floating-hero' in html,'signal':'g1-signal-strip' in html,'looks':'data-g1-looks' in html,'collections':'id="collections"' in html,'css23':'home-looks.css?v=2.3.0' in html,'js23':'home-looks.js?v=2.3.0' in html,'order':html.find('g1-signal-strip')<html.find('data-g1-looks')<html.find('id="collections"')}
+          for label,ok in post.items():print(('PASS' if ok else 'FAIL')+': post '+label)
+          if not all(post.values()):raise SystemExit('post verify failed')
+          st,b=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/css/home-looks.css?v=2.3.0&x='+stamp)
+          if st!=200 or css_marker.encode() not in b:raise SystemExit('public CSS failed')
+          st,b=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/js/home-looks.js?v=2.3.0&x='+stamp)
+          if st!=200 or js_marker.encode() not in b:raise SystemExit('public JS failed')
+          print('LIVE HOME LOOKS TAPPABLE CARD V1 DEPLOYED')
+          PY
