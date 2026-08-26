@@ -1,1 +1,1 @@
-Trigger mobile PDP UX v1 deployment 2026-08-27.
+This file triggers the final cPanel deployment of the PDP v1.3.2 asset rollback and root-flow CSS fix.
