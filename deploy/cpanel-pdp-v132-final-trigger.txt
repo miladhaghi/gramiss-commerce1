@@ -1,1 +1,1 @@
-Trigger final live PDP root-flow repair v1.3.2.
+Trigger mobile PDP UX v1 deployment 2026-08-27.
