@@ -1,0 +1,116 @@
+/* GRAMISS_PDP_MOBILE_UX_V1_2_POLISH */
+@media (max-width: 760px) {
+  /* 1) Tighter vertical rhythm without changing the purchase flow. */
+  body.single-product.gramiss-pdp-premium-v1 .gramiss-pdp-runtime-v3 .g3-summary-slot > .summary,
+  body.single-product.gramiss-pdp-premium-v1 .gramiss-pdp-runtime-v3 .g3-summary-slot > .g2-pdp-buy {
+    padding: 21px 18px 21px !important;
+  }
+
+  body.single-product.gramiss-pdp-premium-v1 .g3-product-eyebrow {
+    margin: 0 0 9px !important;
+  }
+
+  /* 2) Cleaner title / price hierarchy. */
+  body.single-product.gramiss-pdp-premium-v1 .summary h1,
+  body.single-product.gramiss-pdp-premium-v1 .g2-pdp-title {
+    font-size: clamp(26px, 7.7vw, 32px) !important;
+    line-height: 1.17 !important;
+    letter-spacing: -.02em !important;
+  }
+
+  body.single-product.gramiss-pdp-premium-v1 .summary .price,
+  body.single-product.gramiss-pdp-premium-v1 .g2-pdp-price {
+    margin: 8px 0 0 !important;
+    padding: 0 0 12px !important;
+    font-size: clamp(20px, 5.7vw, 24px) !important;
+    line-height: 1.3 !important;
+  }
+
+  body.single-product.gramiss-pdp-premium-v1 .summary .price .woocommerce-Price-currencySymbol,
+  body.single-product.gramiss-pdp-premium-v1 .g2-pdp-price .woocommerce-Price-currencySymbol {
+    font-size: .72em !important;
+    font-weight: 600 !important;
+    opacity: .78 !important;
+    margin-inline-start: 3px !important;
+  }
+
+  body.single-product.gramiss-pdp-premium-v1 .g3-summary-slot form.variations_form {
+    margin-top: 10px !important;
+  }
+
+  body.single-product.gramiss-pdp-premium-v1 .g3-summary-slot form.variations_form table.variations tr {
+    margin-bottom: 12px !important;
+  }
+
+  body.single-product.gramiss-pdp-premium-v1 .g3-summary-slot form.variations_form table.variations th.label {
+    padding-bottom: 6px !important;
+  }
+
+  body.single-product.gramiss-pdp-premium-v1 .g3-summary-slot .g3-variation-options,
+  body.single-product.gramiss-pdp-premium-v1 .g3-summary-slot .g3-color-options,
+  body.single-product.gramiss-pdp-premium-v1 .g3-summary-slot .g3-size-options {
+    gap: 8px !important;
+  }
+
+  /* 4) Reset becomes a quiet utility action directly under the choices. */
+  body.single-product.gramiss-pdp-premium-v1 .g3-summary-slot .reset_variations {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    width: auto !important;
+    min-width: 0 !important;
+    margin: 7px 0 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: rgba(32, 22, 15, .52) !important;
+    font-size: 0 !important;
+    line-height: 1.4 !important;
+    text-decoration: none !important;
+    opacity: 1 !important;
+  }
+
+  body.single-product.gramiss-pdp-premium-v1 .g3-summary-slot .reset_variations::after {
+    content: 'پاک کردن انتخاب‌ها' !important;
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
+  }
+
+  body.single-product.gramiss-pdp-premium-v1 .g3-summary-slot .reset_variations:hover,
+  body.single-product.gramiss-pdp-premium-v1 .g3-summary-slot .reset_variations:focus-visible {
+    color: rgba(32, 22, 15, .78) !important;
+  }
+
+  /* 5) Stock becomes a small useful status, not a large floating block. */
+  body.single-product.gramiss-pdp-premium-v1 .g3-summary-slot .single_variation {
+    margin-top: 1px !important;
+  }
+
+  body.single-product.gramiss-pdp-premium-v1 .g3-summary-slot .woocommerce-variation-availability {
+    margin: 2px 0 0 !important;
+    padding: 0 !important;
+    text-align: right !important;
+  }
+
+  body.single-product.gramiss-pdp-premium-v1 .g3-summary-slot .woocommerce-variation-availability .stock,
+  body.single-product.gramiss-pdp-premium-v1 .g3-summary-slot .single_variation .stock {
+    display: inline-flex !important;
+    align-items: center !important;
+    width: auto !important;
+    min-height: 30px !important;
+    margin: 0 !important;
+    padding: 6px 10px !important;
+    border: 1px solid rgba(52, 85, 55, .10) !important;
+    border-radius: 999px !important;
+    background: rgba(228, 239, 226, .58) !important;
+    color: #425842 !important;
+    font-size: 11.5px !important;
+    font-weight: 650 !important;
+    line-height: 1.35 !important;
+  }
+
+  body.single-product.gramiss-pdp-premium-v1 .g3-product-trust-row {
+    margin-top: 14px !important;
+  }
+}
