@@ -6,7 +6,7 @@ on:
 
 jobs:
   deploy:
-    if: github.head_ref == 'ops/home-looks-visual-polish-deploy-v1'
+    if: github.head_ref == 'ops/home-looks-card-overflow-fix-v1'
     runs-on: ubuntu-latest
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
