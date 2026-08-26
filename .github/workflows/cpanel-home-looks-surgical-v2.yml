@@ -1,0 +1,195 @@
+name: cPanel Home Looks Surgical V2
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.head_ref == 'ops/home-looks-surgical-v2'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+      HEALTHY_HOME_SHA: b948b1fdf6a61c8a15ed3c8d22b034cb4c8a06d5fd8f4717311248e1dcbb5326
+      LOOK1_SHA: 332df1376ad3ebeb448a34a800fb9fbc66bb8f989ed97fb9db46e7877d3ea586
+      LOOK2_SHA: 352c180eb7c2da91dda2b3f6993c172a9ac7d15485d90c2676135380a6d3381d
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ops/home-looks-surgical-v2
+
+      - name: Surgically deploy GRAMISS LOOKS without touching Hero
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, hashlib, json, os, ssl, time, urllib.parse, urllib.request
+          from pathlib import Path
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']
+          root=os.environ['THEME_ROOT'].strip('/'); healthy=os.environ['HEALTHY_HOME_SHA']
+          expected_img={'gramiss-look-01.webp':os.environ['LOOK1_SHA'],'gramiss-look-02.webp':os.environ['LOOK2_SHA']}
+          ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
+
+          def call(fn,params,post=False):
+              url=f'https://{host}:2083/execute/Fileman/{fn}'; data=urllib.parse.urlencode(params).encode(); last=None
+              for attempt in range(1,6):
+                  try:
+                      req=urllib.request.Request(url if post else url+'?'+data.decode(), data=data if post else None, method='POST' if post else 'GET')
+                      req.add_header('Authorization',f'cpanel {user}:{token}')
+                      if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+                      with urllib.request.urlopen(req,context=ctx,timeout=90) as r: obj=json.loads(r.read().decode('utf-8','replace'))
+                      result=obj.get('result') if isinstance(obj.get('result'),dict) else obj
+                      if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
+                      return result.get('data')
+                  except Exception as exc:
+                      last=exc; print(f'Attempt {attempt}/5 {fn}: {exc}')
+                      if attempt<5: time.sleep(attempt*3)
+              raise last
+
+          def read_live(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else root+'/'+parent
+              d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(d,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(d.get(k),str): return d[k]
+              if isinstance(d,str): return d
+              raise RuntimeError('Unexpected live content: '+rel)
+
+          def save_live(rel,content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else root+'/'+parent
+              if parent:
+                  parts=parent.split('/'); cur=root
+                  for part in parts:
+                      cur += '/'+part
+                      try: call('create_directory',{'path':cur},True)
+                      except Exception: pass
+              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+
+          front=read_live('front-page.php')
+          front_sha=hashlib.sha256(front.encode()).hexdigest()
+          print('LIVE_HOME_BEFORE_SHA',front_sha)
+          if front_sha != healthy:
+              raise SystemExit('ABORT: live Home is not the confirmed healthy baseline; nothing changed')
+          if 'data-g1-looks' in front:
+              raise SystemExit('ABORT: Looks already exists in live Home')
+
+          anchor='    <section class="g1-section g1-reveal" id="collections">'
+          pos=front.find(anchor)
+          if pos < 0: raise SystemExit('ABORT: collections anchor not found; nothing changed')
+          prefix=front[:pos]
+          if 'g1-floating-hero' not in prefix or 'g1-signal-strip' not in prefix:
+              raise SystemExit('ABORT: expected Hero/signal strip not found before anchor')
+          prefix_sha=hashlib.sha256(prefix.encode()).hexdigest()
+          print('PROTECTED_PREFIX_SHA',prefix_sha)
+
+          src=Path('.ops/home-looks')
+          partial=(src/'home-looks.php').read_text(encoding='utf-8')
+          css=(src/'home-looks.css').read_text(encoding='utf-8')
+          js=(src/'home-looks.js').read_text(encoding='utf-8')
+          if 'GRAMISS_HOME_LOOKS_SURGICAL_V2' not in partial+css+js: raise SystemExit('Asset marker missing')
+
+          images={}
+          for key,parts in {
+              'gramiss-look-01.webp':['look01-01.b64','look01-02.b64','look01-03.b64'],
+              'gramiss-look-02.webp':['look02-01.b64','look02-02.b64','look02-03.b64','look02-04.b64','look02-05.b64'],
+          }.items():
+              encoded=''.join((src/p).read_text(encoding='ascii').strip() for p in parts)
+              raw=base64.b64decode(encoded,validate=True)
+              sha=hashlib.sha256(raw).hexdigest()
+              print(key,'bytes',len(raw),'sha',sha)
+              if sha != expected_img[key]: raise SystemExit('Local staged image hash mismatch: '+key)
+              if not (raw.startswith(b'RIFF') and b'WEBP' in raw[:16]): raise SystemExit('Not valid WebP: '+key)
+              images[key]=raw
+
+          # Timestamped exact backup before any write.
+          save_live('front-page.php.bak-before-looks-surgical-'+stamp,front)
+
+          # Write text assets and binary images through a one-use, nonce-protected installer.
+          payload={
+              'template-parts/home-looks.php':base64.b64encode(partial.encode()).decode(),
+              'assets/css/home-looks.css':base64.b64encode(css.encode()).decode(),
+              'assets/js/home-looks.js':base64.b64encode(js.encode()).decode(),
+              'assets/images/home/gramiss-look-01.webp':base64.b64encode(images['gramiss-look-01.webp']).decode(),
+              'assets/images/home/gramiss-look-02.webp':base64.b64encode(images['gramiss-look-02.webp']).decode(),
+          }
+          expected={k:hashlib.sha256(base64.b64decode(v)).hexdigest() for k,v in payload.items()}
+          payload64=base64.b64encode(json.dumps(payload,separators=(',',':')).encode()).decode()
+          expected64=base64.b64encode(json.dumps(expected,separators=(',',':')).encode()).decode()
+          nonce=hashlib.sha256((stamp+expected_img['gramiss-look-01.webp']).encode()).hexdigest()
+          installer_name='gramiss-looks-surgical-'+stamp+'.php'
+          installer=f'''<?php
+          ini_set('display_errors','0'); header('Content-Type: application/json; charset=utf-8');
+          if (!isset($_GET['k']) || !hash_equals('{nonce}',(string)$_GET['k'])) {{ http_response_code(403); echo '{{"ok":false}}'; exit; }}
+          $theme=__DIR__.'/wp-content/themes/gramiss-theme-next';
+          $payload=json_decode(base64_decode('{payload64}'),true); $expected=json_decode(base64_decode('{expected64}'),true); $out=array();
+          foreach($payload as $rel=>$encoded) {{ $target=$theme.'/'.$rel; $dir=dirname($target); if(!is_dir($dir)) @mkdir($dir,0755,true); $bytes=base64_decode($encoded,true); if($bytes===false) throw new Exception('decode '.$rel); $tmp=$target.'.tmp-{stamp}'; if(file_put_contents($tmp,$bytes,LOCK_EX)===false) throw new Exception('write '.$rel); if(!hash_equals($expected[$rel],hash_file('sha256',$tmp))) {{ @unlink($tmp); throw new Exception('hash '.$rel); }} if(file_exists($target)) @copy($target,$target.'.bak-looks-{stamp}'); if(!@rename($tmp,$target)) {{ @unlink($tmp); throw new Exception('rename '.$rel); }} $out[$rel]=array('sha256'=>hash_file('sha256',$target),'bytes'=>filesize($target)); }}
+          @unlink(__FILE__); echo json_encode(array('ok'=>true,'files'=>$out)); ?>'''
+          public='public_html'
+          call('save_file_content',{'dir':public,'file':installer_name,'content':installer,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+          u='https://gramiss.ir/'+installer_name+'?k='+urllib.parse.quote(nonce)+'&t='+str(int(time.time()))
+          req=urllib.request.Request(u,headers={'User-Agent':'GramissLooksSurgical/2','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=120) as r: install=json.loads(r.read().decode('utf-8','replace'))
+          if not install.get('ok'): raise SystemExit('Installer failed')
+          for rel,sha in expected.items():
+              got=((install.get('files') or {}).get(rel) or {}).get('sha256')
+              if got != sha: raise SystemExit('Live asset hash mismatch: '+rel)
+              print('PASS live asset',rel,got)
+
+          include="    <?php get_template_part( 'template-parts/home-looks' ); ?>\n\n"
+          patched=front[:pos]+include+front[pos:]
+          if patched[:pos] != prefix: raise SystemExit('Internal protected prefix mismatch before write')
+          save_live('front-page.php',patched)
+          live_after=read_live('front-page.php')
+          if live_after != patched: raise SystemExit('Live front-page write mismatch')
+          if hashlib.sha256(live_after[:pos].encode()).hexdigest() != prefix_sha:
+              raise SystemExit('HERO/PREFIX CHANGED — emergency abort')
+          if live_after.count("get_template_part( 'template-parts/home-looks' )") != 1:
+              raise SystemExit('Looks include count invalid')
+          print('PASS protected Home prefix unchanged byte-for-byte')
+
+          # Purge LiteSpeed.
+          purge='gramiss-purge-looks-'+stamp+'.php'
+          php="<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php'; if(function_exists('do_action')){do_action('litespeed_purge_all');} echo 'OK'; @unlink(__FILE__);"
+          call('save_file_content',{'dir':public,'file':purge,'content':php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+          req=urllib.request.Request('https://gramiss.ir/'+purge+'?t='+str(int(time.time())),headers={'User-Agent':'GramissLooksPurge/2','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=90) as r: print('PURGE',r.status,r.read().decode()[:50])
+
+          def public_get(url):
+              req=urllib.request.Request(url,headers={'User-Agent':'GramissLooksVerify/2','Cache-Control':'no-cache','Pragma':'no-cache'})
+              with urllib.request.urlopen(req,context=ctx,timeout=90) as r: return r.status,r.headers,r.read()
+
+          q='?gramiss_looks_v2='+str(int(time.time()))
+          st,h,b=public_get('https://gramiss.ir/'+q); html=b.decode('utf-8','replace')
+          checks={
+              'home 200':st==200,
+              'hero preserved':'g1-floating-hero' in html and 'کمتر حدس بزن' in html,
+              'looks exists':'data-g1-looks' in html,
+              'looks title':'GRAMISS LOOKS / 01' in html and 'استایل را لمس کن.' in html,
+              'position correct':html.find('g1-signal-strip') < html.find('data-g1-looks') < html.find('id="collections"'),
+              'both model images':html.count('gramiss-look-01.webp')>=1 and html.count('gramiss-look-02.webp')>=1,
+              'dynamic product':'تیشرت باکس طرح مسیح' in html or 'product-card' in html,
+          }
+          for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
+          if not all(checks.values()): raise SystemExit('Public Home verification failed')
+
+          for path,sha,minbytes in [
+              ('assets/images/home/gramiss-look-01.webp',expected_img['gramiss-look-01.webp'],100000),
+              ('assets/images/home/gramiss-look-02.webp',expected_img['gramiss-look-02.webp'],200000),
+          ]:
+              st,h,b=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/'+path+'?v='+stamp)
+              got=hashlib.sha256(b).hexdigest(); ok=st==200 and len(b)>=minbytes and got==sha
+              print(('PASS' if ok else 'FAIL')+': public '+path+' bytes='+str(len(b))+' sha='+got)
+              if not ok: raise SystemExit('Public model asset failed: '+path)
+
+          for path,marker in [('assets/css/home-looks.css','GRAMISS_HOME_LOOKS_SURGICAL_V2'),('assets/js/home-looks.js','GRAMISS_HOME_LOOKS_SURGICAL_V2')]:
+              st,h,b=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/'+path+'?v='+stamp)
+              ok=st==200 and marker.encode() in b
+              print(('PASS' if ok else 'FAIL')+': public '+path)
+              if not ok: raise SystemExit('Public text asset failed: '+path)
+
+          print('LIVE GRAMISS LOOKS SURGICAL V2 DEPLOYED — HERO PRESERVED')
+          PY
