@@ -14,12 +14,12 @@ jobs:
       CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
       THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
     steps:
-      - name: Inspect exact live Home anchors
+      - name: Inspect exact live Home and Look assets
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json,os,ssl,urllib.parse,urllib.request,re,hashlib
+          import json,os,ssl,urllib.parse,urllib.request,hashlib
           host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
           ctx=ssl._create_unverified_context()
           def call(fn,params):
@@ -29,23 +29,25 @@ jobs:
               result=obj.get('result') if isinstance(obj.get('result'),dict) else obj
               if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
               return result.get('data')
-          d=call('get_file_content',{'dir':root,'file':'front-page.php','from_charset':'_DETECT_','to_charset':'utf-8'})
-          if isinstance(d,dict):
-              text=next((d[k] for k in ('content','file_content','data') if isinstance(d.get(k),str)),None)
-          else:text=d
+          def text_file(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else root+'/'+parent
+              d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(d,dict): return next((d[k] for k in ('content','file_content','data') if isinstance(d.get(k),str)),None)
+              return d
+          text=text_file('front-page.php')
           if not isinstance(text,str): raise SystemExit('Could not read live front-page')
           print('LIVE_FRONT_BYTES',len(text.encode()))
           print('LIVE_FRONT_SHA',hashlib.sha256(text.encode()).hexdigest())
-          lines=text.splitlines()
-          for i,line in enumerate(lines,1):
-              low=line.lower()
-              if '<section' in low or 'collections' in low or 'category' in low or 'signal-strip' in low or 'get_footer' in low:
-                  print(f'ANCHOR {i}: {line[:500]}')
-          for needle in ['id="collections"',"id='collections'",'g1-signal-strip','SHOP BY CATEGORY','get_footer();']:
-              pos=text.find(needle)
-              print('NEEDLE',repr(needle),'POS',pos)
-              if pos>=0:
-                  print('SNIPPET_START')
-                  print(text[max(0,pos-900):min(len(text),pos+1200)])
-                  print('SNIPPET_END')
+          print('HERO', 'g1-floating-hero' in text, 'SIGNAL', 'g1-signal-strip' in text, 'LOOKS', 'data-g1-looks' in text, 'COLLECTIONS', 'id="collections"' in text)
+          for needle in ['g1-signal-strip','id="collections"','SHOP BY CATEGORY']:
+              print('NEEDLE',needle,'POS',text.find(needle))
           PY
+          for n in 01 02; do
+            url="https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/images/home/gramiss-look-${n}.webp?inspect=${GITHUB_RUN_ID}"
+            code=$(curl -L --retry 2 --connect-timeout 15 --max-time 60 -sS -w '%{http_code}' -o "look-${n}.webp" "$url")
+            bytes=$(wc -c < "look-${n}.webp")
+            sha=$(sha256sum "look-${n}.webp" | awk '{print $1}')
+            header=$(xxd -p -l 12 "look-${n}.webp" || true)
+            echo "LOOK${n} HTTP=${code} bytes=${bytes} sha256=${sha} header=${header}"
+            file "look-${n}.webp" || true
+          done
