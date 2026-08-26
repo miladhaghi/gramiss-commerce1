@@ -1,0 +1,1 @@
+trigger dedicated Home Looks card tap deploy v1
