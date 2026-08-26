@@ -1,23 +1,10 @@
-name: cPanel PDP Mobile UX V1 Stable Route
+name: cPanel PDP Mobile UX V1 Cleanup Hold
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - deploy/cpanel-pdp-v132-final-trigger.txt
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  noop:
     runs-on: ubuntu-latest
-    env:
-      CPANEL_HOST: cip20.mizbanfadns.net
-      CPANEL_USER: gramissi
-      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
-      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
-      PUBLIC_ROOT: public_html
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ops/pdp-mobile-ux-v1
-      - name: Deploy guarded mobile PDP UX
-        run: python3 deploy/pdp-mobile-v1/deploy.py
+      - run: echo "cleanup hold"
