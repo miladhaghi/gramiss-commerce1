@@ -35,60 +35,52 @@ def save_theme(rel,content):
     call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
 
 def public_get(url):
-    req=urllib.request.Request(url,headers={'User-Agent':'GramissCheckoutMobile/2','Cache-Control':'no-cache','Pragma':'no-cache'})
+    req=urllib.request.Request(url,headers={'User-Agent':'GramissCheckoutMobile/2.1','Cache-Control':'no-cache','Pragma':'no-cache'})
     with urllib.request.urlopen(req,context=ctx,timeout=90) as r: return r.status,r.read(),r.geturl()
 
 front=read_theme('front-page.php'); front_sha=hashlib.sha256(front.encode()).hexdigest(); print('LIVE_HOME_SHA',front_sha)
 if healthy and front_sha!=healthy: raise SystemExit('ABORT: Home baseline mismatch; nothing changed')
 header=read_theme('header.php')
 if '</head>' not in header: raise SystemExit('ABORT: header closing head missing')
+css=Path('deploy/checkout-mobile-v1/checkout-mobile-v21.css').read_text(encoding='utf-8')
+if 'GRAMISS_CHECKOUT_MOBILE_V21' not in css: raise SystemExit('ABORT: overlay candidate invalid')
 
-css=Path('deploy/checkout-mobile-v1/checkout-mobile-v1.css').read_text(encoding='utf-8')
-js=Path('deploy/checkout-mobile-v1/checkout-mobile-v1.js').read_text(encoding='utf-8')
-if 'GRAMISS_CHECKOUT_MOBILE_V1' not in css or 'GRAMISS_CHECKOUT_MOBILE_V1' not in js or 'GRAMISS_CHECKOUT_MOBILE_V2' not in css or 'GRAMISS_CHECKOUT_MOBILE_V2' not in js: raise SystemExit('ABORT: candidate assets invalid')
-
-old_css=old_js=None
-try: old_css=read_theme('assets/css/checkout-mobile-v1.css')
-except Exception: pass
-try: old_js=read_theme('assets/js/checkout-mobile-v1.js')
+old_css=None
+try: old_css=read_theme('assets/css/checkout-mobile-v21.css')
 except Exception: pass
 
-start='<!-- GRAMISS CHECKOUT MOBILE V1 START -->'; end='<!-- GRAMISS CHECKOUT MOBILE V1 END -->'
+start='<!-- GRAMISS CHECKOUT MOBILE V21 START -->'; end='<!-- GRAMISS CHECKOUT MOBILE V21 END -->'
 base=header
 if start in base and end in base:
     a=base.index(start); b=base.index(end,a)+len(end); base=base[:a]+base[b:]
-loader=f'''\n{start}\n<?php if ( function_exists( 'is_checkout' ) && is_checkout() && ! ( function_exists( 'is_order_received_page' ) && is_order_received_page() ) ) : ?>\n<link id="gramiss-checkout-mobile-v1-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/checkout-mobile-v1.css?v=20260827-4' ); ?>" media="(max-width:760px)">\n<script id="gramiss-checkout-mobile-v1-js" src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/checkout-mobile-v1.js?v=20260827-4' ); ?>" defer></script>\n<?php endif; ?>\n{end}\n'''
+loader=f'''\n{start}\n<?php if ( function_exists( 'is_checkout' ) && is_checkout() && ! ( function_exists( 'is_order_received_page' ) && is_order_received_page() ) ) : ?>\n<link id="gramiss-checkout-mobile-v21-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/checkout-mobile-v21.css?v=20260827-1' ); ?>" media="(max-width:760px)">\n<?php endif; ?>\n{end}\n'''
 patched=base.replace('</head>',loader+'</head>',1)
 
-save_theme('header.php.bak-checkout-mobile-v2-'+stamp,header)
-if old_css is not None: save_theme('assets/css/checkout-mobile-v1.css.bak-v2-'+stamp,old_css)
-if old_js is not None: save_theme('assets/js/checkout-mobile-v1.js.bak-v2-'+stamp,old_js)
+save_theme('header.php.bak-checkout-mobile-v21-'+stamp,header)
+if old_css is not None: save_theme('assets/css/checkout-mobile-v21.css.bak-'+stamp,old_css)
 
 def rollback(reason):
     save_theme('header.php',header)
-    if old_css is not None: save_theme('assets/css/checkout-mobile-v1.css',old_css)
-    if old_js is not None: save_theme('assets/js/checkout-mobile-v1.js',old_js)
+    if old_css is not None: save_theme('assets/css/checkout-mobile-v21.css',old_css)
     raise SystemExit('ROLLED BACK: '+reason)
 
-save_theme('assets/css/checkout-mobile-v1.css',css); save_theme('assets/js/checkout-mobile-v1.js',js); save_theme('header.php',patched)
-live=read_theme('header.php')
-if live!=patched: rollback('header write mismatch')
-if live.count(start)!=1 or live.count(end)!=1: rollback('loader marker count invalid')
+save_theme('assets/css/checkout-mobile-v21.css',css)
+save_theme('header.php',patched)
+if read_theme('header.php')!=patched: rollback('header write mismatch')
+if read_theme('assets/css/checkout-mobile-v21.css')!=css: rollback('overlay write mismatch')
 if hashlib.sha256(read_theme('front-page.php').encode()).hexdigest()!=front_sha: rollback('Home changed')
-if read_theme('assets/css/checkout-mobile-v1.css')!=css or read_theme('assets/js/checkout-mobile-v1.js')!=js: rollback('asset write mismatch')
 
 try:
-    purge='gramiss-purge-checkout-v2-'+stamp+'.php'
+    purge='gramiss-purge-checkout-v21-'+stamp+'.php'
     php="<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php'; if(function_exists('do_action')){do_action('litespeed_purge_all');} echo function_exists('wc_get_checkout_url') ? wc_get_checkout_url() : 'OK'; @unlink(__FILE__);"
     call('save_file_content',{'dir':'public_html','file':purge,'content':php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
     status,body,_=public_get('https://gramiss.ir/'+purge+'?t='+str(int(time.time()))); print('PURGE/CHECKOUT_URL',status,body.decode('utf-8','replace')[:180])
-    for path in ('assets/css/checkout-mobile-v1.css','assets/js/checkout-mobile-v1.js'):
-        status,body,_=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/'+path+'?v='+stamp)
-        ok=status==200 and b'GRAMISS_CHECKOUT_MOBILE_V2' in body and len(body)>1000; print(('PASS' if ok else 'FAIL'),path,status,len(body))
-        if not ok: rollback('public asset failed '+path)
+    status,body,_=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/css/checkout-mobile-v21.css?v='+stamp)
+    ok=status==200 and b'GRAMISS_CHECKOUT_MOBILE_V21' in body and len(body)>1000; print(('PASS' if ok else 'FAIL'),'overlay',status,len(body))
+    if not ok: rollback('public overlay failed')
     status,body,_=public_get('https://gramiss.ir/?checkout_verify='+str(int(time.time()))); html=body.decode('utf-8','replace')
     if status!=200 or 'g1-floating-hero' not in html or 'data-g1-looks' not in html: rollback('Home public verify failed')
     print('PASS HOME PRESERVED')
-    print('LIVE CHECKOUT MOBILE V2 DEPLOYED')
+    print('LIVE CHECKOUT MOBILE V2.1 DEPLOYED')
 except SystemExit: raise
 except Exception as exc: rollback('post-write verification error: '+str(exc))
