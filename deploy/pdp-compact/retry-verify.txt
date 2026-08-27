@@ -1,0 +1,1 @@
+retry compact PDP deploy after verification normalization

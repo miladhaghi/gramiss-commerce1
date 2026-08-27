@@ -1,0 +1,23 @@
+/* GRAMISS_PDP_IMAGE_BLEND_V2 */
+/* Force the near-white studio canvas in product photos to merge into the true-white PDP media surface. */
+html body.single-product .gramiss-pdp-runtime-v3 .g3-dual-stage {
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+html body.single-product .gramiss-pdp-runtime-v3 .g3-dual-stage img.g3-dual-image.g3-dual-image,
+html body.single-product .gramiss-pdp-runtime-v3 .g3-gallery-slot .woocommerce-product-gallery__image img,
+html body.single-product .gramiss-pdp-runtime-v3 .g3-gallery-slot img.g2-pdp-main-image {
+  background: #fff !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  filter: brightness(1.035) contrast(1.03) !important;
+}
+
+html body.single-product .gramiss-pdp-runtime-v3 .g3-gallery-slot ol.flex-control-thumbs img,
+html body.single-product .gramiss-pdp-runtime-v3 .g3-gallery-slot .g2-pdp-thumb img {
+  background: #fff !important;
+  box-shadow: none !important;
+  filter: brightness(1.035) contrast(1.03) !important;
+}
