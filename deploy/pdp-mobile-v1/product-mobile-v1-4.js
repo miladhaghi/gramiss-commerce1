@@ -13,19 +13,7 @@
   section.dataset.g1StyleV14 = '1';
 
   const currentId = Number(document.body.className.match(/postid-(\d+)/)?.[1] || 0);
-  const storeBase = `${location.origin}/wp-json/wc/store/v1`;
   const selectedKey = 'gramiss_style_selection_v1';
-
-  const money = product => {
-    const p = product?.prices;
-    if (!p || p.price == null) return '';
-    const n = Number(p.price);
-    if (!Number.isFinite(n)) return '';
-    const formatted = Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    const symbol = (p.currency_symbol || 'تومان').trim();
-    return `${formatted} ${symbol}`;
-  };
-
   const readSelected = () => { try { return JSON.parse(localStorage.getItem(selectedKey) || '[]'); } catch { return []; } };
 
   const curatedByProduct = {
@@ -55,31 +43,46 @@
     };
   }).filter(item => item.href && item.image);
 
-  const fetchJSON = async url => {
-    const res = await fetch(url, { credentials: 'same-origin', headers: { Accept: 'application/json' } });
+  const cleanTitle = text => (text || '').replace(/\s*[|–-]\s*Gramiss.*$/i,'').trim();
+  const hydrateFromProductPage = async spec => {
+    const res = await fetch(`${location.origin}/?p=${spec.id}&g1_style_logic=1`, {
+      credentials: 'same-origin',
+      headers: { Accept: 'text/html', 'Cache-Control': 'no-cache' }
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.json();
+    const html = await res.text();
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const bodyClass = doc.body?.className || '';
+    if (!bodyClass.includes(`postid-${spec.id}`)) throw new Error('product page marker missing');
+
+    const title = cleanTitle(
+      doc.querySelector('h1.product_title, .g2-pdp-title, .summary h1')?.textContent ||
+      doc.querySelector('meta[property="og:title"]')?.content || ''
+    );
+    const image =
+      doc.querySelector('meta[property="og:image"]')?.content ||
+      doc.querySelector('.woocommerce-product-gallery__image img')?.getAttribute('data-large_image') ||
+      doc.querySelector('.woocommerce-product-gallery__image img')?.src ||
+      doc.querySelector('.g3-gallery img, .product img')?.src || '';
+    const href =
+      doc.querySelector('link[rel="canonical"]')?.href ||
+      doc.querySelector('meta[property="og:url"]')?.content ||
+      `${location.origin}/?p=${spec.id}`;
+    const priceText = (
+      doc.querySelector('.summary .price, .g2-pdp-price, .woocommerce-Price-amount')?.textContent || ''
+    ).replace(/\s+/g,' ').trim();
+
+    if (!title || !image) throw new Error('product data incomplete');
+    return { ...spec, id: String(spec.id), name: title, href, image, priceText: priceText || 'مشاهده محصول' };
   };
 
   const hydrateCurated = async specs => {
-    const out = [];
-    for (const spec of specs) {
-      try {
-        const p = await fetchJSON(`${storeBase}/products/${spec.id}`);
-        if (!p || Number(p.id) === currentId || p.is_purchasable === false || !p.images?.[0]?.src) continue;
-        out.push({
-          ...spec,
-          id: String(p.id),
-          name: p.name,
-          href: p.permalink,
-          image: p.images[0].src,
-          priceText: money(p)
-        });
-      } catch (err) {
-        console.info('[Gramiss Style Logic v1.4] curated item unavailable', spec.id, err?.message || err);
-      }
-    }
-    return out;
+    const settled = await Promise.allSettled(specs.map(hydrateFromProductPage));
+    return settled.flatMap((result, index) => {
+      if (result.status === 'fulfilled') return [result.value];
+      console.info('[Gramiss Style Logic v1.4] curated page unavailable', specs[index]?.id, result.reason?.message || result.reason);
+      return [];
+    });
   };
 
   const heading = section.querySelector(':scope > h2, :scope > .g3-related-heading, h2');
