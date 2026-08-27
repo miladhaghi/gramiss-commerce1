@@ -34,14 +34,6 @@ def read_file(directory,name):
 def save_file(directory,name,content):
     call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
 
-def ensure_dir(path):
-    try:
-        call('mkdir',{'path':path,'permissions':'0755'},True)
-    except Exception as exc:
-        text=str(exc).lower()
-        if 'exist' not in text and 'already' not in text:
-            raise
-
 def public_get(url):
     req=urllib.request.Request(url,headers={'User-Agent':'GramissCardTransfer/1.0','Cache-Control':'no-cache','Pragma':'no-cache'})
     with urllib.request.urlopen(req,context=ctx,timeout=90) as r: return r.status,r.read(),r.geturl()
@@ -58,7 +50,20 @@ files={
 if 'Plugin Name: Gramiss Card Transfer' not in files['gramiss-card-transfer.php'] or 'GRAMISS_CARD_TRANSFER_V1' not in files['assets/card-transfer.css'] or 'GRAMISS_CARD_TRANSFER_V1' not in files['assets/card-transfer.js']:
     raise SystemExit('ABORT: candidate plugin assets invalid')
 
-ensure_dir(plugin_root); ensure_dir(plugin_root+'/assets')
+# This cPanel Fileman build has no mkdir endpoint. Create the plugin tree through a one-time PHP file in WordPress root.
+mkdir_probe='gramiss-card-transfer-mkdir-'+stamp+'.php'
+mkdir_php=r'''<?php
+$dir=__DIR__.'/wp-content/plugins/gramiss-card-transfer/assets';
+$ok=is_dir($dir) || @mkdir($dir,0755,true);
+header('Content-Type: text/plain; charset=utf-8');
+echo ($ok && is_dir($dir)) ? 'OK' : 'FAIL';
+@unlink(__FILE__);
+'''
+save_file(site_root,mkdir_probe,mkdir_php)
+status,body,_=public_get('https://gramiss.ir/'+mkdir_probe+'?t='+str(int(time.time())))
+if status!=200 or body.strip()!=b'OK': raise SystemExit('ABORT: could not create plugin directory; nothing written')
+print('PASS PLUGIN DIRECTORY READY')
+
 backups={}
 for rel in files:
     parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=plugin_root if not parent else plugin_root+'/'+parent
@@ -113,7 +118,6 @@ try:
     if status!=200 or not data.get('ok') or not data.get('registered'): rollback('plugin activation/registration failed')
 except Exception as exc: rollback('activation probe failed '+str(exc))
 
-# Purge LiteSpeed cache without altering checkout/theme.
 purge='gramiss-purge-card-transfer-'+stamp+'.php'
 purge_php="<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php'; if(function_exists('do_action')){do_action('litespeed_purge_all');} echo 'OK'; @unlink(__FILE__);"
 save_file(site_root,purge,purge_php)
