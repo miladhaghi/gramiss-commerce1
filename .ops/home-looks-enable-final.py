@@ -34,53 +34,95 @@ def save_theme(rel,content):
     parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else root+'/'+parent
     call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
 
-def public_get(url):
-    req=urllib.request.Request(url,headers={'User-Agent':'GramissCheckoutMobile/2.1','Cache-Control':'no-cache','Pragma':'no-cache'})
-    with urllib.request.urlopen(req,context=ctx,timeout=90) as r: return r.status,r.read(),r.geturl()
+def public_get(url,timeout=50):
+    req=urllib.request.Request(url,headers={'User-Agent':'GramissCheckoutDesktop/1.0','Cache-Control':'no-cache','Pragma':'no-cache'})
+    with urllib.request.urlopen(req,context=ctx,timeout=timeout) as r: return r.status,r.read(),r.geturl()
+
+def section(source,start,end):
+    if start not in source or end not in source: return None
+    a=source.index(start); b=source.index(end,a)+len(end); return source[a:b]
 
 front=read_theme('front-page.php'); front_sha=hashlib.sha256(front.encode()).hexdigest(); print('LIVE_HOME_SHA',front_sha)
 if healthy and front_sha!=healthy: raise SystemExit('ABORT: Home baseline mismatch; nothing changed')
 header=read_theme('header.php')
 if '</head>' not in header: raise SystemExit('ABORT: header closing head missing')
-css=Path('deploy/checkout-mobile-v1/checkout-mobile-v21.css').read_text(encoding='utf-8')
-if 'GRAMISS_CHECKOUT_MOBILE_V21' not in css: raise SystemExit('ABORT: overlay candidate invalid')
 
-old_css=None
-try: old_css=read_theme('assets/css/checkout-mobile-v21.css')
+css=Path('deploy/checkout-desktop-v1/checkout-desktop-v1.css').read_text(encoding='utf-8')
+js=Path('deploy/checkout-desktop-v1/checkout-desktop-v1.js').read_text(encoding='utf-8')
+if 'GRAMISS_CHECKOUT_DESKTOP_V1' not in css or 'GRAMISS_CHECKOUT_DESKTOP_V1' not in js: raise SystemExit('ABORT: desktop candidates invalid')
+print('CANDIDATE CSS',len(css),hashlib.sha256(css.encode()).hexdigest())
+print('CANDIDATE JS',len(js),hashlib.sha256(js.encode()).hexdigest())
+
+# Capture existing mobile checkout blocks; desktop deployment must preserve them byte-for-byte.
+mobile_markers=[
+ ('<!-- GRAMISS CHECKOUT MOBILE V1 START -->','<!-- GRAMISS CHECKOUT MOBILE V1 END -->'),
+ ('<!-- GRAMISS CHECKOUT MOBILE V21 START -->','<!-- GRAMISS CHECKOUT MOBILE V21 END -->')
+]
+mobile_before={a:section(header,a,b) for a,b in mobile_markers}
+
+old_css=old_js=None
+try: old_css=read_theme('assets/css/checkout-desktop-v1.css')
+except Exception: pass
+try: old_js=read_theme('assets/js/checkout-desktop-v1.js')
 except Exception: pass
 
-start='<!-- GRAMISS CHECKOUT MOBILE V21 START -->'; end='<!-- GRAMISS CHECKOUT MOBILE V21 END -->'
+start='<!-- GRAMISS CHECKOUT DESKTOP V1 START -->'; end='<!-- GRAMISS CHECKOUT DESKTOP V1 END -->'
 base=header
 if start in base and end in base:
     a=base.index(start); b=base.index(end,a)+len(end); base=base[:a]+base[b:]
-loader=f'''\n{start}\n<?php if ( function_exists( 'is_checkout' ) && is_checkout() && ! ( function_exists( 'is_order_received_page' ) && is_order_received_page() ) ) : ?>\n<link id="gramiss-checkout-mobile-v21-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/checkout-mobile-v21.css?v=20260827-1' ); ?>" media="(max-width:760px)">\n<?php endif; ?>\n{end}\n'''
+loader=f'''\n{start}\n<?php if ( function_exists( 'is_checkout' ) && is_checkout() && ! ( function_exists( 'is_order_received_page' ) && is_order_received_page() ) ) : ?>\n<link id="gramiss-checkout-desktop-v1-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/checkout-desktop-v1.css?v=20260828-1' ); ?>" media="(min-width:761px)">\n<script id="gramiss-checkout-desktop-v1-js" src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/checkout-desktop-v1.js?v=20260828-1' ); ?>" defer></script>\n<?php endif; ?>\n{end}\n'''
 patched=base.replace('</head>',loader+'</head>',1)
+if patched==base: raise SystemExit('ABORT: loader injection failed')
 
-save_theme('header.php.bak-checkout-mobile-v21-'+stamp,header)
-if old_css is not None: save_theme('assets/css/checkout-mobile-v21.css.bak-'+stamp,old_css)
+# Pre-write invariant: desktop edit itself must not alter any existing mobile block.
+for a,b in mobile_markers:
+    before=mobile_before[a]; after=section(patched,a,b)
+    if before != after: raise SystemExit('ABORT: candidate would alter mobile checkout block '+a)
+
+save_theme('header.php.bak-checkout-desktop-v1-'+stamp,header)
+if old_css is not None: save_theme('assets/css/checkout-desktop-v1.css.bak-'+stamp,old_css)
+if old_js is not None: save_theme('assets/js/checkout-desktop-v1.js.bak-'+stamp,old_js)
 
 def rollback(reason):
+    print('ROLLBACK',reason)
     save_theme('header.php',header)
-    if old_css is not None: save_theme('assets/css/checkout-mobile-v21.css',old_css)
+    if old_css is not None: save_theme('assets/css/checkout-desktop-v1.css',old_css)
+    if old_js is not None: save_theme('assets/js/checkout-desktop-v1.js',old_js)
     raise SystemExit('ROLLED BACK: '+reason)
 
-save_theme('assets/css/checkout-mobile-v21.css',css)
+save_theme('assets/css/checkout-desktop-v1.css',css)
+save_theme('assets/js/checkout-desktop-v1.js',js)
 save_theme('header.php',patched)
-if read_theme('header.php')!=patched: rollback('header write mismatch')
-if read_theme('assets/css/checkout-mobile-v21.css')!=css: rollback('overlay write mismatch')
-if hashlib.sha256(read_theme('front-page.php').encode()).hexdigest()!=front_sha: rollback('Home changed')
 
+live_header=read_theme('header.php'); live_css=read_theme('assets/css/checkout-desktop-v1.css'); live_js=read_theme('assets/js/checkout-desktop-v1.js')
+if live_header!=patched: rollback('header write mismatch')
+if live_css!=css or live_js!=js: rollback('asset write mismatch')
+if hashlib.sha256(read_theme('front-page.php').encode()).hexdigest()!=front_sha: rollback('Home changed')
+for a,b in mobile_markers:
+    if mobile_before[a] != section(live_header,a,b): rollback('mobile checkout block changed '+a)
+if live_header.count('gramiss-checkout-desktop-v1-css')!=1 or live_header.count('gramiss-checkout-desktop-v1-js')!=1: rollback('desktop loader count invalid')
+print('PASS exact writes / Home preserved / mobile checkout preserved')
+
+# Purge LiteSpeed via one-time WP bootstrap. Failure here does not justify destructive rollback after exact writes.
 try:
-    purge='gramiss-purge-checkout-v21-'+stamp+'.php'
+    purge='gramiss-purge-checkout-desktop-'+stamp+'.php'
     php="<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php'; if(function_exists('do_action')){do_action('litespeed_purge_all');} echo function_exists('wc_get_checkout_url') ? wc_get_checkout_url() : 'OK'; @unlink(__FILE__);"
     call('save_file_content',{'dir':'public_html','file':purge,'content':php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
-    status,body,_=public_get('https://gramiss.ir/'+purge+'?t='+str(int(time.time()))); print('PURGE/CHECKOUT_URL',status,body.decode('utf-8','replace')[:180])
-    status,body,_=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/css/checkout-mobile-v21.css?v='+stamp)
-    ok=status==200 and b'GRAMISS_CHECKOUT_MOBILE_V21' in body and len(body)>1000; print(('PASS' if ok else 'FAIL'),'overlay',status,len(body))
-    if not ok: rollback('public overlay failed')
-    status,body,_=public_get('https://gramiss.ir/?checkout_verify='+str(int(time.time()))); html=body.decode('utf-8','replace')
-    if status!=200 or 'g1-floating-hero' not in html or 'data-g1-looks' not in html: rollback('Home public verify failed')
-    print('PASS HOME PRESERVED')
-    print('LIVE CHECKOUT MOBILE V2.1 DEPLOYED')
-except SystemExit: raise
-except Exception as exc: rollback('post-write verification error: '+str(exc))
+    status,body,_=public_get('https://gramiss.ir/'+purge+'?t='+str(int(time.time())),70); print('PURGE/CHECKOUT_URL',status,body.decode('utf-8','replace')[:180])
+except Exception as exc:
+    print('WARN purge request:',exc)
+
+# Public asset checks with retries. Exact cPanel reads above remain authoritative.
+for rel,marker in [('assets/css/checkout-desktop-v1.css',b'GRAMISS_CHECKOUT_DESKTOP_V1'),('assets/js/checkout-desktop-v1.js',b'GRAMISS_CHECKOUT_DESKTOP_V1')]:
+    ok=False
+    for attempt in range(3):
+        try:
+            status,body,_=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/'+rel+'?v='+stamp,45)
+            ok=status==200 and marker in body and len(body)>800
+            print(('PASS' if ok else 'FAIL'),'public',rel,status,len(body))
+            if ok: break
+        except Exception as exc:
+            print('WARN public asset',rel,'attempt',attempt+1,exc); time.sleep(2)
+    if not ok: print('WARN: public asset verification incomplete; cPanel exact-write verification passed')
+
+print('LIVE CHECKOUT DESKTOP V1 DEPLOYED')
