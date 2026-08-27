@@ -1,0 +1,234 @@
+/* GRAMISS_PDP_MOBILE_STYLE_INTELLIGENCE_V1_4 */
+@media (max-width: 760px) {
+  body.single-product.gramiss-pdp-premium-v1 .gramiss-pdp-runtime-v3 .g1-style-intelligence {
+    position: relative !important;
+    margin: 34px 0 20px !important;
+    padding: 0 0 28px !important;
+    overflow: visible !important;
+  }
+
+  body.single-product.gramiss-pdp-premium-v1 .gramiss-pdp-runtime-v3 .g1-style-intelligence > h2 {
+    margin: 0 20px 10px !important;
+    font-size: clamp(30px, 8.8vw, 38px) !important;
+    line-height: 1.08 !important;
+    letter-spacing: -.035em !important;
+    text-align: right !important;
+  }
+
+  body.single-product .g1-style-intro {
+    margin: 0 20px 18px !important;
+    text-align: right !important;
+  }
+  body.single-product .g1-style-intro__eyebrow {
+    margin-bottom: 8px !important;
+    color: rgba(31,23,18,.42) !important;
+    font-size: 9px !important;
+    font-weight: 750 !important;
+    letter-spacing: .18em !important;
+    direction: ltr !important;
+    text-align: right !important;
+  }
+  body.single-product .g1-style-intro__copy {
+    max-width: 350px !important;
+    margin: 0 !important;
+    color: rgba(31,23,18,.62) !important;
+    font-size: 13px !important;
+    line-height: 1.85 !important;
+  }
+  body.single-product .g1-style-intro__progress {
+    display: grid !important;
+    grid-template-columns: auto 86px auto !important;
+    align-items: center !important;
+    gap: 9px !important;
+    width: max-content !important;
+    margin: 15px 0 0 auto !important;
+    color: rgba(31,23,18,.40) !important;
+    font-size: 9px !important;
+    letter-spacing: .12em !important;
+    direction: ltr !important;
+  }
+  body.single-product .g1-style-intro__progress i {
+    --g1-progress: 25%;
+    position: relative !important;
+    display: block !important;
+    width: 86px !important;
+    height: 1px !important;
+    background: rgba(31,23,18,.13) !important;
+    overflow: hidden !important;
+  }
+  body.single-product .g1-style-intro__progress i::after {
+    content: '' !important;
+    position: absolute !important;
+    inset: 0 auto 0 0 !important;
+    width: var(--g1-progress) !important;
+    background: #18171a !important;
+    transition: width .2s ease !important;
+  }
+
+  body.single-product.gramiss-pdp-premium-v1 .gramiss-pdp-runtime-v3 .g1-style-intelligence ul.products {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 14px !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 20px 18px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    overscroll-behavior-inline: contain !important;
+    scroll-snap-type: x mandatory !important;
+    scroll-padding-left: 20px !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    direction: ltr !important;
+    transform: none !important;
+  }
+  body.single-product .g1-style-intelligence ul.products::-webkit-scrollbar { display: none !important; }
+
+  body.single-product.gramiss-pdp-premium-v1 .gramiss-pdp-runtime-v3 .g1-style-intelligence ul.products > li.product.g1-style-card {
+    position: relative !important;
+    display: block !important;
+    float: none !important;
+    clear: none !important;
+    flex: 0 0 calc(100vw - 74px) !important;
+    width: calc(100vw - 74px) !important;
+    min-width: calc(100vw - 74px) !important;
+    max-width: 340px !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 0 12px !important;
+    border: 1px solid rgba(31,23,18,.09) !important;
+    border-radius: 26px !important;
+    background: rgba(255,255,255,.82) !important;
+    box-shadow: 0 18px 48px rgba(49,39,31,.055) !important;
+    overflow: hidden !important;
+    scroll-snap-align: start !important;
+    scroll-snap-stop: always !important;
+    direction: rtl !important;
+    transform: none !important;
+  }
+  body.single-product .g1-style-card::before,
+  body.single-product .g1-style-card::after,
+  body.single-product .g1-style-card__link::before,
+  body.single-product .g1-style-card__link::after { content: none !important; display: none !important; }
+
+  body.single-product .g1-style-card__link {
+    display: block !important;
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+  body.single-product .g1-style-card__media {
+    position: relative !important;
+    aspect-ratio: 4 / 4.15 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    background: linear-gradient(180deg,#fbfbfa 0%,#f6f4f1 100%) !important;
+  }
+  body.single-product .g1-style-card__media::before,
+  body.single-product .g1-style-card__media::after { content: none !important; display: none !important; }
+  body.single-product .g1-style-card__media img {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 7px 10px 0 !important;
+    object-fit: contain !important;
+    object-position: center bottom !important;
+    background: transparent !important;
+    transform: scale(1.06) !important;
+    transform-origin: center bottom !important;
+  }
+
+  body.single-product .g1-style-card__body { padding: 15px 16px 5px !important; text-align: right !important; }
+  body.single-product .g1-style-card__meta {
+    margin-bottom: 8px !important;
+    color: rgba(31,23,18,.44) !important;
+    font-size: 9px !important;
+    font-weight: 760 !important;
+    letter-spacing: .06em !important;
+  }
+  body.single-product .g1-style-card__title {
+    display: -webkit-box !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    color: #18171a !important;
+    font-size: 17px !important;
+    font-weight: 780 !important;
+    line-height: 1.48 !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 2 !important;
+  }
+  body.single-product .g1-style-card__price {
+    margin-top: 7px !important;
+    color: rgba(24,23,26,.86) !important;
+    font-size: 13px !important;
+    font-weight: 760 !important;
+    line-height: 1.45 !important;
+  }
+  body.single-product .g1-style-card__reason {
+    min-height: 0 !important;
+    margin: 13px 0 0 !important;
+    padding-top: 11px !important;
+    border-top: 1px solid rgba(31,23,18,.075) !important;
+    color: rgba(31,23,18,.57) !important;
+    font-size: 11.5px !important;
+    line-height: 1.8 !important;
+  }
+  body.single-product .g1-style-card__reason b {
+    display: block !important;
+    margin-bottom: 2px !important;
+    color: rgba(31,23,18,.83) !important;
+    font-size: 10.5px !important;
+  }
+
+  body.single-product .g1-style-card__add {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    width: calc(100% - 24px) !important;
+    min-height: 48px !important;
+    margin: 10px 12px 0 !important;
+    padding: 0 6px 0 13px !important;
+    border: 0 !important;
+    border-radius: 16px !important;
+    background: rgba(244,241,236,.80) !important;
+    color: #18171a !important;
+    box-shadow: inset 0 0 0 1px rgba(31,23,18,.065) !important;
+    font: inherit !important;
+    cursor: pointer !important;
+    -webkit-tap-highlight-color: transparent !important;
+  }
+  body.single-product .g1-style-card__add-label { font-size: 11.5px !important; font-weight: 680 !important; }
+  body.single-product .g1-style-card__add-orb {
+    display: grid !important;
+    place-items: center !important;
+    flex: 0 0 38px !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 50% !important;
+    background: #18171a !important;
+    color: #fff !important;
+    font-size: 21px !important;
+    line-height: 1 !important;
+  }
+
+  body.single-product .g1-style-swipe-hint {
+    margin: 2px 20px 0 !important;
+    color: rgba(31,23,18,.38) !important;
+    font-size: 9.5px !important;
+    text-align: right !important;
+  }
+
+  body.single-product.g1-style-zone-active .g1-mobile-buybar {
+    transform: translateY(calc(100% + 30px)) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+}
