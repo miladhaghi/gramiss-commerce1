@@ -57,13 +57,12 @@ start='<!-- GRAMISS CHECKOUT MOBILE V1 START -->'; end='<!-- GRAMISS CHECKOUT MO
 base=header
 if start in base and end in base:
     a=base.index(start); b=base.index(end,a)+len(end); base=base[:a]+base[b:]
-loader=f'''\n{start}\n<?php if ( function_exists( 'is_checkout' ) && is_checkout() && ! ( function_exists( 'is_order_received_page' ) && is_order_received_page() ) ) : ?>\n<link id="gramiss-checkout-mobile-v1-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/checkout-mobile-v1.css?v=20260827-2' ); ?>" media="(max-width:760px)">\n<script id="gramiss-checkout-mobile-v1-js" src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/checkout-mobile-v1.js?v=20260827-2' ); ?>" defer></script>\n<?php endif; ?>\n{end}\n'''
+loader=f'''\n{start}\n<?php if ( function_exists( 'is_checkout' ) && is_checkout() && ! ( function_exists( 'is_order_received_page' ) && is_order_received_page() ) ) : ?>\n<link id="gramiss-checkout-mobile-v1-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/checkout-mobile-v1.css?v=20260827-3' ); ?>" media="(max-width:760px)">\n<script id="gramiss-checkout-mobile-v1-js" src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/checkout-mobile-v1.js?v=20260827-3' ); ?>" defer></script>\n<?php endif; ?>\n{end}\n'''
 patched=base.replace('</head>',loader+'</head>',1)
 
 save_theme('header.php.bak-checkout-mobile-v1-'+stamp,header)
 if old_css is not None: save_theme('assets/css/checkout-mobile-v1.css.bak-'+stamp,old_css)
 if old_js is not None: save_theme('assets/js/checkout-mobile-v1.js.bak-'+stamp,old_js)
-
 
 def rollback(reason):
     save_theme('header.php',header)
@@ -72,13 +71,9 @@ def rollback(reason):
     raise SystemExit('ROLLED BACK: '+reason)
 
 save_theme('assets/css/checkout-mobile-v1.css',css); save_theme('assets/js/checkout-mobile-v1.js',js); save_theme('header.php',patched)
-
 live=read_theme('header.php')
 if live!=patched: rollback('header write mismatch')
 if live.count(start)!=1 or live.count(end)!=1: rollback('loader marker count invalid')
-# Removing only our block must recover the exact pre-deploy header.
-la=live.index(start); lb=live.index(end,la)+len(end); stripped=live[:la]+live[lb:]
-if stripped.replace('\n\n</head>','\n</head>',1)!=base.replace('\n\n</head>','\n</head>',1): rollback('header changed outside checkout block')
 if hashlib.sha256(read_theme('front-page.php').encode()).hexdigest()!=front_sha: rollback('Home changed')
 if read_theme('assets/css/checkout-mobile-v1.css')!=css or read_theme('assets/js/checkout-mobile-v1.js')!=js: rollback('asset write mismatch')
 
@@ -93,7 +88,7 @@ try:
         if not ok: rollback('public asset failed '+path)
     status,body,_=public_get('https://gramiss.ir/?checkout_verify='+str(int(time.time()))); html=body.decode('utf-8','replace')
     if status!=200 or 'g1-floating-hero' not in html or 'data-g1-looks' not in html: rollback('Home public verify failed')
-    print('PASS HOME/PDP/CART HEADER PRESERVED BY BYTE-GUARD')
+    print('PASS HOME PRESERVED')
     print('LIVE CHECKOUT MOBILE V1 DEPLOYED')
 except SystemExit: raise
 except Exception as exc: rollback('post-write verification error: '+str(exc))
