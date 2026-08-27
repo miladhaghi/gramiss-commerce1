@@ -2,7 +2,7 @@ import hashlib, json, os, re, ssl, subprocess, time, urllib.parse, urllib.reques
 from pathlib import Path
 
 host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; theme=os.environ['THEME_ROOT'].strip('/'); public='public_html'
-ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime()); version='20260827-4'
+ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime()); version='20260827-5'
 css_rel='assets/css/product-mobile-v1-4.css'; js_rel='assets/js/product-mobile-v1-4.js'
 css_path=Path('deploy/pdp-mobile-v1/product-mobile-v1-4.css'); js_path=Path('deploy/pdp-mobile-v1/product-mobile-v1-4.js')
 css=css_path.read_text(encoding='utf-8'); js=js_path.read_text(encoding='utf-8')
@@ -38,7 +38,7 @@ def write_at(root,relpath,content):
     call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
 
 def public_get(url):
-    req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0 GramissStyleLogic/1.4','Cache-Control':'no-cache','Pragma':'no-cache','Accept':'*/*'})
+    req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0 GramissStyleLogic/1.4.1','Cache-Control':'no-cache','Pragma':'no-cache','Accept':'*/*'})
     with urllib.request.urlopen(req,context=ctx,timeout=90) as r:return r.status,r.read()
 
 header=read_at(theme,'header.php'); original=header; end='<!-- GRAMISS PDP MOBILE UX V1 END -->'
@@ -62,7 +62,7 @@ def rollback(reason):
     write_at(theme,'header.php',original); raise SystemExit('ROLLED BACK HEADER: '+reason)
 
 live_h=read_at(theme,'header.php'); live_css=read_at(theme,css_rel); live_js=read_at(theme,js_rel)
-checks={'v1.4 css once':live_h.count('gramiss-pdp-mobile-v1-4-css')==1,'v1.4 js once':live_h.count('gramiss-pdp-mobile-v1-4-js')==1,'v1.4 css version':f'{css_rel}?v={version}' in live_h,'v1.4 js version':f'{js_rel}?v={version}' in live_h,'css exact':hashlib.sha256(live_css.encode()).hexdigest()==css_sha,'js exact':hashlib.sha256(live_js.encode()).hexdigest()==js_sha,'mobile guarded':'@media (max-width: 760px)' in live_css,'curated module':'curatedByProduct' in live_js and 'calc(100vw - 74px)' in live_css}
+checks={'v1.4 css once':live_h.count('gramiss-pdp-mobile-v1-4-css')==1,'v1.4 js once':live_h.count('gramiss-pdp-mobile-v1-4-js')==1,'v1.4 css version':f'{css_rel}?v={version}' in live_h,'v1.4 js version':f'{js_rel}?v={version}' in live_h,'css exact':hashlib.sha256(live_css.encode()).hexdigest()==css_sha,'js exact':hashlib.sha256(live_js.encode()).hexdigest()==js_sha,'mobile guarded':'@media (max-width: 760px)' in live_css,'curated module':'curatedByProduct' in live_js and 'hydrateFromProductPage' in live_js and 'calc(100vw - 74px)' in live_css}
 for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
 if not all(checks.values()): rollback('live file verification failed')
 
@@ -75,10 +75,14 @@ if not all(public_checks.values()): rollback('public PDP verification failed')
 for rel,sha,marker in ((css_rel,css_sha,b'GRAMISS_PDP_MOBILE_STYLE_INTELLIGENCE_V1_4'),(js_rel,js_sha,b'GRAMISS_PDP_MOBILE_STYLE_INTELLIGENCE_V1_4')):
     st,b=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/'+rel+'?v='+nonce); got=hashlib.sha256(b).hexdigest(); ok=st==200 and got==sha and marker in b; print(('PASS' if ok else 'FAIL')+': public '+rel+' bytes='+str(len(b))+' sha='+got)
     if not ok: rollback('public asset verification failed '+rel)
+
+curated_ok=0
 for pid in (284,435,366,403):
     try:
-        st,b=public_get(f'https://gramiss.ir/wp-json/wc/store/v1/products/{pid}'); obj=json.loads(b.decode('utf-8','replace')) if st==200 else {}; print('CURATED',pid,st,obj.get('name','?'))
-    except Exception as exc: print('CURATED optional',pid,exc)
+        st,b=public_get(f'https://gramiss.ir/?p={pid}&g1_style_verify={nonce}'); text=b.decode('utf-8','replace'); ok=st==200 and f'postid-{pid}' in text and ('woocommerce-product-gallery' in text or 'g3-gallery' in text or 'product_title' in text); print(('PASS' if ok else 'FAIL')+f': curated product page {pid} bytes={len(b)}'); curated_ok += 1 if ok else 0
+    except Exception as exc: print('FAIL: curated product page',pid,exc)
+if curated_ok < 2: rollback('too few curated product pages available')
+
 st,b=public_get('https://gramiss.ir/?g1_home_safety_style_v14='+nonce); home=b.decode('utf-8','replace'); home_ok=st==200 and 'g1-floating-hero' in home and 'data-g1-looks' in home; print(('PASS' if home_ok else 'FAIL')+': Home/Looks untouched')
 if not home_ok: rollback('Home safety verification failed')
-print('LIVE PDP MOBILE STYLE INTELLIGENCE V1.4 DEPLOYED')
+print('LIVE PDP MOBILE STYLE INTELLIGENCE V1.4 CURATED DEPLOYED')
