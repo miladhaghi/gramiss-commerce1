@@ -1,0 +1,53 @@
+/* GRAMISS_CHECKOUT_DESKTOP_V1_1 */
+@media (min-width:761px){
+/* V1.1: optically center the coupon + without changing the trigger geometry */
+.g1-desktop-coupon-trigger__plus{
+  position:relative!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  flex:0 0 32px!important;
+  width:32px!important;
+  height:32px!important;
+  padding:0!important;
+  line-height:1!important;
+  font-size:0!important;
+}
+.g1-desktop-coupon-trigger__plus::before,
+.g1-desktop-coupon-trigger__plus::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  display:block;
+  background:currentColor;
+  border-radius:2px;
+  transform:translate(-50%,-50%);
+  transform-origin:center;
+}
+.g1-desktop-coupon-trigger__plus::before{width:10px;height:1px}
+.g1-desktop-coupon-trigger__plus::after{width:1px;height:10px}
+
+/* V1.1: give price cells enough room and keep the grand total fully inside the card */
+body.g1-checkout-desktop-v1 table.woocommerce-checkout-review-order-table .product-name{width:54%!important}
+body.g1-checkout-desktop-v1 table.woocommerce-checkout-review-order-table .product-total{width:46%!important}
+body.g1-checkout-desktop-v1 table.woocommerce-checkout-review-order-table tfoot th{width:54%!important}
+body.g1-checkout-desktop-v1 table.woocommerce-checkout-review-order-table tfoot td{width:46%!important;overflow:visible!important}
+body.g1-checkout-desktop-v1 table.woocommerce-checkout-review-order-table .order-total td{
+  padding-left:0!important;
+  font-size:18px!important;
+  line-height:1.35!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+}
+body.g1-checkout-desktop-v1 table.woocommerce-checkout-review-order-table .order-total td .woocommerce-Price-amount,
+body.g1-checkout-desktop-v1 table.woocommerce-checkout-review-order-table .order-total td .amount,
+body.g1-checkout-desktop-v1 table.woocommerce-checkout-review-order-table .order-total td bdi{
+  display:inline-block!important;
+  max-width:none!important;
+  white-space:nowrap!important;
+  direction:rtl!important;
+  unicode-bidi:isolate!important;
+  letter-spacing:-.02em!important;
+}
+}
