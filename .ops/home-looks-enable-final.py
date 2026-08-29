@@ -1,132 +1,25 @@
-import hashlib, json, os, ssl, time, urllib.error, urllib.parse, urllib.request
-
-host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']
-root=os.environ['THEME_ROOT'].strip('/'); healthy=os.environ.get('HEALTHY_HOME_SHA','')
-ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
-
+import hashlib,json,os,ssl,time,urllib.parse,urllib.request
+host=os.environ['CPANEL_HOST'];user=os.environ['CPANEL_USER'];token=os.environ['CPANEL_TOKEN'];root=os.environ['THEME_ROOT'].strip('/');healthy=os.environ.get('HEALTHY_HOME_SHA','');ctx=ssl._create_unverified_context()
 def call(fn,params,post=False):
-    url=f'https://{host}:2083/execute/Fileman/{fn}'; data=urllib.parse.urlencode(params).encode(); last=None
-    for attempt in range(1,5):
-        try:
-            req=urllib.request.Request(url if post else url+'?'+data.decode(),data=data if post else None,method='POST' if post else 'GET')
-            req.add_header('Authorization',f'cpanel {user}:{token}')
-            if post:req.add_header('Content-Type','application/x-www-form-urlencoded')
-            with urllib.request.urlopen(req,context=ctx,timeout=90) as r: obj=json.loads(r.read().decode('utf-8','replace'))
-            result=obj.get('result') if isinstance(obj.get('result'),dict) else obj
-            if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
-            return result.get('data')
-        except Exception as exc:
-            last=exc; print(f'Attempt {attempt}/4 {fn}: {exc}')
-            if attempt<4: time.sleep(attempt*2)
-    raise last
-
-def read_file(directory,name):
-    data=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
-    if isinstance(data,dict):
-        for key in ('content','file_content','data'):
-            if isinstance(data.get(key),str): return data[key]
-    if isinstance(data,str): return data
-    raise RuntimeError('Cannot read '+directory+'/'+name)
-
-def save_file(directory,name,content):
-    return call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
-
-def read_theme(rel):
-    parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else root+'/'+parent
-    return read_file(directory,name)
-
-class NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self,req,fp,code,msg,headers,newurl): return None
-
-def get(url,follow=True,timeout=90):
-    req=urllib.request.Request(url,headers={'User-Agent':'GramissSEOMigration/1.0','Cache-Control':'no-cache','Pragma':'no-cache'})
-    handlers=[urllib.request.HTTPSHandler(context=ctx)]
-    if not follow: handlers.insert(0,NoRedirect())
-    opener=urllib.request.build_opener(*handlers)
-    try:
-        with opener.open(req,timeout=timeout) as r: return r.status,r.read(),r.geturl(),dict(r.headers)
-    except urllib.error.HTTPError as e: return e.code,e.read(),url,dict(e.headers)
-
-front=read_theme('front-page.php'); front_sha=hashlib.sha256(front.encode()).hexdigest(); print('LIVE_HOME_SHA',front_sha)
-if healthy and front_sha!=healthy: raise SystemExit('ABORT: Home baseline mismatch; no changes')
-ht_before=read_file('public_html','.htaccess'); ht_sha=hashlib.sha256(ht_before.encode()).hexdigest()
-save_file('public_html','.htaccess.bak-seo-url-v1-'+stamp,ht_before); print('BACKUP_HTACCESS',len(ht_before),ht_sha)
-redirect_dir='public_html/wp-content/mu-plugins'; redirect_name='gramiss-seo-query-redirects.php'; old_redirect_plugin=None
-try: old_redirect_plugin=read_file(redirect_dir,redirect_name)
-except Exception: pass
-
-nonce=hashlib.sha256((stamp+front_sha).encode()).hexdigest()[:18]; probe=f'gramiss-seo-migrate-{nonce}.php'
-php=r'''<?php
-header('Content-Type: application/json; charset=utf-8');
-define('WP_USE_THEMES', false); require __DIR__.'/wp-load.php'; @unlink(__FILE__);
-if (!function_exists('wc_get_product')) { http_response_code(500); echo json_encode(['error'=>'WooCommerce unavailable']); exit; }
-$old_structure=(string)get_option('permalink_structure');
-$wc_permalinks=(array)get_option('woocommerce_permalinks',[]);
-if ($old_structure!=='') { http_response_code(409); echo wp_json_encode(['error'=>'permalink_structure changed from audited baseline','current'=>$old_structure]); exit; }
-$ids=get_posts(['post_type'=>'product','post_status'=>'publish','numberposts'=>-1,'orderby'=>'ID','order'=>'ASC','fields'=>'ids']);
-$pmap=[];foreach($ids as $id){$slug=(string)get_post_field('post_name',$id);if($slug!=='')$pmap[$slug]=(int)$id;}
-$terms=get_terms(['taxonomy'=>'product_cat','hide_empty'=>true]);$cmap=[];if(!is_wp_error($terms)){foreach($terms as $t)$cmap[$t->slug]=(int)$t->term_id;}
-wp_mkdir_p(WP_CONTENT_DIR.'/mu-plugins');
-$plugin=WP_CONTENT_DIR.'/mu-plugins/gramiss-seo-query-redirects.php';$plugin_backup='';
-if(file_exists($plugin)){$plugin_backup=$plugin.'.bak-'.gmdate('Ymd-His');@copy($plugin,$plugin_backup);}
-$p_export=var_export($pmap,true);$c_export=var_export($cmap,true);
-$code="<?php\n/** Plugin Name: Gramiss Legacy SEO Query Redirects */\nif (!defined('ABSPATH')) exit;\nadd_action('template_redirect', function(){\n  if (is_admin()) return;\n  \$pmap={$p_export};\n  \$cmap={$c_export};\n  if (count(\$_GET)===1 && isset(\$_GET['product'])) {\n    \$slug=sanitize_title(wp_unslash(\$_GET['product']));\n    if(isset(\$pmap[\$slug])){\$target=get_permalink((int)\$pmap[\$slug]);if(\$target){wp_safe_redirect(\$target,301,'Gramiss SEO Migration');exit;}}\n  }\n  if (count(\$_GET)===1 && isset(\$_GET['product_cat'])) {\n    \$slug=sanitize_title(wp_unslash(\$_GET['product_cat']));\n    if(isset(\$cmap[\$slug])){\$target=get_term_link((int)\$cmap[\$slug],'product_cat');if(!is_wp_error(\$target)){wp_safe_redirect(\$target,301,'Gramiss SEO Migration');exit;}}\n  }\n},0);\n";
-if(file_put_contents($plugin,$code)===false){http_response_code(500);echo wp_json_encode(['error'=>'redirect plugin write failed']);exit;}
-$manifest=['created_at'=>gmdate('c'),'old_permalink_structure'=>$old_structure,'woocommerce_permalinks'=>$wc_permalinks,'product_map'=>$pmap,'category_map'=>$cmap,'redirect_plugin'=>$plugin,'redirect_plugin_backup'=>$plugin_backup];
-$manifest_path=WP_CONTENT_DIR.'/gramiss-seo-url-migration-v1-'.gmdate('Ymd-His').'.json';file_put_contents($manifest_path,wp_json_encode($manifest,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_PRETTY_PRINT));
-update_option('permalink_structure','/%postname%/');global $wp_rewrite;$wp_rewrite->set_permalink_structure('/%postname%/');flush_rewrite_rules(true);
-$samples=[];foreach(array_slice($ids,0,3) as $id)$samples[]=['type'=>'product','id'=>(int)$id,'url'=>get_permalink($id)];
-foreach([97,222,296,392,403] as $id){if(get_post_status($id)==='publish')$samples[]=['type'=>'product','id'=>$id,'url'=>get_permalink($id)];}
-foreach(['tshirt','pants','shirt','sneakers','hat','graphic-tshirt','long-sleeve-shirt'] as $slug){$t=get_term_by('slug',$slug,'product_cat');if($t)$samples[]=['type'=>'category','id'=>(int)$t->term_id,'slug'=>$slug,'url'=>get_term_link($t)];}
-$pages=[];foreach(['shop'=>'woocommerce_shop_page_id','cart'=>'woocommerce_cart_page_id','checkout'=>'woocommerce_checkout_page_id','account'=>'woocommerce_myaccount_page_id'] as $k=>$opt){$id=(int)get_option($opt);$pages[$k]=['id'=>$id,'url'=>$id?get_permalink($id):''];}
-echo wp_json_encode(['ok'=>true,'old_structure'=>$old_structure,'new_structure'=>(string)get_option('permalink_structure'),'products'=>count($pmap),'categories'=>count($cmap),'manifest'=>$manifest_path,'plugin'=>$plugin,'plugin_backup'=>$plugin_backup,'samples'=>$samples,'pages'=>$pages],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
-'''
-save_file('public_html',probe,php)
-status,body,_,_=get('https://gramiss.ir/'+probe+'?t='+str(int(time.time())),True,180); print('MIGRATE_STATUS',status,'BYTES',len(body))
-if status!=200: print(body.decode('utf-8','replace')[:1200]); raise SystemExit('ABORT: migration bootstrap failed')
-data=json.loads(body.decode('utf-8','replace')); print('MIGRATION',json.dumps(data,ensure_ascii=False,separators=(',',':')))
-
-ht_after=read_file('public_html','.htaccess'); print('HTACCESS_AFTER',len(ht_after),hashlib.sha256(ht_after.encode()).hexdigest(),'RewriteEngine On' in ht_after)
-errors=[]
-if data.get('new_structure')!='/%postname%/': errors.append('permalink option mismatch')
-if 'RewriteEngine On' not in ht_after or 'index.php' not in ht_after: errors.append('WordPress rewrite rules missing from .htaccess')
-
-for s in data.get('samples',[]):
-    url=s.get('url','')
-    if not url: errors.append('empty sample URL '+str(s)); continue
-    st,b,final,_=get(url,True,90); print('PRETTY_TEST',s.get('type'),s.get('id'),st,final,len(b))
-    if st!=200: errors.append(f"pretty route failed {s.get('type')} {s.get('id')} status={st}")
-
-slug_map={49:'کلاه-فیت-کپ-آبی',97:'تیشرت-باکسی-سنگشور',392:'تیشرت-باکس-طرح-مسیح',403:'کتونی-طرح-ونس-سرمه-ای'}
-for idv,slug in slug_map.items():
-    old='https://gramiss.ir/?product='+urllib.parse.quote(slug,safe='-')
-    st,_,_,hdr=get(old,False,60); loc=hdr.get('Location',''); print('LEGACY_REDIRECT_PRODUCT',idv,st,loc)
-    if st!=301 or '/product/' not in loc: errors.append(f'legacy product redirect failed {idv}: {st} {loc}')
-for slug in ['tshirt','pants','shirt','sneakers','hat','graphic-tshirt']:
-    old='https://gramiss.ir/?product_cat='+urllib.parse.quote(slug,safe='-')
-    st,_,_,hdr=get(old,False,60); loc=hdr.get('Location',''); print('LEGACY_REDIRECT_CATEGORY',slug,st,loc)
-    if st!=301 or '/product-category/' not in loc: errors.append(f'legacy category redirect failed {slug}: {st} {loc}')
-
-for k,row in data.get('pages',{}).items():
-    url=row.get('url','')
-    if not url: continue
-    st,b,final,_=get(url,True,90); print('SYSTEM_PAGE',k,st,final,len(b))
-    if st==404: errors.append('system page 404 '+k)
-
-front_after=read_theme('front-page.php')
-if hashlib.sha256(front_after.encode()).hexdigest()!=front_sha: errors.append('Home changed unexpectedly')
-for path in ['robots.txt','sitemap_index.xml','wp-sitemap.xml']:
-    st,b,final,_=get('https://gramiss.ir/'+path,True,60); print('SEO_ENDPOINT',path,st,final,len(b))
-
-if errors:
-    print('VERIFY_ERRORS',json.dumps(errors,ensure_ascii=False))
-    rb=f'gramiss-seo-rollback-{nonce}.php'
-    rbphp=r'''<?php define('WP_USE_THEMES',false);require __DIR__.'/wp-load.php';@unlink(__FILE__);update_option('permalink_structure','');global $wp_rewrite;$wp_rewrite->set_permalink_structure('');flush_rewrite_rules(true);$p=WP_CONTENT_DIR.'/mu-plugins/gramiss-seo-query-redirects.php';@unlink($p);echo 'ROLLED_BACK';'''
-    save_file('public_html',rb,rbphp)
-    rst,rbody,_,_=get('https://gramiss.ir/'+rb+'?t='+str(int(time.time())),True,120); print('ROLLBACK_APP',rst,rbody[:100])
-    if old_redirect_plugin is not None: save_file(redirect_dir,redirect_name,old_redirect_plugin)
-    save_file('public_html','.htaccess',ht_before); print('ROLLBACK_HTACCESS_RESTORED',hashlib.sha256(read_file('public_html','.htaccess').encode()).hexdigest()==ht_sha)
-    raise SystemExit('ROLLED BACK: '+ '; '.join(errors))
-
-print('PASS SEO URL MIGRATION V1')
-print('NO PRODUCT NAMES/SLUGS/PRICES/STOCK/ATTRIBUTES/CATEGORIES/CONTENT CHANGED')
+ url=f'https://{host}:2083/execute/Fileman/{fn}';data=urllib.parse.urlencode(params).encode();req=urllib.request.Request(url if post else url+'?'+data.decode(),data=data if post else None,method='POST' if post else 'GET');req.add_header('Authorization',f'cpanel {user}:{token}');
+ if post:req.add_header('Content-Type','application/x-www-form-urlencoded')
+ with urllib.request.urlopen(req,context=ctx,timeout=90) as r:obj=json.loads(r.read().decode('utf-8','replace'))
+ result=obj.get('result') if isinstance(obj.get('result'),dict) else obj
+ if not isinstance(result,dict) or result.get('status')!=1:raise RuntimeError(str(result))
+ return result.get('data')
+def read(directory,name):
+ d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'});return d.get('content') if isinstance(d,dict) and isinstance(d.get('content'),str) else (d if isinstance(d,str) else d.get('file_content',''))
+def save(directory,name,content):return call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+def get(url):
+ req=urllib.request.Request(url,headers={'User-Agent':'GramissRewriteDiagnostic/1.0','Cache-Control':'no-cache'});
+ with urllib.request.urlopen(req,context=ctx,timeout=120) as r:return r.status,r.read(),r.geturl()
+front=read(root,'front-page.php');fsha=hashlib.sha256(front.encode()).hexdigest();print('LIVE_HOME_SHA',fsha)
+if healthy and fsha!=healthy:raise SystemExit('ABORT Home mismatch')
+ht=read('public_html','.htaccess');print('HTACCESS_META',json.dumps({'bytes':len(ht.encode()),'sha256':hashlib.sha256(ht.encode()).hexdigest(),'lines':len(ht.splitlines())},separators=(',',':')))
+for i,line in enumerate(ht.splitlines(),1):
+ low=line.lower();safe='<REDACTED>' if any(x in low for x in ['password','secret','token','api_key','apikey']) else line
+ print(f'HTL {i:03d} {safe}')
+stamp=str(int(time.time()));probe='gramiss-rewrite-diagnostic-'+hashlib.sha256((stamp+fsha).encode()).hexdigest()[:16]+'.php'
+php=r'''<?php header('Content-Type: application/json; charset=utf-8');define('WP_USE_THEMES',false);require __DIR__.'/wp-load.php';@unlink(__FILE__);require_once ABSPATH.'wp-admin/includes/misc.php';require_once ABSPATH.'wp-admin/includes/file.php';global $wp_rewrite;$path=ABSPATH.'.htaccess';$out=['server'=>$_SERVER['SERVER_SOFTWARE']??'','permalink_structure'=>(string)get_option('permalink_structure'),'using_permalinks'=>$wp_rewrite->using_permalinks(),'htaccess_exists'=>file_exists($path),'htaccess_readable'=>is_readable($path),'htaccess_writable'=>is_writable($path),'htaccess_perms'=>file_exists($path)?substr(sprintf('%o',fileperms($path)),-4):'','home_path'=>function_exists('get_home_path')?get_home_path():'','got_mod_rewrite'=>function_exists('got_mod_rewrite')?got_mod_rewrite():null,'save_mod_rewrite_rules_exists'=>function_exists('save_mod_rewrite_rules'),'flush_rules_hard_default'=>apply_filters('flush_rewrite_rules_hard',true),'product_permalink_sample'=>get_permalink(49),'shop_permalink'=>get_permalink((int)get_option('woocommerce_shop_page_id')),'rewrite_rule_count'=>count((array)get_option('rewrite_rules',[])),'wc_permalinks'=>get_option('woocommerce_permalinks')];echo wp_json_encode($out,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);'''
+save('public_html',probe,php);st,b,final=get('https://gramiss.ir/'+probe+'?t='+stamp);print('PROBE',st,final,b.decode('utf-8','replace'))
+print('END READ ONLY DIAGNOSTIC; NO SETTINGS OR FILES CHANGED')
