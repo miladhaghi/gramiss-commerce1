@@ -1,0 +1,19 @@
+name: SEO Category Metadata V1
+
+on:
+  push:
+    branches: [ops/seo-category-metadata-v1]
+
+jobs:
+  seo-category-metadata:
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+      HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run guarded category metadata task
+        run: python3 .ops/home-looks-enable-final.py
