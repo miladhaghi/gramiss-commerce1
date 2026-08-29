@@ -1,5 +1,4 @@
 import hashlib, json, os, ssl, time, urllib.parse, urllib.request
-from pathlib import Path
 
 host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']
 root=os.environ['THEME_ROOT'].strip('/'); healthy=os.environ.get('HEALTHY_HOME_SHA','')
@@ -30,107 +29,62 @@ def read_theme(rel):
     if isinstance(data,str): return data
     raise RuntimeError('Cannot read '+rel)
 
-def save_theme(rel,content):
-    parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else root+'/'+parent
-    call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
-
-def public_get(url,timeout=50):
-    req=urllib.request.Request(url,headers={'User-Agent':'GramissCheckoutDesktop/1.1','Cache-Control':'no-cache','Pragma':'no-cache'})
+def public_get(url,timeout=120):
+    req=urllib.request.Request(url,headers={'User-Agent':'GramissSEOInventory/1.0','Cache-Control':'no-cache','Pragma':'no-cache'})
     with urllib.request.urlopen(req,context=ctx,timeout=timeout) as r: return r.status,r.read(),r.geturl()
 
-def section(source,start,end):
-    if start not in source or end not in source: return None
-    a=source.index(start); b=source.index(end,a)+len(end); return source[a:b]
-
 front=read_theme('front-page.php'); front_sha=hashlib.sha256(front.encode()).hexdigest(); print('LIVE_HOME_SHA',front_sha)
-if healthy and front_sha!=healthy: raise SystemExit('ABORT: Home baseline mismatch; nothing changed')
-header=read_theme('header.php')
-if '</head>' not in header: raise SystemExit('ABORT: header closing head missing')
+if healthy and front_sha!=healthy: raise SystemExit('ABORT: Home baseline mismatch; no product reads performed')
 
-css=Path('deploy/checkout-desktop-v1/checkout-desktop-v1.css').read_text(encoding='utf-8')
-polish=Path('deploy/checkout-desktop-v1/checkout-desktop-v1-1.css').read_text(encoding='utf-8')
-js=Path('deploy/checkout-desktop-v1/checkout-desktop-v1.js').read_text(encoding='utf-8')
-if 'GRAMISS_CHECKOUT_DESKTOP_V1' not in css or 'GRAMISS_CHECKOUT_DESKTOP_V1_1' not in polish or 'GRAMISS_CHECKOUT_DESKTOP_V1' not in js: raise SystemExit('ABORT: desktop candidates invalid')
-print('CANDIDATE CSS',len(css),hashlib.sha256(css.encode()).hexdigest())
-print('CANDIDATE POLISH',len(polish),hashlib.sha256(polish.encode()).hexdigest())
-print('CANDIDATE JS',len(js),hashlib.sha256(js.encode()).hexdigest())
+nonce=hashlib.sha256((stamp+front_sha).encode()).hexdigest()[:18]
+probe=f'gramiss-seo-inventory-{nonce}.php'
+php=r'''<?php
+header('Content-Type: application/json; charset=utf-8');
+define('WP_USE_THEMES', false);
+require __DIR__ . '/wp-load.php';
+@unlink(__FILE__);
+if (!function_exists('wc_get_product')) { http_response_code(500); echo json_encode(['error'=>'WooCommerce unavailable']); exit; }
 
-# Capture existing mobile checkout blocks; desktop deployment must preserve them byte-for-byte.
-mobile_markers=[
- ('<!-- GRAMISS CHECKOUT MOBILE V1 START -->','<!-- GRAMISS CHECKOUT MOBILE V1 END -->'),
- ('<!-- GRAMISS CHECKOUT MOBILE V21 START -->','<!-- GRAMISS CHECKOUT MOBILE V21 END -->')
-]
-mobile_before={a:section(header,a,b) for a,b in mobile_markers}
+function g1_meta($id,$keys){$o=[];foreach($keys as $k){$v=get_post_meta($id,$k,true);if($v!==''&&$v!==null)$o[$k]=(string)$v;}return $o;}
+function g1_images($p){$ids=[];$f=$p->get_image_id();if($f)$ids[]=$f;foreach($p->get_gallery_image_ids() as $id){if(!in_array($id,$ids,true))$ids[]=$id;}$out=[];foreach($ids as $id){$alt=(string)get_post_meta($id,'_wp_attachment_image_alt',true);$out[]=['id'=>(int)$id,'alt'=>$alt,'alt_empty'=>trim($alt)==='','title'=>get_the_title($id),'url'=>wp_get_attachment_url($id)];}return $out;}
+function g1_attrs($p){$out=[];foreach($p->get_attributes() as $a){$name=$a->get_name();$vals=[];if($a->is_taxonomy()){$vals=wc_get_product_terms($p->get_id(),$name,['fields'=>'names']);}else{$vals=$a->get_options();}$out[]=['name'=>$name,'label'=>wc_attribute_label($name),'values'=>array_values($vals),'variation'=>(bool)$a->get_variation(),'visible'=>(bool)$a->get_visible()];}return $out;}
 
-old_css=old_polish=old_js=None
-try: old_css=read_theme('assets/css/checkout-desktop-v1.css')
-except Exception: pass
-try: old_polish=read_theme('assets/css/checkout-desktop-v1-1.css')
-except Exception: pass
-try: old_js=read_theme('assets/js/checkout-desktop-v1.js')
-except Exception: pass
-
-start='<!-- GRAMISS CHECKOUT DESKTOP V1 START -->'; end='<!-- GRAMISS CHECKOUT DESKTOP V1 END -->'
-base=header
-if start in base and end in base:
-    a=base.index(start); b=base.index(end,a)+len(end); base=base[:a]+base[b:]
-loader=f'''\n{start}\n<?php if ( function_exists( 'is_checkout' ) && is_checkout() && ! ( function_exists( 'is_order_received_page' ) && is_order_received_page() ) ) : ?>\n<link id="gramiss-checkout-desktop-v1-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/checkout-desktop-v1.css?v=20260828-2' ); ?>" media="(min-width:761px)">\n<link id="gramiss-checkout-desktop-v1-1-css" rel="stylesheet" href="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/css/checkout-desktop-v1-1.css?v=20260828-2' ); ?>" media="(min-width:761px)">\n<script id="gramiss-checkout-desktop-v1-js" src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/js/checkout-desktop-v1.js?v=20260828-2' ); ?>" defer></script>\n<?php endif; ?>\n{end}\n'''
-patched=base.replace('</head>',loader+'</head>',1)
-if patched==base: raise SystemExit('ABORT: loader injection failed')
-
-# Pre-write invariant: desktop edit itself must not alter any existing mobile block.
-for a,b in mobile_markers:
-    before=mobile_before[a]; after=section(patched,a,b)
-    if before != after: raise SystemExit('ABORT: candidate would alter mobile checkout block '+a)
-
-save_theme('header.php.bak-checkout-desktop-v1-'+stamp,header)
-if old_css is not None: save_theme('assets/css/checkout-desktop-v1.css.bak-'+stamp,old_css)
-if old_polish is not None: save_theme('assets/css/checkout-desktop-v1-1.css.bak-'+stamp,old_polish)
-if old_js is not None: save_theme('assets/js/checkout-desktop-v1.js.bak-'+stamp,old_js)
-
-def rollback(reason):
-    print('ROLLBACK',reason)
-    save_theme('header.php',header)
-    if old_css is not None: save_theme('assets/css/checkout-desktop-v1.css',old_css)
-    if old_polish is not None: save_theme('assets/css/checkout-desktop-v1-1.css',old_polish)
-    if old_js is not None: save_theme('assets/js/checkout-desktop-v1.js',old_js)
-    raise SystemExit('ROLLED BACK: '+reason)
-
-save_theme('assets/css/checkout-desktop-v1.css',css)
-save_theme('assets/css/checkout-desktop-v1-1.css',polish)
-save_theme('assets/js/checkout-desktop-v1.js',js)
-save_theme('header.php',patched)
-
-live_header=read_theme('header.php'); live_css=read_theme('assets/css/checkout-desktop-v1.css'); live_polish=read_theme('assets/css/checkout-desktop-v1-1.css'); live_js=read_theme('assets/js/checkout-desktop-v1.js')
-if live_header!=patched: rollback('header write mismatch')
-if live_css!=css or live_polish!=polish or live_js!=js: rollback('asset write mismatch')
-if hashlib.sha256(read_theme('front-page.php').encode()).hexdigest()!=front_sha: rollback('Home changed')
-for a,b in mobile_markers:
-    if mobile_before[a] != section(live_header,a,b): rollback('mobile checkout block changed '+a)
-if live_header.count('gramiss-checkout-desktop-v1-css')!=1 or live_header.count('gramiss-checkout-desktop-v1-1-css')!=1 or live_header.count('gramiss-checkout-desktop-v1-js')!=1: rollback('desktop loader count invalid')
-if 'v=20260828-2' not in live_header: rollback('desktop cache version missing')
-print('PASS exact writes / Home preserved / mobile checkout preserved')
-
-# Purge LiteSpeed via one-time WP bootstrap. Failure here does not justify destructive rollback after exact writes.
+$ids=get_posts(['post_type'=>'product','post_status'=>['publish','draft','pending','private'],'numberposts'=>-1,'orderby'=>'ID','order'=>'ASC','fields'=>'ids']);
+$products=[];$summary=['products'=>0,'published'=>0,'draft_or_private'=>0,'simple'=>0,'variable'=>0,'other_types'=>0,'variations'=>0,'missing_parent_sku'=>0,'missing_description'=>0,'missing_short_description'=>0,'missing_featured_image'=>0,'image_alt_empty'=>0,'products_with_any_empty_alt'=>0,'products_without_category'=>0,'query_product_urls'=>0,'pretty_product_urls'=>0,'seo_title_missing'=>0,'seo_description_missing'=>0,'seo_canonical_missing'=>0,'variation_missing_sku'=>0,'variation_missing_price'=>0,'variation_out_of_stock'=>0];
+$seo_keys=['_yoast_wpseo_title','_yoast_wpseo_metadesc','_yoast_wpseo_canonical','rank_math_title','rank_math_description','rank_math_canonical_url','_seopress_titles_title','_seopress_titles_desc','_seopress_robots_canonical'];
+foreach($ids as $id){$p=wc_get_product($id);if(!$p)continue;$summary['products']++;$status=get_post_status($id);if($status==='publish')$summary['published']++;else$summary['draft_or_private']++;$type=$p->get_type();if(isset($summary[$type]))$summary[$type]++;else$summary['other_types']++;
+$cats=wp_get_post_terms($id,'product_cat',['fields'=>'all']);$catrows=[];foreach($cats as $c)$catrows[]=['id'=>(int)$c->term_id,'name'=>$c->name,'slug'=>$c->slug];if(!$catrows)$summary['products_without_category']++;
+$permalink=get_permalink($id);if(strpos($permalink,'?product=')!==false)$summary['query_product_urls']++;else$summary['pretty_product_urls']++;
+$sku=(string)$p->get_sku();if(trim($sku)==='')$summary['missing_parent_sku']++;$desc=(string)$p->get_description();$short=(string)$p->get_short_description();if(trim(wp_strip_all_tags($desc))==='')$summary['missing_description']++;if(trim(wp_strip_all_tags($short))==='')$summary['missing_short_description']++;if(!$p->get_image_id())$summary['missing_featured_image']++;
+$images=g1_images($p);$empty=0;foreach($images as $im){if($im['alt_empty']){$empty++;$summary['image_alt_empty']++;}}if($empty)$summary['products_with_any_empty_alt']++;
+$seo=g1_meta($id,$seo_keys);$hasTitle=isset($seo['_yoast_wpseo_title'])||isset($seo['rank_math_title'])||isset($seo['_seopress_titles_title']);$hasDesc=isset($seo['_yoast_wpseo_metadesc'])||isset($seo['rank_math_description'])||isset($seo['_seopress_titles_desc']);$hasCan=isset($seo['_yoast_wpseo_canonical'])||isset($seo['rank_math_canonical_url'])||isset($seo['_seopress_robots_canonical']);if(!$hasTitle)$summary['seo_title_missing']++;if(!$hasDesc)$summary['seo_description_missing']++;if(!$hasCan)$summary['seo_canonical_missing']++;
+$vars=[];if($p->is_type('variable')){foreach($p->get_children() as $vid){$v=wc_get_product($vid);if(!$v)continue;$summary['variations']++;$vsku=(string)$v->get_sku();$vprice=(string)$v->get_price();if(trim($vsku)==='')$summary['variation_missing_sku']++;if(trim($vprice)==='')$summary['variation_missing_price']++;if(!$v->is_in_stock())$summary['variation_out_of_stock']++;$vars[]=['id'=>(int)$vid,'sku'=>$vsku,'price'=>$vprice,'regular_price'=>(string)$v->get_regular_price(),'sale_price'=>(string)$v->get_sale_price(),'stock_status'=>$v->get_stock_status(),'manage_stock'=>$v->get_manage_stock(),'stock_quantity'=>$v->get_stock_quantity(),'attributes'=>$v->get_attributes()];}}
+$products[]=['id'=>(int)$id,'status'=>$status,'name'=>$p->get_name(),'slug'=>get_post_field('post_name',$id),'type'=>$type,'permalink'=>$permalink,'sku'=>$sku,'price'=>(string)$p->get_price(),'regular_price'=>(string)$p->get_regular_price(),'sale_price'=>(string)$p->get_sale_price(),'stock_status'=>$p->get_stock_status(),'manage_stock'=>$p->get_manage_stock(),'stock_quantity'=>$p->get_stock_quantity(),'categories'=>$catrows,'attributes'=>g1_attrs($p),'variation_count'=>count($vars),'variation_issues'=>['missing_sku'=>count(array_filter($vars,fn($x)=>trim($x['sku'])==='')),'missing_price'=>count(array_filter($vars,fn($x)=>trim($x['price'])==='')),'out_of_stock'=>count(array_filter($vars,fn($x)=>$x['stock_status']!=='instock'))],'variations'=>$vars,'description_len'=>mb_strlen(trim(wp_strip_all_tags($desc))),'short_description_len'=>mb_strlen(trim(wp_strip_all_tags($short))),'featured_image_id'=>(int)$p->get_image_id(),'image_count'=>count($images),'empty_alt_count'=>$empty,'images'=>$images,'seo_meta'=>$seo];}
+$terms=get_terms(['taxonomy'=>'product_cat','hide_empty'=>false]);$categories=[];if(!is_wp_error($terms)){foreach($terms as $t)$categories[]=['id'=>(int)$t->term_id,'name'=>$t->name,'slug'=>$t->slug,'count'=>(int)$t->count,'parent'=>(int)$t->parent,'description_len'=>mb_strlen(trim(wp_strip_all_tags($t->description))),'permalink'=>get_term_link($t)];}
+$active=(array)get_option('active_plugins',[]);$seo_plugins=array_values(array_filter($active,function($p){$s=strtolower($p);return strpos($s,'yoast')!==false||strpos($s,'seo')!==false||strpos($s,'rank-math')!==false||strpos($s,'aioseo')!==false;}));
+$out=['generated_at'=>gmdate('c'),'site'=>['home_url'=>home_url('/'),'site_url'=>site_url('/'),'blog_public'=>(int)get_option('blog_public'),'permalink_structure'=>(string)get_option('permalink_structure'),'woocommerce_permalinks'=>get_option('woocommerce_permalinks'),'shop_page_id'=>(int)get_option('woocommerce_shop_page_id'),'shop_url'=>function_exists('wc_get_page_permalink')?wc_get_page_permalink('shop'):'','seo_plugins'=>$seo_plugins],'summary'=>$summary,'categories'=>$categories,'products'=>$products];
+echo wp_json_encode($out,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+'''
+call('save_file_content',{'dir':'public_html','file':probe,'content':php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
 try:
-    purge='gramiss-purge-checkout-desktop-'+stamp+'.php'
-    php="<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php'; if(function_exists('do_action')){do_action('litespeed_purge_all');} echo function_exists('wc_get_checkout_url') ? wc_get_checkout_url() : 'OK'; @unlink(__FILE__);"
-    call('save_file_content',{'dir':'public_html','file':purge,'content':php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
-    status,body,_=public_get('https://gramiss.ir/'+purge+'?t='+str(int(time.time())),70); print('PURGE/CHECKOUT_URL',status,body.decode('utf-8','replace')[:180])
-except Exception as exc:
-    print('WARN purge request:',exc)
+    status,body,final=public_get('https://gramiss.ir/'+probe+'?t='+str(int(time.time())),180)
+    print('PROBE_STATUS',status,'BYTES',len(body),'FINAL',final)
+    if status!=200: raise RuntimeError('inventory probe non-200')
+    data=json.loads(body.decode('utf-8','replace'))
+finally:
+    # The PHP self-deletes before reading WooCommerce. If HTTP failed before execution, try deleting it via Fileman.
+    try: call('delete_files',{'dir':'public_html','files':probe},True)
+    except Exception: pass
 
-# Public asset checks with retries. Exact cPanel reads above remain authoritative.
-for rel,marker in [('assets/css/checkout-desktop-v1.css',b'GRAMISS_CHECKOUT_DESKTOP_V1'),('assets/css/checkout-desktop-v1-1.css',b'GRAMISS_CHECKOUT_DESKTOP_V1_1'),('assets/js/checkout-desktop-v1.js',b'GRAMISS_CHECKOUT_DESKTOP_V1')]:
-    ok=False
-    for attempt in range(3):
-        try:
-            status,body,_=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/'+rel+'?v='+stamp,45)
-            ok=status==200 and marker in body and len(body)>800
-            print(('PASS' if ok else 'FAIL'),'public',rel,status,len(body))
-            if ok: break
-        except Exception as exc:
-            print('WARN public asset',rel,'attempt',attempt+1,exc); time.sleep(2)
-    if not ok: print('WARN: public asset verification incomplete; cPanel exact-write verification passed')
-
-print('LIVE CHECKOUT DESKTOP V1.1 DEPLOYED')
+print('=== GRAMISS PRODUCT INVENTORY V1 ===')
+print('SITE',json.dumps(data.get('site',{}),ensure_ascii=False,separators=(',',':')))
+print('SUMMARY',json.dumps(data.get('summary',{}),ensure_ascii=False,separators=(',',':')))
+print('CATEGORIES',json.dumps(data.get('categories',[]),ensure_ascii=False,separators=(',',':')))
+for p in data.get('products',[]):
+    compact={k:p.get(k) for k in ['id','status','name','slug','type','permalink','sku','price','regular_price','sale_price','stock_status','manage_stock','stock_quantity','categories','attributes','variation_count','variation_issues','description_len','short_description_len','featured_image_id','image_count','empty_alt_count','seo_meta']}
+    print('PRODUCT',json.dumps(compact,ensure_ascii=False,separators=(',',':')))
+    if p.get('variation_count'):
+        print('VARIATIONS',p.get('id'),json.dumps(p.get('variations',[]),ensure_ascii=False,separators=(',',':')))
+    if p.get('empty_alt_count'):
+        print('IMAGE_ALT_ISSUES',p.get('id'),json.dumps([i for i in p.get('images',[]) if i.get('alt_empty')],ensure_ascii=False,separators=(',',':')))
+print('=== END INVENTORY; NO PRODUCT/OPTION/TAXONOMY MUTATIONS PERFORMED ===')
