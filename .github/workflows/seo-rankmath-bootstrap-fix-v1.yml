@@ -1,0 +1,19 @@
+name: SEO Rank Math Bootstrap Fix V1
+
+on:
+  push:
+    branches: [ops/seo-rankmath-bootstrap-fix-v1]
+
+jobs:
+  seo-rankmath:
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+      HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run guarded Rank Math diagnosis/fix
+        run: python3 .ops/home-looks-enable-final.py
