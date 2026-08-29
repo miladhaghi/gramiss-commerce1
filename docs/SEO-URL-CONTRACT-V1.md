@@ -9,7 +9,10 @@ Move the live WooCommerce catalog from query URLs to stable pretty canonical URL
 ## Final structure
 - WordPress post/page permalink structure: `/%postname%/`
 - Product URL: `/product/{existing-product-slug}/`
-- Product category URL: `/product-category/{existing-category-slug}/`
+- Product category URL uses WooCommerce native hierarchical taxonomy routing:
+  - top-level: `/product-category/{category-slug}/`
+  - child: `/product-category/{parent-slug}/{child-slug}/`
+  - deeper descendants continue the same hierarchy
 - Product base stays `product`
 - Product category base stays `product-category`
 
@@ -21,7 +24,7 @@ Reason: changing the rewrite architecture and 48 individual slugs at the same ti
 
 ## Redirect rule
 - Exact legacy `?product={old-slug}` URLs -> HTTP 301 -> mapped pretty product canonical.
-- Exact legacy `?product_cat={old-slug}` URLs -> HTTP 301 -> mapped pretty category canonical.
+- Exact legacy `?product_cat={old-slug}` URLs -> HTTP 301 -> the current native WooCommerce hierarchical category canonical.
 - No redirect chains.
 - Redirect mappings are retained long-term.
 - Unknown query values are not redirected to Home.
