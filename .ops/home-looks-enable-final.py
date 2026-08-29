@@ -20,71 +20,59 @@ def call(fn,params,post=False):
             if attempt<4: time.sleep(attempt*2)
     raise last
 
-def read_theme(rel):
-    parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else root+'/'+parent
+def read_file(directory,name):
     data=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
     if isinstance(data,dict):
         for key in ('content','file_content','data'):
             if isinstance(data.get(key),str): return data[key]
     if isinstance(data,str): return data
-    raise RuntimeError('Cannot read '+rel)
+    raise RuntimeError('Cannot read '+directory+'/'+name)
 
-def public_get(url,timeout=120):
-    req=urllib.request.Request(url,headers={'User-Agent':'GramissSEOInventory/1.0','Cache-Control':'no-cache','Pragma':'no-cache'})
-    with urllib.request.urlopen(req,context=ctx,timeout=timeout) as r: return r.status,r.read(),r.geturl()
+def read_theme(rel):
+    parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else root+'/'+parent
+    return read_file(directory,name)
+
+def public_get(url,timeout=150):
+    req=urllib.request.Request(url,headers={'User-Agent':'GramissSEOURLDryRun/1.0','Cache-Control':'no-cache','Pragma':'no-cache'})
+    with urllib.request.urlopen(req,context=ctx,timeout=timeout) as r: return r.status,r.read(),r.geturl(),dict(r.headers)
 
 front=read_theme('front-page.php'); front_sha=hashlib.sha256(front.encode()).hexdigest(); print('LIVE_HOME_SHA',front_sha)
-if healthy and front_sha!=healthy: raise SystemExit('ABORT: Home baseline mismatch; no product reads performed')
+if healthy and front_sha!=healthy: raise SystemExit('ABORT: Home baseline mismatch; no production mutations performed')
+try:
+    ht=read_file('public_html','.htaccess')
+    print('HTACCESS',json.dumps({'exists':True,'bytes':len(ht.encode()),'sha256':hashlib.sha256(ht.encode()).hexdigest(),'has_wp_block':'# BEGIN WordPress' in ht,'has_rewrite_engine':'RewriteEngine On' in ht},separators=(',',':')))
+except Exception as exc:
+    print('HTACCESS',json.dumps({'exists':False,'error':str(exc)[:180]},separators=(',',':')))
 
-nonce=hashlib.sha256((stamp+front_sha).encode()).hexdigest()[:18]
-probe=f'gramiss-seo-inventory-{nonce}.php'
+nonce=hashlib.sha256((stamp+front_sha).encode()).hexdigest()[:18]; probe=f'gramiss-seo-url-plan-{nonce}.php'
 php=r'''<?php
 header('Content-Type: application/json; charset=utf-8');
-define('WP_USE_THEMES', false);
-require __DIR__ . '/wp-load.php';
-@unlink(__FILE__);
+define('WP_USE_THEMES', false); require __DIR__ . '/wp-load.php'; @unlink(__FILE__);
 if (!function_exists('wc_get_product')) { http_response_code(500); echo json_encode(['error'=>'WooCommerce unavailable']); exit; }
-
-function g1_meta($id,$keys){$o=[];foreach($keys as $k){$v=get_post_meta($id,$k,true);if($v!==''&&$v!==null)$o[$k]=(string)$v;}return $o;}
-function g1_images($p){$ids=[];$f=$p->get_image_id();if($f)$ids[]=$f;foreach($p->get_gallery_image_ids() as $id){if(!in_array($id,$ids,true))$ids[]=$id;}$out=[];foreach($ids as $id){$alt=(string)get_post_meta($id,'_wp_attachment_image_alt',true);$out[]=['id'=>(int)$id,'alt'=>$alt,'alt_empty'=>trim($alt)==='','title'=>get_the_title($id),'url'=>wp_get_attachment_url($id)];}return $out;}
-function g1_attrs($p){$out=[];foreach($p->get_attributes() as $a){$name=$a->get_name();$vals=[];if($a->is_taxonomy()){$vals=wc_get_product_terms($p->get_id(),$name,['fields'=>'names']);}else{$vals=$a->get_options();}$out[]=['name'=>$name,'label'=>wc_attribute_label($name),'values'=>array_values($vals),'variation'=>(bool)$a->get_variation(),'visible'=>(bool)$a->get_visible()];}return $out;}
-
-$ids=get_posts(['post_type'=>'product','post_status'=>['publish','draft','pending','private'],'numberposts'=>-1,'orderby'=>'ID','order'=>'ASC','fields'=>'ids']);
-$products=[];$summary=['products'=>0,'published'=>0,'draft_or_private'=>0,'simple'=>0,'variable'=>0,'other_types'=>0,'variations'=>0,'missing_parent_sku'=>0,'missing_description'=>0,'missing_short_description'=>0,'missing_featured_image'=>0,'image_alt_empty'=>0,'products_with_any_empty_alt'=>0,'products_without_category'=>0,'query_product_urls'=>0,'pretty_product_urls'=>0,'seo_title_missing'=>0,'seo_description_missing'=>0,'seo_canonical_missing'=>0,'variation_missing_sku'=>0,'variation_missing_price'=>0,'variation_out_of_stock'=>0];
-$seo_keys=['_yoast_wpseo_title','_yoast_wpseo_metadesc','_yoast_wpseo_canonical','rank_math_title','rank_math_description','rank_math_canonical_url','_seopress_titles_title','_seopress_titles_desc','_seopress_robots_canonical'];
-foreach($ids as $id){$p=wc_get_product($id);if(!$p)continue;$summary['products']++;$status=get_post_status($id);if($status==='publish')$summary['published']++;else$summary['draft_or_private']++;$type=$p->get_type();if(isset($summary[$type]))$summary[$type]++;else$summary['other_types']++;
-$cats=wp_get_post_terms($id,'product_cat',['fields'=>'all']);$catrows=[];foreach($cats as $c)$catrows[]=['id'=>(int)$c->term_id,'name'=>$c->name,'slug'=>$c->slug];if(!$catrows)$summary['products_without_category']++;
-$permalink=get_permalink($id);if(strpos($permalink,'?product=')!==false)$summary['query_product_urls']++;else$summary['pretty_product_urls']++;
-$sku=(string)$p->get_sku();if(trim($sku)==='')$summary['missing_parent_sku']++;$desc=(string)$p->get_description();$short=(string)$p->get_short_description();if(trim(wp_strip_all_tags($desc))==='')$summary['missing_description']++;if(trim(wp_strip_all_tags($short))==='')$summary['missing_short_description']++;if(!$p->get_image_id())$summary['missing_featured_image']++;
-$images=g1_images($p);$empty=0;foreach($images as $im){if($im['alt_empty']){$empty++;$summary['image_alt_empty']++;}}if($empty)$summary['products_with_any_empty_alt']++;
-$seo=g1_meta($id,$seo_keys);$hasTitle=isset($seo['_yoast_wpseo_title'])||isset($seo['rank_math_title'])||isset($seo['_seopress_titles_title']);$hasDesc=isset($seo['_yoast_wpseo_metadesc'])||isset($seo['rank_math_description'])||isset($seo['_seopress_titles_desc']);$hasCan=isset($seo['_yoast_wpseo_canonical'])||isset($seo['rank_math_canonical_url'])||isset($seo['_seopress_robots_canonical']);if(!$hasTitle)$summary['seo_title_missing']++;if(!$hasDesc)$summary['seo_description_missing']++;if(!$hasCan)$summary['seo_canonical_missing']++;
-$vars=[];if($p->is_type('variable')){foreach($p->get_children() as $vid){$v=wc_get_product($vid);if(!$v)continue;$summary['variations']++;$vsku=(string)$v->get_sku();$vprice=(string)$v->get_price();if(trim($vsku)==='')$summary['variation_missing_sku']++;if(trim($vprice)==='')$summary['variation_missing_price']++;if(!$v->is_in_stock())$summary['variation_out_of_stock']++;$vars[]=['id'=>(int)$vid,'sku'=>$vsku,'price'=>$vprice,'regular_price'=>(string)$v->get_regular_price(),'sale_price'=>(string)$v->get_sale_price(),'stock_status'=>$v->get_stock_status(),'manage_stock'=>$v->get_manage_stock(),'stock_quantity'=>$v->get_stock_quantity(),'attributes'=>$v->get_attributes()];}}
-$products[]=['id'=>(int)$id,'status'=>$status,'name'=>$p->get_name(),'slug'=>get_post_field('post_name',$id),'type'=>$type,'permalink'=>$permalink,'sku'=>$sku,'price'=>(string)$p->get_price(),'regular_price'=>(string)$p->get_regular_price(),'sale_price'=>(string)$p->get_sale_price(),'stock_status'=>$p->get_stock_status(),'manage_stock'=>$p->get_manage_stock(),'stock_quantity'=>$p->get_stock_quantity(),'categories'=>$catrows,'attributes'=>g1_attrs($p),'variation_count'=>count($vars),'variation_issues'=>['missing_sku'=>count(array_filter($vars,fn($x)=>trim($x['sku'])==='')),'missing_price'=>count(array_filter($vars,fn($x)=>trim($x['price'])==='')),'out_of_stock'=>count(array_filter($vars,fn($x)=>$x['stock_status']!=='instock'))],'variations'=>$vars,'description_len'=>mb_strlen(trim(wp_strip_all_tags($desc))),'short_description_len'=>mb_strlen(trim(wp_strip_all_tags($short))),'featured_image_id'=>(int)$p->get_image_id(),'image_count'=>count($images),'empty_alt_count'=>$empty,'images'=>$images,'seo_meta'=>$seo];}
-$terms=get_terms(['taxonomy'=>'product_cat','hide_empty'=>false]);$categories=[];if(!is_wp_error($terms)){foreach($terms as $t)$categories[]=['id'=>(int)$t->term_id,'name'=>$t->name,'slug'=>$t->slug,'count'=>(int)$t->count,'parent'=>(int)$t->parent,'description_len'=>mb_strlen(trim(wp_strip_all_tags($t->description))),'permalink'=>get_term_link($t)];}
-$active=(array)get_option('active_plugins',[]);$seo_plugins=array_values(array_filter($active,function($p){$s=strtolower($p);return strpos($s,'yoast')!==false||strpos($s,'seo')!==false||strpos($s,'rank-math')!==false||strpos($s,'aioseo')!==false;}));
-$out=['generated_at'=>gmdate('c'),'site'=>['home_url'=>home_url('/'),'site_url'=>site_url('/'),'blog_public'=>(int)get_option('blog_public'),'permalink_structure'=>(string)get_option('permalink_structure'),'woocommerce_permalinks'=>get_option('woocommerce_permalinks'),'shop_page_id'=>(int)get_option('woocommerce_shop_page_id'),'shop_url'=>function_exists('wc_get_page_permalink')?wc_get_page_permalink('shop'):'','seo_plugins'=>$seo_plugins],'summary'=>$summary,'categories'=>$categories,'products'=>$products];
+function g1_clean($u){return esc_url_raw($u);}
+function g1_pretty_product($slug){return user_trailingslashit(home_url('/product/'.$slug));}
+function g1_pretty_cat($slug){return user_trailingslashit(home_url('/product-category/'.$slug));}
+$ids=get_posts(['post_type'=>'product','post_status'=>'publish','numberposts'=>-1,'orderby'=>'ID','order'=>'ASC','fields'=>'ids']);
+$products=[];$seen=[];$titleGroups=[];$flags=[];
+foreach($ids as $id){$p=wc_get_product($id);if(!$p)continue;$slug=(string)get_post_field('post_name',$id);$name=$p->get_name();$old=get_permalink($id);$new=g1_pretty_product($slug);$cats=wp_get_post_terms($id,'product_cat',['fields'=>'names']);
+$row=['id'=>(int)$id,'name'=>$name,'slug'=>$slug,'old_url'=>g1_clean($old),'proposed_url'=>g1_clean($new),'categories'=>array_values($cats)];$products[]=$row;
+$key=mb_strtolower(trim(preg_replace('/\s+/u',' ',$name)));$titleGroups[$key][]=(int)$id;if(isset($seen[$new]))$flags[]=['type'=>'product_url_collision','ids'=>[$seen[$new],(int)$id],'url'=>$new];else$seen[$new]=(int)$id;
+if($slug===''||preg_match('/-\d+$/',$slug))$flags[]=['type'=>'product_slug_review','id'=>(int)$id,'slug'=>$slug,'reason'=>$slug===''?'empty':'numeric-suffix'];
+}
+foreach($titleGroups as $name=>$group){if(count($group)>1)$flags[]=['type'=>'duplicate_product_title','ids'=>$group,'name'=>$name];}
+$terms=get_terms(['taxonomy'=>'product_cat','hide_empty'=>true]);$categories=[];$cseen=[];if(!is_wp_error($terms)){foreach($terms as $t){$old=get_term_link($t);$new=g1_pretty_cat($t->slug);$row=['id'=>(int)$t->term_id,'name'=>$t->name,'slug'=>$t->slug,'count'=>(int)$t->count,'parent'=>(int)$t->parent,'old_url'=>g1_clean($old),'proposed_url'=>g1_clean($new)];$categories[]=$row;if(isset($cseen[$new]))$flags[]=['type'=>'category_url_collision','ids'=>[$cseen[$new],(int)$t->term_id],'url'=>$new];else$cseen[$new]=(int)$t->term_id;if(preg_match('/%[0-9a-f]{2}/i',$t->slug))$flags[]=['type'=>'category_slug_language_review','id'=>(int)$t->term_id,'slug'=>$t->slug];}}
+$contract=['wp_post_permalink'=>'/%postname%/','product_base'=>'product','product_pattern'=>'/product/{existing-product-slug}/','category_base'=>'product-category','category_pattern'=>'/product-category/{existing-category-slug}/','slug_policy'=>'preserve existing published slugs during first migration; fix verified bad slugs only in later isolated redirect-backed batch','redirect_policy'=>'301 exact old query URL to mapped pretty canonical; no chains; keep redirects long-term','canonical_policy'=>'self-referencing pretty canonical after migration','draft_policy'=>'exclude drafts','facet_policy'=>'do not create indexable filter/sort/search utility URLs'];
+$out=['generated_at'=>gmdate('c'),'server_software'=>$_SERVER['SERVER_SOFTWARE']??'','home_url'=>home_url('/'),'current'=>['permalink_structure'=>(string)get_option('permalink_structure'),'woocommerce_permalinks'=>get_option('woocommerce_permalinks'),'using_permalinks'=>isset($GLOBALS['wp_rewrite'])?$GLOBALS['wp_rewrite']->using_permalinks():null],'contract'=>$contract,'summary'=>['published_products'=>count($products),'active_categories'=>count($categories),'product_collisions'=>count(array_filter($flags,fn($x)=>$x['type']==='product_url_collision')),'category_collisions'=>count(array_filter($flags,fn($x)=>$x['type']==='category_url_collision')),'review_flags'=>count($flags)],'products'=>$products,'categories'=>$categories,'flags'=>$flags];
 echo wp_json_encode($out,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 '''
 call('save_file_content',{'dir':'public_html','file':probe,'content':php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
-try:
-    status,body,final=public_get('https://gramiss.ir/'+probe+'?t='+str(int(time.time())),180)
-    print('PROBE_STATUS',status,'BYTES',len(body),'FINAL',final)
-    if status!=200: raise RuntimeError('inventory probe non-200')
-    data=json.loads(body.decode('utf-8','replace'))
-finally:
-    # The PHP self-deletes before reading WooCommerce. If HTTP failed before execution, try deleting it via Fileman.
-    try: call('delete_files',{'dir':'public_html','files':probe},True)
-    except Exception: pass
-
-print('=== GRAMISS PRODUCT INVENTORY V1 ===')
-print('SITE',json.dumps(data.get('site',{}),ensure_ascii=False,separators=(',',':')))
-print('SUMMARY',json.dumps(data.get('summary',{}),ensure_ascii=False,separators=(',',':')))
-print('CATEGORIES',json.dumps(data.get('categories',[]),ensure_ascii=False,separators=(',',':')))
-for p in data.get('products',[]):
-    compact={k:p.get(k) for k in ['id','status','name','slug','type','permalink','sku','price','regular_price','sale_price','stock_status','manage_stock','stock_quantity','categories','attributes','variation_count','variation_issues','description_len','short_description_len','featured_image_id','image_count','empty_alt_count','seo_meta']}
-    print('PRODUCT',json.dumps(compact,ensure_ascii=False,separators=(',',':')))
-    if p.get('variation_count'):
-        print('VARIATIONS',p.get('id'),json.dumps(p.get('variations',[]),ensure_ascii=False,separators=(',',':')))
-    if p.get('empty_alt_count'):
-        print('IMAGE_ALT_ISSUES',p.get('id'),json.dumps([i for i in p.get('images',[]) if i.get('alt_empty')],ensure_ascii=False,separators=(',',':')))
-print('=== END INVENTORY; NO PRODUCT/OPTION/TAXONOMY MUTATIONS PERFORMED ===')
+status,body,final,headers=public_get('https://gramiss.ir/'+probe+'?t='+str(int(time.time())),180)
+print('PROBE_STATUS',status,'BYTES',len(body),'FINAL',final,'SERVER_HEADER',headers.get('Server',''))
+if status!=200: raise SystemExit('ABORT: probe failed; no changes performed')
+data=json.loads(body.decode('utf-8','replace'))
+print('=== GRAMISS SEO URL MIGRATION DRY RUN V1 ===')
+for key in ('server_software','home_url','current','contract','summary','flags'):
+    print(key.upper(),json.dumps(data.get(key),ensure_ascii=False,separators=(',',':')))
+for row in data.get('products',[]): print('PRODUCT_MAP',json.dumps(row,ensure_ascii=False,separators=(',',':')))
+for row in data.get('categories',[]): print('CATEGORY_MAP',json.dumps(row,ensure_ascii=False,separators=(',',':')))
+print('=== END DRY RUN; NO OPTIONS, SLUGS, PRODUCTS, TAXONOMIES OR REDIRECTS CHANGED ===')
