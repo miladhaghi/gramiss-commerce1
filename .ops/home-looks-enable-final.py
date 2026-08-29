@@ -15,21 +15,19 @@ def read_theme(rel):
  return d if isinstance(d,str) else ''
 def save(n,c):return call('save_file_content',{'dir':'public_html','file':n,'content':c,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
 def get(u):
- r=urllib.request.Request(u,headers={'User-Agent':'GramissRankMathSourceAudit/1.0','Cache-Control':'no-cache'});
+ r=urllib.request.Request(u,headers={'User-Agent':'GramissRankMathHelperAudit/1.0','Cache-Control':'no-cache'});
  with urllib.request.urlopen(r,context=ctx,timeout=120) as z:return z.status,z.read(),z.geturl()
 f=read_theme('front-page.php');sha=hashlib.sha256(f.encode()).hexdigest();print('LIVE_HOME_SHA',sha)
 if healthy and sha!=healthy:raise SystemExit('ABORT Home mismatch')
-st=str(int(time.time()));name='gramiss-rm-source-'+hashlib.sha256((st+sha).encode()).hexdigest()[:14]+'.php'
+st=str(int(time.time()));name='gramiss-rm-helper-'+hashlib.sha256((st+sha).encode()).hexdigest()[:14]+'.php'
 php=r'''<?php
 header('Content-Type: application/json; charset=utf-8');define('WP_USE_THEMES',false);require __DIR__.'/wp-load.php';@unlink(__FILE__);
-function g1_snips($file,$needles){$out=[];if(!$file||!is_readable($file))return $out;$lines=file($file,FILE_IGNORE_NEW_LINES);foreach($lines as $i=>$line){foreach($needles as $n){if(stripos($line,$n)!==false){$a=max(0,$i-5);$b=min(count($lines)-1,$i+7);$chunk=[];for($j=$a;$j<=$b;$j++)$chunk[]=['line'=>$j+1,'text'=>$lines[$j]];$out[]=['needle'=>$n,'at'=>$i+1,'context'=>$chunk];break;}}}return $out;}
-$rm=function_exists('rank_math')?rank_math():null;$reg=$rm?$rm->registration:null;$out=['php'=>PHP_VERSION,'wp'=>$GLOBALS['wp_version']??'','rank_math_version'=>defined('RANK_MATH_VERSION')?RANK_MATH_VERSION:'','rank_math_file'=>defined('RANK_MATH_FILE')?RANK_MATH_FILE:'','rank_math_path'=>defined('RANK_MATH_PATH')?RANK_MATH_PATH:'','active_plugins'=>get_option('active_plugins',[]),'network_plugins'=>is_multisite()?get_site_option('active_sitewide_plugins',[]):[],'registration_invalid'=>$reg?(bool)$reg->invalid:null,'rank_math_loaded'=>did_action('rank_math/loaded')];
-if($reg){$rc=new ReflectionClass($reg);$rf=$rc->getFileName();$out['registration']=['class'=>$rc->getName(),'file'=>$rf,'start'=>$rc->getStartLine(),'end'=>$rc->getEndLine(),'snips'=>g1_snips($rf,['invalid','RANK_MATH_VERSION','version_compare','minimum','requirements','PHP_VERSION','WP_VERSION'])];$props=[];foreach($rc->getProperties() as $p){$n=$p->getName();try{$p->setAccessible(true);$v=$p->getValue($reg);if(is_scalar($v)||$v===null||is_array($v))$props[$n]=$v;}catch(Throwable $e){}}$out['registration_props']=$props;}
-if($rm){$rc=new ReflectionClass($rm);$out['main']=['class'=>$rc->getName(),'file'=>$rc->getFileName(),'snips'=>g1_snips($rc->getFileName(),['registration','invalid','return','manager','frontend','rewrite'])];}
-$plugin=defined('RANK_MATH_FILE')?RANK_MATH_FILE:'';$out['plugin_main_snips']=g1_snips($plugin,['Registration','invalid','requirements','version_compare','PHP_VERSION','ABSPATH']);
-$out['options']=['rank_math_version'=>get_option('rank_math_version'),'rank_math_db_version'=>get_option('rank_math_db_version'),'rank_math_registration_data'=>get_option('rank_math_registration_data'),'rank_math_connect_data'=>get_option('rank_math_connect_data'),'rank_math_modules'=>get_option('rank_math_modules')];
+function g1_method($class,$method){$m=new ReflectionMethod($class,$method);$f=$m->getFileName();$s=$m->getStartLine();$e=$m->getEndLine();$lines=file($f,FILE_IGNORE_NEW_LINES);$chunk=[];for($i=max(1,$s-5);$i<=min(count($lines),$e+5);$i++)$chunk[]=['line'=>$i,'text'=>$lines[$i-1]];return ['class'=>$class,'method'=>$method,'file'=>$f,'start'=>$s,'end'=>$e,'source'=>$chunk];}
+$out=['invalid'=>\RankMath\Helper::is_invalid_registration(),'methods'=>[],'options'=>['registration_data'=>get_option('rank_math_registration_data'),'connect_data'=>get_option('rank_math_connect_data'),'wizard_completed'=>get_option('rank_math_wizard_completed'),'installation_date'=>get_option('rank_math_installation_date'),'version'=>get_option('rank_math_version')]];
+foreach([['RankMath\\Helper','is_invalid_registration'],['RankMath\\Helper','is_connected'],['RankMath\\Helper','get_registration_data']] as $x){try{$out['methods'][]=g1_method($x[0],$x[1]);}catch(Throwable $e){$out['methods'][]=['class'=>$x[0],'method'=>$x[1],'error'=>$e->getMessage()];}}
+$rf=new ReflectionClass('RankMath\\Helper');$file=$rf->getFileName();$lines=file($file,FILE_IGNORE_NEW_LINES);$hits=[];foreach($lines as $i=>$line){if(stripos($line,'registration')!==false||stripos($line,'connect_data')!==false||stripos($line,'is_connected')!==false){$hits[]=['line'=>$i+1,'text'=>$line];}}$out['helper_file']=$file;$out['registration_hits']=$hits;
 echo wp_json_encode($out,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 '''
-save(name,php);s,b,u=get('https://gramiss.ir/'+name+'?t='+st);print('SOURCE_AUDIT_STATUS',s,u,'BYTES',len(b));data=json.loads(b.decode('utf-8','replace'));print('SOURCE_AUDIT',json.dumps(data,ensure_ascii=False,separators=(',',':')))
+save(name,php);s,b,u=get('https://gramiss.ir/'+name+'?t='+st);print('HELPER_AUDIT_STATUS',s,u,'BYTES',len(b));print('HELPER_AUDIT',b.decode('utf-8','replace'))
 if hashlib.sha256(read_theme('front-page.php').encode()).hexdigest()!=sha:raise SystemExit('ABORT Home changed')
-print('END READ ONLY RANK MATH SOURCE AUDIT')
+print('END READ ONLY HELPER AUDIT')
