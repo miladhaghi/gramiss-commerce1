@@ -15,16 +15,13 @@ def read_theme(rel):
  return d if isinstance(d,str) else ''
 def save(n,c):return call('save_file_content',{'dir':'public_html','file':n,'content':c,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
 def get(u):
- r=urllib.request.Request(u,headers={'User-Agent':'GramissProductConflictAudit/1.0','Cache-Control':'no-cache'});
+ r=urllib.request.Request(u,headers={'User-Agent':'GramissMediaEvidence/1.0','Cache-Control':'no-cache'});
  with urllib.request.urlopen(r,context=ctx,timeout=180) as z:return z.status,z.read(),z.geturl()
 front=read_theme('front-page.php');sha=hashlib.sha256(front.encode()).hexdigest();print('LIVE_HOME_SHA',sha)
 if healthy and sha!=healthy:raise SystemExit('ABORT Home mismatch')
-st=str(int(time.time()));name='gramiss-product-conflict-audit-'+hashlib.sha256((st+sha).encode()).hexdigest()[:14]+'.php'
+st=str(int(time.time()));name='gramiss-media-evidence-'+hashlib.sha256((st+sha).encode()).hexdigest()[:14]+'.php'
 php=r'''<?php
-header('Content-Type: application/json; charset=utf-8');define('WP_USE_THEMES',false);require __DIR__.'/wp-load.php';@unlink(__FILE__);
-$ids=[49,62,68,80,84,87,210,296,307,320,330,344,355,359,366];$out=[];foreach($ids as $id){$p=wc_get_product($id);if(!$p)continue;$attrs=[];foreach($p->get_attributes() as $a){$vals=[];if($a->is_taxonomy()){foreach($a->get_terms() as $t)$vals[]=['id'=>(int)$t->term_id,'name'=>$t->name,'slug'=>$t->slug];}else $vals=$a->get_options();$attrs[]=['name'=>$a->get_name(),'label'=>wc_attribute_label($a->get_name()),'variation'=>$a->get_variation(),'visible'=>$a->get_visible(),'values'=>$vals];}$terms=[];foreach(wp_get_post_terms($id,'product_cat') as $t)$terms[]=['id'=>(int)$t->term_id,'name'=>$t->name,'slug'=>$t->slug];$vars=[];foreach($p->get_children() as $vid){$v=wc_get_product($vid);if(!$v)continue;$vars[]=['id'=>(int)$vid,'status'=>get_post_status($vid),'price'=>$v->get_price(),'regular_price'=>$v->get_regular_price(),'sale_price'=>$v->get_sale_price(),'stock'=>$v->get_stock_status(),'sku'=>$v->get_sku(),'attributes'=>$v->get_attributes()];}$out[]=['id'=>(int)$id,'name'=>$p->get_name(),'slug'=>rawurldecode(get_post_field('post_name',$id)),'url'=>get_permalink($id),'type'=>$p->get_type(),'price'=>$p->get_price(),'stock'=>$p->get_stock_status(),'short'=>trim(wp_strip_all_tags($p->get_short_description())),'description'=>trim(wp_strip_all_tags($p->get_description())),'categories'=>$terms,'attributes'=>$attrs,'variations'=>$vars];}echo wp_json_encode($out,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
-'''
-save(name,php);s,b,u=get('https://gramiss.ir/'+name+'?t='+st);print('PROBE',s,u,'BYTES',len(b));data=json.loads(b.decode('utf-8','replace'))
-for x in data:print('DETAIL',x['id'],json.dumps(x,ensure_ascii=False,separators=(',',':')))
+header('Content-Type: application/json; charset=utf-8');define('WP_USE_THEMES',false);require __DIR__.'/wp-load.php';@unlink(__FILE__);$ids=[296,307,320,330,344,359,366];$out=[];foreach($ids as $id){$p=wc_get_product($id);if(!$p)continue;$imgs=[];$all=array_values(array_filter(array_merge([$p->get_image_id()],$p->get_gallery_image_ids())));foreach($all as $aid)$imgs[]=['id'=>(int)$aid,'title'=>get_the_title($aid),'alt'=>get_post_meta($aid,'_wp_attachment_image_alt',true),'file'=>basename((string)get_attached_file($aid)),'caption'=>wp_get_attachment_caption($aid)];$out[]=['id'=>$id,'name'=>$p->get_name(),'images'=>$imgs];}echo wp_json_encode($out,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);'''
+save(name,php);s,b,u=get('https://gramiss.ir/'+name+'?t='+st);print('PROBE',s,u,'BYTES',len(b));data=json.loads(b.decode('utf-8','replace'));[print('MEDIA',x['id'],json.dumps(x,ensure_ascii=False,separators=(',',':'))) for x in data]
 if hashlib.sha256(read_theme('front-page.php').encode()).hexdigest()!=sha:raise SystemExit('ABORT Home changed')
-print('END TARGETED PRODUCT CONFLICT AUDIT')
+print('END MEDIA EVIDENCE AUDIT')
