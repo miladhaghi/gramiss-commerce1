@@ -15,5 +15,5 @@ jobs:
       HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
     steps:
       - uses: actions/checkout@v4
-      - name: Run Product Data QA V1
-        run: python3 .ops/home-looks-enable-final.py
+      - name: Run Product Data QA V1 retry
+        run: python3 .ops/product-data-fix-v1-retry.py
