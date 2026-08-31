@@ -5,7 +5,7 @@ on:
     branches: [ops/seo-content-architecture-v1]
 
 jobs:
-  editorial-schema-audit:
+  editorial-wave-2-3:
     runs-on: ubuntu-latest
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
@@ -15,5 +15,5 @@ jobs:
       HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
     steps:
       - uses: actions/checkout@v4
-      - name: Audit Article schema metadata
-        run: python3 .ops/editorial-schema-audit.py
+      - name: Publish and verify Editorial Wave 2-3 retry 2
+        run: python3 .ops/editorial-wave-2-3-retry2.py
