@@ -15,5 +15,7 @@ jobs:
       HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
     steps:
       - uses: actions/checkout@v4
-      - name: Audit blog page SEO meta
-        run: python3 .ops/blog-page-meta-audit.py
+      - name: Install Editorial SEO Foundation
+        run: python3 .ops/install-editorial-seo-foundation.py
+      - name: Publish and verify Content Wave 1 Article 01
+        run: python3 .ops/publish-article-01-boxy-vs-oversize.py
