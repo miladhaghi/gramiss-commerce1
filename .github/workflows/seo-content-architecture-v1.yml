@@ -15,5 +15,5 @@ jobs:
       HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy guarded Content SEO Foundation V1
-        run: python3 .ops/content-foundation-deploy-v1.py
+      - name: Retry guarded Content SEO Foundation V1
+        run: python3 .ops/content-foundation-deploy-v1-retry.py
