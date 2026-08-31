@@ -5,7 +5,7 @@ on:
     branches: [ops/seo-content-architecture-v1]
 
 jobs:
-  content-seo-audit:
+  content-foundation:
     runs-on: ubuntu-latest
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
@@ -15,5 +15,5 @@ jobs:
       HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
     steps:
       - uses: actions/checkout@v4
-      - name: Inspect live editorial theme structure
-        run: python3 .ops/editorial-theme-inspect-v1.py
+      - name: Deploy guarded Content SEO Foundation V1
+        run: python3 .ops/content-foundation-deploy-v1.py
