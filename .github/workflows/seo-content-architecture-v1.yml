@@ -5,7 +5,7 @@ on:
     branches: [ops/seo-content-architecture-v1]
 
 jobs:
-  editorial-wave-6-7:
+  editorial-wave-8-9:
     runs-on: ubuntu-latest
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
@@ -15,5 +15,5 @@ jobs:
       HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
     steps:
       - uses: actions/checkout@v4
-      - name: Publish and verify Editorial Wave 6-7
-        run: python3 .ops/editorial-wave-6-7.py
+      - name: Publish and verify Editorial Wave 8-9
+        run: python3 .ops/editorial-wave-8-9.py
