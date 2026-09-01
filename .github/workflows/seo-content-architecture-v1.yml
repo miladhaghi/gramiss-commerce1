@@ -17,5 +17,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Audit final 19-article editorial foundation v7
         run: python3 .ops/editorial-foundation-audit-v7.py
-      - name: Diagnose product indexability and sitemap mismatch
-        run: python3 .ops/product-indexability-diagnosis-v1.py
+      - name: Validate product gate implementation
+        run: |
+          python3 -m py_compile .ops/product-prepublish-gate-v1.py
+          python3 .ops/product-prepublish-gate-v1.py --self-test
+      - name: Report legacy product 49 blockers
+        run: python3 .ops/product-prepublish-gate-v1.py --product-id 49 --mode prepublish --index-intent index --report-only
+      - name: Report legacy noindex product 62
+        run: python3 .ops/product-prepublish-gate-v1.py --product-id 62 --mode postpublish --index-intent noindex --report-only
+      - name: Report legacy product 210 price blockers
+        run: python3 .ops/product-prepublish-gate-v1.py --product-id 210 --mode prepublish --index-intent index --report-only
