@@ -17,3 +17,19 @@ jobs:
       - uses: actions/checkout@v4
       - name: Audit editorial foundation v6
         run: python3 .ops/editorial-foundation-audit-v6.py
+      - name: Validate final wave 18-19 publisher
+        run: |
+          python3 -m py_compile .ops/editorial-wave-18-19.py
+          python3 - <<'PY'
+          import ast, pathlib
+          tree = ast.parse(pathlib.Path('.ops/editorial-wave-18-19.py').read_text())
+          for node in ast.walk(tree):
+              if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'php' for t in node.targets) and isinstance(node.value, ast.Constant):
+                  pathlib.Path('/tmp/wave1819.php').write_text(node.value.value)
+                  break
+          else:
+              raise SystemExit('main php payload not found')
+          PY
+          php -l /tmp/wave1819.php
+      - name: Publish guarded final editorial wave 18-19
+        run: python3 .ops/editorial-wave-18-19.py
