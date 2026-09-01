@@ -555,11 +555,23 @@ blog_status, blog_raw, blog_final, _ = get(
 blog_metadata = head(blog_raw)
 blog_body = blog_raw.decode("utf-8", "replace")
 print("BLOG", blog_status, blog_final, json.dumps(blog_metadata, ensure_ascii=False))
+blog_pages_body = blog_body
+if not all(title in blog_pages_body for title in expected_live_titles.values()):
+    blog_page_2 = state["blog"].rstrip("/") + "/page/2/"
+    blog_2_status, blog_2_raw, blog_2_final, _ = get(
+        blog_page_2 + "?t=" + str(int(time.time())), 180
+    )
+    blog_2_body = blog_2_raw.decode("utf-8", "replace")
+    print("BLOG_PAGE_2", blog_2_status, blog_2_final)
+    if blog_2_status == 200:
+        blog_pages_body += "\n" + blog_2_body
 if (
     blog_status != 200
     or norm(blog_metadata.get("canonical", "")) != norm(state["blog"])
     or "noindex" in blog_metadata.get("robots", "").lower()
-    or not all(title in blog_body for title in expected_live_titles.values())
+    or TITLE_10 not in blog_body
+    or TITLE_11 not in blog_body
+    or not all(title in blog_pages_body for title in expected_live_titles.values())
 ):
     errors.append("blog archive")
 
