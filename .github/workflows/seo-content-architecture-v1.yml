@@ -5,8 +5,9 @@ on:
     branches: [ops/seo-content-architecture-v1]
 
 jobs:
-  product-gate-validation-readonly:
+  seo-foundation-readonly-audits:
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
       CPANEL_USER: gramissi
@@ -15,13 +16,9 @@ jobs:
       HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
     steps:
       - uses: actions/checkout@v4
-      - name: Validate product gate implementation
+      - name: Audit final editorial foundation v7
+        run: python3 .ops/editorial-foundation-audit-v7.py
+      - name: Validate product gate code
         run: |
           python3 -m py_compile .ops/product-prepublish-gate-v1.py
           python3 .ops/product-prepublish-gate-v1.py --self-test
-      - name: Report legacy product 49 blockers
-        run: python3 .ops/product-prepublish-gate-v1.py --product-id 49 --mode prepublish --index-intent index --report-only
-      - name: Report legacy noindex product 62
-        run: python3 .ops/product-prepublish-gate-v1.py --product-id 62 --mode postpublish --index-intent noindex --report-only
-      - name: Report legacy product 210 price blockers
-        run: python3 .ops/product-prepublish-gate-v1.py --product-id 210 --mode prepublish --index-intent index --report-only
