@@ -5,7 +5,7 @@ on:
     branches: [ops/product-legacy-remediation-v1]
 
 jobs:
-  remediation-checkpoint-readonly:
+  shortdesc-batch2-discovery-readonly:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -16,7 +16,7 @@ jobs:
       HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
     steps:
       - uses: actions/checkout@v4
-      - name: Compile checkpoint audit
-        run: python3 -m py_compile .ops/legacy-product-remediation-audit-v1.py
-      - name: Audit legacy remediation checkpoint
-        run: python3 .ops/legacy-product-remediation-audit-v1.py
+      - name: Compile discovery
+        run: python3 -m py_compile .ops/legacy-shortdesc-batch2-discover.py
+      - name: Discover next safe T-shirt batch
+        run: python3 .ops/legacy-shortdesc-batch2-discover.py
