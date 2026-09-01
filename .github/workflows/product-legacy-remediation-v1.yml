@@ -5,7 +5,7 @@ on:
     branches: [ops/product-legacy-remediation-v1]
 
 jobs:
-  legacy-family-discovery-readonly:
+  pants-batch4-preflight-readonly:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -16,11 +16,12 @@ jobs:
       HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
     steps:
       - uses: actions/checkout@v4
-      - name: Compile discovery and checkpoint audit
+      - name: Compile batch 4 scripts
         run: |
-          python3 -m py_compile .ops/legacy-family-discovery-v1.py
+          python3 -m py_compile .ops/legacy-pants-batch4-facts.py
+          python3 -m py_compile .ops/legacy-pants-batch4-publish.py
           python3 -m py_compile .ops/legacy-product-remediation-audit-v3.py
       - name: Reconfirm 13-product checkpoint
         run: python3 .ops/legacy-product-remediation-audit-v3.py
-      - name: Discover next safe product family
-        run: python3 .ops/legacy-family-discovery-v1.py
+      - name: Audit pants batch 4 facts
+        run: python3 .ops/legacy-pants-batch4-facts.py
