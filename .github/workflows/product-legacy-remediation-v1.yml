@@ -5,7 +5,7 @@ on:
     branches: [ops/product-legacy-remediation-v1]
 
 jobs:
-  shortdesc-batch3-preflight-readonly:
+  shortdesc-batch3-publish:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
@@ -16,9 +16,7 @@ jobs:
       HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
     steps:
       - uses: actions/checkout@v4
-      - name: Compile batch 3 publisher and checkpoint audit
-        run: |
-          python3 -m py_compile .ops/legacy-shortdesc-batch3-publish.py
-          python3 -m py_compile .ops/legacy-product-remediation-audit-v2.py
-      - name: Reconfirm 10-product checkpoint
-        run: python3 .ops/legacy-product-remediation-audit-v2.py
+      - name: Compile publisher
+        run: python3 -m py_compile .ops/legacy-shortdesc-batch3-publish.py
+      - name: Publish and verify short-description batch 3
+        run: python3 .ops/legacy-shortdesc-batch3-publish.py
