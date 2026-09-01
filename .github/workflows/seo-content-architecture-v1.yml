@@ -17,5 +17,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: Audit final 19-article editorial foundation v7
         run: python3 .ops/editorial-foundation-audit-v7.py
-      - name: Audit product entry readiness v1
-        run: python3 .ops/product-entry-readiness-audit-v1.py
+      - name: Diagnose product indexability and sitemap mismatch
+        run: python3 .ops/product-indexability-diagnosis-v1.py
