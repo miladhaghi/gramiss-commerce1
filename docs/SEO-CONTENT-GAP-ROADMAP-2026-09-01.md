@@ -396,3 +396,32 @@ Post-mutation verification:
 If any post-mutation assertion fails, delete only Articles 10 and 11, remove only
 the two explicit marked blocks, invalidate sitemap/cache state, and re-check the
 nine-article baseline.
+
+## Wave 10-11 execution checkpoint
+
+The guarded batch completed on 2026-09-01 through the dedicated SEO workflow.
+The first attempt correctly rolled back because the verifier assumed all 11
+cards would remain on Blog page 1; the public archive paginates after nine
+cards. A separate public Audit V3 then proved the original nine-article state
+was fully restored. The verifier was corrected to require both new cards on
+page 1 and aggregate page 2 for the complete editorial set.
+
+- Article 10: post 482, `انتخاب-سایز-کتانی-مردانه`
+- Article 11: post 483, `راهنمای-خرید-کتانی-مردانه-روزمره`
+- Published posts: 11
+- Category counts: fit/size 4, fabric/care 2, style 2, buying 3
+- Post Sitemap: 12 URLs
+- Category Sitemap: 4 URLs
+- Product Sitemap: 47 URLs; SHA-256 remained
+  `70c4ea579eda29df345086d38a50ad0e681532dd0138f7e7d4d46d541e4526b3`
+- Protected Home Looks and front-page file hashes remained byte-identical
+- Both articles returned HTTP 200, canonical self-reference, index/follow,
+  BlogPosting, and no Product schema
+- Article 07 now links contextually to Articles 10 and 11
+- Article 01 now has the missing contextual bridge to the live T-shirt archive
+- Articles 12-19 remain planned only; no later roadmap item was published
+
+The branch is returned to audit-only mode after this batch. The persistent
+checkpoint validates the full 11-article set, paginated Blog archive, four
+editorial archives, internal-link graph, Product Sitemap baseline, and protected
+UI hashes on every later push to this branch.

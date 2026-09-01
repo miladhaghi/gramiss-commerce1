@@ -4,8 +4,8 @@ host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ
 root=os.environ['THEME_ROOT'].strip('/'); healthy=os.environ.get('HEALTHY_HOME_SHA','')
 ctx=ssl._create_unverified_context(); BASE='https://gramiss.ir'
 EXPECTED_PRODUCT_SHA='70c4ea579eda29df345086d38a50ad0e681532dd0138f7e7d4d46d541e4526b3'
-EXPECTED_IDS=[453,459,460,463,464,467,468,471,472]
-EXPECTED_CATEGORY_COUNTS={'fit-size-guide':3,'fabric-care':2,'style-guide':2,'buying-guide':2}
+EXPECTED_IDS=[453,459,460,463,464,467,468,471,472,482,483]
+EXPECTED_CATEGORY_COUNTS={'fit-size-guide':4,'fabric-care':2,'style-guide':2,'buying-guide':3}
 EXPECTED_TITLES={
 453:'تیشرت باکسی چیست و چه تفاوتی با اورسایز دارد؟',
 459:'راهنمای انتخاب سایز تیشرت باکسی مردانه؛ اندازه‌گیری و فیت مناسب',
@@ -16,6 +16,13 @@ EXPECTED_TITLES={
 468:'با شلوار بگ مردانه چی بپوشیم؟ راهنمای تیشرت، کفش و قد شلوار',
 471:'راهنمای خرید تیشرت مردانه؛ فیت، اندازه، پارچه، دوخت و چاپ',
 472:'راهنمای خرید شلوار جین مردانه؛ فیت، قد، پارچه و جزئیات',
+482:'راهنمای انتخاب سایز کتانی مردانه؛ اندازه‌گیری پا برای خرید آنلاین',
+483:'راهنمای خرید کتانی مردانه برای استفاده روزمره؛ سایز، رویه و زیره',
+}
+EXPECTED_FOCUS={482:'انتخاب سایز کتانی مردانه',483:'راهنمای خرید کتانی مردانه'}
+EXPECTED_META={
+482:('انتخاب سایز کتانی مردانه برای خرید آنلاین','برای انتخاب سایز کتانی مردانه، طول و عرض هر دو پا را درست اندازه بگیرید و نتیجه را با جدول همان مدل مقایسه کنید تا خرید آنلاین دقیق‌تری داشته باشید.'),
+483:('راهنمای خرید کتانی مردانه؛ سایز، رویه و زیره','راهنمای خرید کتانی مردانه برای استفاده روزمره؛ کاربرد، سایز، رویه، آستر، کفی، زیره و جزئیات ساخت را بدون تکیه بر ادعاهای مبهم مقایسه کنید.'),
 }
 
 def call(fn,p,post=False):
@@ -87,7 +94,7 @@ nonce=hashlib.sha256((str(time.time())+hashes['front-page.php']).encode()).hexdi
 probe='gramiss-editorial-foundation-audit-v2-'+nonce+'.php'
 php=r'''<?php
 header('Content-Type: application/json; charset=utf-8');define('WP_USE_THEMES',false);require __DIR__.'/wp-load.php';@unlink(__FILE__);
-$ids=[453,459,460,463,464,467,468,471,472];$posts=[];
+$ids=[453,459,460,463,464,467,468,471,472,482,483];$posts=[];
 foreach($ids as $id){$p=get_post($id);$posts[]=$p?['id'=>(int)$p->ID,'status'=>$p->post_status,'title'=>$p->post_title,'url'=>get_permalink($p),'cats'=>wp_get_post_categories($p->ID,['fields'=>'slugs']),'focus'=>get_post_meta($p->ID,'rank_math_focus_keyword',true)]:['id'=>$id,'missing'=>true];}
 $cats=[];foreach(['fit-size-guide','fabric-care','style-guide','buying-guide'] as $slug){$t=get_term_by('slug',$slug,'category');$cats[$slug]=$t?['id'=>(int)$t->term_id,'count'=>(int)$t->count,'url'=>get_term_link($t)]:null;}
 $blog=get_post(22);
@@ -102,7 +109,7 @@ if s!=200:
 else:
     try:state=json.loads(raw.decode('utf-8','replace'))
     except Exception as exc:errors.append('wp state json failed '+str(exc));state={}
-if state.get('published')!=9:errors.append('published post count != 9')
+if state.get('published')!=11:errors.append('published post count != 11')
 if not state.get('blog') or state['blog'].get('title')!='مجله Gramiss':errors.append('blog page drift')
 rows={int(p.get('id',0)):p for p in state.get('posts',[])}
 for pid in EXPECTED_IDS:
@@ -111,6 +118,7 @@ for pid in EXPECTED_IDS:
     if p.get('status')!='publish':errors.append('post not publish '+str(pid))
     if p.get('title')!=EXPECTED_TITLES[pid]:errors.append('title drift '+str(pid))
     if not p.get('url'):errors.append('url missing '+str(pid))
+    if pid in EXPECTED_FOCUS and p.get('focus')!=EXPECTED_FOCUS[pid]:errors.append('focus keyword drift '+str(pid))
 for slug,count in EXPECTED_CATEGORY_COUNTS.items():
     c=(state.get('categories') or {}).get(slug)
     if not c:errors.append('missing editorial category '+slug);continue
@@ -134,6 +142,9 @@ for pid,u in live_urls.items():
     if re.search(r'"@type"\s*:\s*"Product"',body,re.I):errors.append('accidental Product schema '+str(pid))
     if body.count('<h2>')<8:errors.append('thin heading structure '+str(pid))
     if len(article_links)<1:errors.append('article orphan/no editorial internal link '+str(pid))
+    if pid in EXPECTED_META and (h.get('title'),h.get('description'))!=EXPECTED_META[pid]:errors.append('metadata drift '+str(pid))
+    if pid==468 and not all(norm(live_urls[x]) in internal for x in (482,483)):errors.append('sneaker cluster bridge missing from 468')
+    if pid==453 and norm(BASE+'/product-category/tshirt/') not in internal:errors.append('tshirt commerce bridge missing from 453')
 
 for slug,count in EXPECTED_CATEGORY_COUNTS.items():
     c=state['categories'][slug];u=c['url'];st,r,final,_=get(u+'?t='+str(int(time.time())),150);h=head(r);body=r.decode('utf-8','replace')
@@ -151,11 +162,17 @@ if blog:
     if st!=200 or 'g1-editorial-index' not in body:errors.append('blog archive render')
     if norm(h.get('canonical',''))!=norm(blog):errors.append('blog canonical')
     if 'noindex' in h.get('robots','').lower():errors.append('blog noindex')
+    if EXPECTED_TITLES[482] not in body or EXPECTED_TITLES[483] not in body:errors.append('new articles missing from blog first page')
+    combined=body
+    if not all(title in combined for title in EXPECTED_TITLES.values()):
+        st2,r2,final2,_=get(blog.rstrip('/')+'/page/2/?t='+str(int(time.time())),150);body2=r2.decode('utf-8','replace')
+        print('BLOG_PAGE_2',st2,final2,'CARDS',sum(1 for t in EXPECTED_TITLES.values() if t in body2))
+        if st2==200:combined+='\n'+body2
     for title in EXPECTED_TITLES.values():
-        if title not in body:errors.append('blog missing card '+title[:25])
+        if title not in combined:errors.append('blog missing card '+title[:25])
 
 ss,posts=sitemap('post-sitemap.xml');print('POST_SITEMAP',ss,len(posts),json.dumps(posts,ensure_ascii=False));pn={norm(x) for x in posts}
-if ss!=200 or len(posts)!=10:errors.append('post sitemap count')
+if ss!=200 or len(posts)!=12:errors.append('post sitemap count')
 for u in live_urls.values():
     if norm(u) not in pn:errors.append('post sitemap missing '+norm(u))
 if blog and norm(blog) not in pn:errors.append('post sitemap missing blog')
@@ -169,4 +186,4 @@ if ss!=200 or len(products)!=47 or sha!=EXPECTED_PRODUCT_SHA:errors.append('prod
 
 print('ERRORS',json.dumps(errors,ensure_ascii=False))
 if errors:raise SystemExit('AUDIT FAILED: '+'; '.join(errors))
-print('PASS EDITORIAL FOUNDATION AUDIT V2')
+print('PASS EDITORIAL FOUNDATION AUDIT V4')

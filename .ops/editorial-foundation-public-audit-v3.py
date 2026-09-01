@@ -24,7 +24,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 
 BASE = "https://gramiss.ir"
-EXPECTED_IDS = [453, 459, 460, 463, 464, 467, 468, 471, 472]
+EXPECTED_IDS = [453, 459, 460, 463, 464, 467, 468, 471, 472, 482, 483]
 EXPECTED_TITLES = {
     453: "تیشرت باکسی چیست و چه تفاوتی با اورسایز دارد؟",
     459: "راهنمای انتخاب سایز تیشرت باکسی مردانه؛ اندازه‌گیری و فیت مناسب",
@@ -35,12 +35,24 @@ EXPECTED_TITLES = {
     468: "با شلوار بگ مردانه چی بپوشیم؟ راهنمای تیشرت، کفش و قد شلوار",
     471: "راهنمای خرید تیشرت مردانه؛ فیت، اندازه، پارچه، دوخت و چاپ",
     472: "راهنمای خرید شلوار جین مردانه؛ فیت، قد، پارچه و جزئیات",
+    482: "راهنمای انتخاب سایز کتانی مردانه؛ اندازه‌گیری پا برای خرید آنلاین",
+    483: "راهنمای خرید کتانی مردانه برای استفاده روزمره؛ سایز، رویه و زیره",
 }
 EXPECTED_CATEGORIES = {
-    "fit-size-guide": 3,
+    "fit-size-guide": 4,
     "fabric-care": 2,
     "style-guide": 2,
-    "buying-guide": 2,
+    "buying-guide": 3,
+}
+EXPECTED_META = {
+    482: (
+        "انتخاب سایز کتانی مردانه برای خرید آنلاین",
+        "برای انتخاب سایز کتانی مردانه، طول و عرض هر دو پا را درست اندازه بگیرید و نتیجه را با جدول همان مدل مقایسه کنید تا خرید آنلاین دقیق‌تری داشته باشید.",
+    ),
+    483: (
+        "راهنمای خرید کتانی مردانه؛ سایز، رویه و زیره",
+        "راهنمای خرید کتانی مردانه برای استفاده روزمره؛ کاربرد، سایز، رویه، آستر، کفی، زیره و جزئیات ساخت را بدون تکیه بر ادعاهای مبهم مقایسه کنید.",
+    ),
 }
 EXPECTED_PRODUCT_SITEMAP_SHA = (
     "70c4ea579eda29df345086d38a50ad0e681532dd0138f7e7d4d46d541e4526b3"
@@ -320,6 +332,11 @@ def main() -> int:
             errors.append(f"article {post_id} H2 structure is thin ({len(page.h2)})")
         if not page.title or not page.meta_description:
             errors.append(f"article {post_id} metadata missing")
+        if post_id in EXPECTED_META and (
+            page.title,
+            page.meta_description,
+        ) != EXPECTED_META[post_id]:
+            errors.append(f"article {post_id} metadata drift")
         if norm(page.canonical) != url:
             errors.append(f"article {post_id} canonical mismatch")
         if "noindex" in robots or "index" not in robots or "follow" not in robots:
@@ -376,7 +393,20 @@ def main() -> int:
     blog_status, blog_raw, blog_final, _ = request(f"{blog_url}?audit={int(time.time())}")
     blog_page, _ = parse_page(blog_raw)
     blog_links = {target for target, _ in internal_urls(blog_page.links, blog_final)}
-    blog_articles = sorted(blog_links & article_url_set)
+    blog_articles = blog_links & article_url_set
+    if blog_articles != article_url_set:
+        blog_page_2_url = blog_url.rstrip("/") + "/page/2/"
+        blog_2_status, blog_2_raw, blog_2_final, _ = request(
+            f"{blog_page_2_url}?audit={int(time.time())}"
+        )
+        blog_page_2, _ = parse_page(blog_2_raw)
+        if blog_2_status == 200:
+            blog_articles.update(
+                target
+                for target, _ in internal_urls(blog_page_2.links, blog_2_final)
+                if target in article_url_set
+            )
+    blog_articles = sorted(blog_articles)
     blog_robots = blog_page.robots.lower()
     blog_result = {
         "status": blog_status,
@@ -403,7 +433,7 @@ def main() -> int:
     product_sha = hashlib.sha256("\n".join(sorted(product_urls)).encode()).hexdigest()
     post_normalized = {norm(value) for value in post_urls}
     category_normalized = {norm(value) for value in category_sitemap_urls}
-    if post_status != 200 or len(post_urls) != 10:
+    if post_status != 200 or len(post_urls) != 12:
         errors.append(f"post sitemap mismatch: status={post_status} count={len(post_urls)}")
     if not article_url_set.issubset(post_normalized) or blog_url not in post_normalized:
         errors.append("post sitemap is missing editorial URLs")
