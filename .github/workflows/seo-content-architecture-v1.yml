@@ -5,7 +5,7 @@ on:
     branches: [ops/seo-content-architecture-v1]
 
 jobs:
-  editorial-foundation-audit-v4:
+  editorial-foundation-audit-v5:
     runs-on: ubuntu-latest
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
@@ -15,7 +15,5 @@ jobs:
       HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
     steps:
       - uses: actions/checkout@v4
-      - name: Audit protected editorial foundation v4
-        run: python3 .ops/editorial-foundation-audit-v2.py
-      - name: Cross-check public editorial foundation v3
-        run: python3 .ops/editorial-foundation-public-audit-v3.py
+      - name: Audit editorial foundation v5
+        run: python3 .ops/editorial-foundation-audit-v5.py
