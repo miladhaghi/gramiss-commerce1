@@ -5,9 +5,9 @@ on:
     branches: [ops/product-legacy-remediation-v1]
 
 jobs:
-  remediation-checkpoint-v5-readonly:
+  pants-batch6-preflight-readonly:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 22
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
       CPANEL_USER: gramissi
@@ -16,7 +16,11 @@ jobs:
       HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
     steps:
       - uses: actions/checkout@v4
-      - name: Compile checkpoint audit v5
-        run: python3 -m py_compile .ops/legacy-product-remediation-audit-v5.py
-      - name: Audit 23 remediated products
+      - name: Compile batch 6 facts and checkpoint
+        run: |
+          python3 -m py_compile .ops/legacy-pants-batch6-facts.py
+          python3 -m py_compile .ops/legacy-product-remediation-audit-v5.py
+      - name: Reconfirm 23-product checkpoint
         run: python3 .ops/legacy-product-remediation-audit-v5.py
+      - name: Audit pants batch 6 facts
+        run: python3 .ops/legacy-pants-batch6-facts.py
