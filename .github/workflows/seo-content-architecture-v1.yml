@@ -5,11 +5,15 @@ on:
     branches: [ops/seo-content-architecture-v1]
 
 jobs:
-  publisher-disabled-checkpoint-prep:
+  editorial-foundation-audit-v6:
     runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+      HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
     steps:
       - uses: actions/checkout@v4
-      - name: Confirm publisher is disabled
-        run: |
-          python3 -m py_compile .ops/editorial-wave-16-17-v2.py
-          echo "Wave 16-17 publisher disabled; preparing 17-article checkpoint audit."
+      - name: Audit editorial foundation v6
+        run: python3 .ops/editorial-foundation-audit-v6.py
