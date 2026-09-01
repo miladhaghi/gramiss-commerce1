@@ -5,7 +5,7 @@ on:
     branches: [ops/seo-content-architecture-v1]
 
 jobs:
-  editorial-foundation-audit-v7:
+  seo-foundation-readonly-audits:
     runs-on: ubuntu-latest
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
@@ -17,3 +17,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: Audit final 19-article editorial foundation v7
         run: python3 .ops/editorial-foundation-audit-v7.py
+      - name: Audit product entry readiness v1
+        run: python3 .ops/product-entry-readiness-audit-v1.py
