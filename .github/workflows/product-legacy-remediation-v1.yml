@@ -5,18 +5,12 @@ on:
     branches: [ops/product-legacy-remediation-v1]
 
 jobs:
-  pants-batch6-publish:
+  remediation-checkpoint-prep-readonly:
     runs-on: ubuntu-latest
-    timeout-minutes: 18
-    env:
-      CPANEL_HOST: cip20.mizbanfadns.net
-      CPANEL_USER: gramissi
-      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
-      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
-      HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Compile publisher
-        run: python3 -m py_compile .ops/legacy-pants-batch6-publish.py
-      - name: Publish and verify pants short-description batch 6
-        run: python3 .ops/legacy-pants-batch6-publish.py
+      - name: Confirm pants publisher is inactive
+        run: |
+          python3 -m py_compile .ops/legacy-pants-batch6-publish.py
+          echo "Pants mutation publisher disabled; checkpoint preparation only."
