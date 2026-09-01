@@ -5,9 +5,9 @@ on:
     branches: [ops/product-legacy-remediation-v1]
 
 jobs:
-  remediation-checkpoint-v6-readonly:
+  shirts-batch7-preflight-readonly:
     runs-on: ubuntu-latest
-    timeout-minutes: 22
+    timeout-minutes: 24
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
       CPANEL_USER: gramissi
@@ -16,7 +16,11 @@ jobs:
       HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
     steps:
       - uses: actions/checkout@v4
-      - name: Compile checkpoint audit v6
-        run: python3 -m py_compile .ops/legacy-product-remediation-audit-v6.py
-      - name: Audit 25 remediated products
+      - name: Compile batch 7 facts and checkpoint
+        run: |
+          python3 -m py_compile .ops/legacy-shirts-batch7-facts.py
+          python3 -m py_compile .ops/legacy-product-remediation-audit-v6.py
+      - name: Reconfirm 25-product checkpoint
         run: python3 .ops/legacy-product-remediation-audit-v6.py
+      - name: Audit shirts batch 7 facts
+        run: python3 .ops/legacy-shirts-batch7-facts.py
