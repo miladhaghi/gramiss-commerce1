@@ -2,6 +2,7 @@
 
 Status: Working source of truth
 Baseline audit: 2026-08-29
+Current checkpoint: 2026-09-01
 Scope: WordPress + WooCommerce production at gramiss.ir
 
 ## Business objective
@@ -42,8 +43,15 @@ Noindex candidates:
 - Thin filter/sort/faceted combinations
 
 ## Product URL policy
-Current production baseline uses query URLs because WordPress `permalink_structure` is empty.
-Before migration, define the final stable structure and produce a full redirect map. Do not mass-edit product slugs independently of the migration.
+Current production uses WordPress pretty permalinks with `/%postname%/`.
+
+Canonical product URLs use:
+
+`/product/<stable-product-slug>/`
+
+Product categories preserve native WooCommerce hierarchical paths under `/product-category/`.
+
+Legacy query URLs are redirect-backed to the pretty canonical URLs through the guarded migration map. Do not change an indexed product slug casually. Any future product URL change requires an explicit old->new map, permanent redirect, self-canonical verification, sitemap refresh and internal-link verification.
 
 ## Product data contract
 Every published product should ultimately have:
@@ -67,17 +75,72 @@ Every published product should ultimately have:
 - Social preview data
 - Valid Product structured data (WooCommerce output must not be duplicated)
 
-## 2026-08-29 production baseline
+## Product-entry authority — V1
+
+New products are governed by the dedicated product-entry stack rather than ad-hoc WooCommerce entry:
+
+- `docs/GRAMISS-PRODUCT-ENTRY-STANDARD-V1.md` — human-readable source of truth
+- `config/gramiss-product-entry-schema-v1.json` — machine-readable intake contract
+- `.ops/validate-product-intake-v1.py` — pre-WooCommerce payload validator
+- `.ops/product-prepublish-gate-v1.py` — live WooCommerce pre/post-publish gate
+- `.github/workflows/product-prepublish-gate-v1.yml` — manual strict/report workflow
+- `docs/GRAMISS-PRODUCT-INTAKE-V1.md` — operating procedure
+
+Required sequence for new inventory:
+
+1. authoritative product facts -> intake payload;
+2. intake validator PASS;
+3. WooCommerce product creation/configuration;
+4. pre-publish Gate PASS;
+5. publish;
+6. post-publish Gate PASS.
+
+Legacy catalogue debt does not weaken the requirements for newly entered products.
+
+## 2026-09-01 current production product state
+
+Read-only Product Entry Readiness Audit V1 and Product Indexability Diagnosis V1 confirmed:
+
+- Published products: 48
+- Draft/non-public products: 8
+- Published variable products: 45
+- Published simple products: 3
+- Published variations: 149
+- All 48 published product pages: HTTP 200
+- Product schema: exactly one Product object on every published product page
+- Published product image-alt gaps: 0
+- Published products missing featured image: 0
+- Published products missing full description: 0
+- Published products missing short description: 47
+- Published parent/master SKU missing: 48
+- Published variation SKU missing: 10
+- Published variation price missing: 2
+- Out-of-stock published variations: 5
+- Product `62` and product `68`: explicit legacy `noindex, follow`, no rendered canonical, intentionally excluded by Rank Math from Product Sitemap under their current state
+- Product Sitemap: 47 URLs = 45 indexable products + `/shop/`
+- Product Sitemap checksum remained protected during the editorial/content work
+
+Known authoritative-data blockers still requiring merchant/source data:
+
+- variation `213` under product `210`: no price
+- variation `346` under product `344`: no price
+- product `49`: variation SKUs missing on variations `50` and `52`
+- additional variation-SKU gaps remain in the published catalogue, including products `97` and `141`
+- parent/master SKU convention/data is not yet populated across the published catalogue
+
+These values must not be guessed from sibling products or generated arbitrarily.
+
+## 2026-08-29 historical production baseline
 WooCommerce product posts: 56
 Published products: 48
 Draft/non-public products: 8
 Total variations found: 159
 Active SEO plugin: Rank Math
-WordPress permalink_structure: empty
+WordPress permalink_structure at that baseline: empty
 WooCommerce product base: product
 WooCommerce category base: product-category
 
-Catalog issues detected across all 56 product posts:
+Catalog issues detected across all 56 product posts at that baseline:
 - Parent SKU missing: 56
 - Product description missing: 4
 - Short description missing: 55
@@ -85,7 +148,7 @@ Catalog issues detected across all 56 product posts:
 - Empty image alt values: 139
 - Products with at least one empty image alt: 48
 - Products without category: 5 (draft-side issues observed)
-- Query-style product URLs: 48 (the published catalog)
+- Query-style product URLs: 48 (the published catalog at that time)
 - Explicit per-product SEO title meta missing: 56
 - Explicit per-product SEO description meta missing: 56
 - Explicit per-product SEO canonical meta missing: 56
@@ -93,19 +156,14 @@ Catalog issues detected across all 56 product posts:
 - Variation price missing: 6 total (includes draft variations)
 - Out-of-stock variations: 5
 
-### Confirmed live-data issues requiring attention
-- Published product variation 213 (product 210) has no price while sibling variation is priced.
-- Published product variation 346 (product 344) has no price while sibling variation is priced.
-- Published product 49 has 2 variation SKUs missing.
-- Published product 97 has 5 variation SKUs missing.
-- Published product 141 has 3 variation SKUs missing.
-- All 48 published products have at least one product image with empty alt text.
+The historical alt/URL findings above have since been remediated or migrated where noted by the 2026-09-01 current-state section. Do not treat historical counts as current production defects.
 
 ### Human-review candidates (do not auto-correct blindly)
 - Duplicate/near-duplicate product names exist, including products 296/307/320 and 359/366; likely variants/colors/materials must be differentiated using verified facts.
 - Product 355 is named as long-sleeve but is assigned to a short-sleeve category; review required.
 - Some product/category naming and slugs contain apparent typos or inconsistent transliteration. Preserve print/brand wording when intentional; only correct verified mistakes.
 - Some products have overlapping category assignments that may be intentional or mistaken; review taxonomy before bulk normalization.
+- Product category 217 language/slug consistency remains a review item, not an automatic rename.
 
 ## Automation policy for Codex/scripts
 Safe to automate after dry-run:
@@ -119,15 +177,18 @@ Safe to automate after dry-run:
 - Redirect-map generation
 - Canonical/sitemap/robots QA
 - Schema QA
+- Product-intake structural validation
+- Pre/post-publish product gate checks
 
 Requires human/authoritative confirmation before write:
 - Price
 - Stock
 - Material
+- SKU values when the authoritative SKU convention/source is unavailable
 - Product identity/brand claims
 - Category changes where intent is ambiguous
 - Product-name corrections that may alter printed model/design names
-- URL migration final structure
+- URL changes after publication/indexing
 
 ## Definition of done for SEO Foundation V1
 - Pretty permalink architecture enabled and verified
@@ -142,4 +203,5 @@ Requires human/authoritative confirmation before write:
 - Product structured data validates without duplicate conflicting markup
 - Published categories have deliberate index/noindex decisions
 - Product images have useful alt strategy
+- New products pass the Gramiss Product Intake + Pre-Publish + Post-Publish contract
 - Search Console / measurement layer ready for post-migration monitoring
