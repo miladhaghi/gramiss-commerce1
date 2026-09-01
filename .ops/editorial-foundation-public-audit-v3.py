@@ -24,7 +24,7 @@ if hasattr(sys.stdout, "reconfigure"):
 
 
 BASE = "https://gramiss.ir"
-EXPECTED_IDS = [453, 459, 460, 463, 464, 467, 468, 471, 472, 482, 483]
+EXPECTED_IDS = [453, 459, 460, 463, 464, 467, 468, 471, 472, 482, 483, 487, 488]
 EXPECTED_TITLES = {
     453: "تیشرت باکسی چیست و چه تفاوتی با اورسایز دارد؟",
     459: "راهنمای انتخاب سایز تیشرت باکسی مردانه؛ اندازه‌گیری و فیت مناسب",
@@ -37,10 +37,12 @@ EXPECTED_TITLES = {
     472: "راهنمای خرید شلوار جین مردانه؛ فیت، قد، پارچه و جزئیات",
     482: "راهنمای انتخاب سایز کتانی مردانه؛ اندازه‌گیری پا برای خرید آنلاین",
     483: "راهنمای خرید کتانی مردانه برای استفاده روزمره؛ سایز، رویه و زیره",
+    487: "راهنمای انتخاب سایز پیراهن مردانه؛ سرشانه، سینه، قد و آستین",
+    488: "تمیز کردن کتانی سفید بدون آسیب؛ راهنمای رویه، بند و خشک‌کردن",
 }
 EXPECTED_CATEGORIES = {
-    "fit-size-guide": 4,
-    "fabric-care": 2,
+    "fit-size-guide": 5,
+    "fabric-care": 3,
     "style-guide": 2,
     "buying-guide": 3,
 }
@@ -53,6 +55,19 @@ EXPECTED_META = {
         "راهنمای خرید کتانی مردانه؛ سایز، رویه و زیره",
         "راهنمای خرید کتانی مردانه برای استفاده روزمره؛ کاربرد، سایز، رویه، آستر، کفی، زیره و جزئیات ساخت را بدون تکیه بر ادعاهای مبهم مقایسه کنید.",
     ),
+    487: (
+        "انتخاب سایز پیراهن مردانه؛ سرشانه، سینه و آستین",
+        "برای انتخاب سایز پیراهن مردانه، عرض سرشانه و سینه، قد لباس و طول آستین یک پیراهن مرجع را اندازه بگیرید و با اطلاعات همان مدل مقایسه کنید.",
+    ),
+    488: (
+        "تمیز کردن کتانی سفید بدون آسیب؛ راهنمای مراقبت",
+        "برای تمیز کردن کتانی سفید، ابتدا جنس و دستور مراقبت را بررسی کنید؛ گرد خشک، لکه‌گیری کنترل‌شده، بندها و خشک‌کردن را مرحله‌به‌مرحله مدیریت کنید.",
+    ),
+}
+EXPECTED_BRIDGES = {
+    463: ('data-g1-wave="1213-shirt-size-from-04"', 487),
+    467: ('data-g1-wave="1213-shirt-size-from-06"', 487),
+    483: ('data-g1-wave="1213-sneaker-care-from-11"', 488),
 }
 EXPECTED_PRODUCT_SITEMAP_SHA = (
     "70c4ea579eda29df345086d38a50ad0e681532dd0138f7e7d4d46d541e4526b3"
@@ -347,6 +362,10 @@ def main() -> int:
             errors.append(f"article {post_id} category mismatch: {assigned_slugs}")
         if not editorial_targets:
             errors.append(f"article {post_id} has no contextual editorial link")
+        if post_id in EXPECTED_BRIDGES:
+            marker, target_id = EXPECTED_BRIDGES[post_id]
+            if marker not in source or article_urls.get(target_id) not in targets:
+                errors.append(f"article {post_id} Wave 12-13 bridge mismatch")
 
     incoming = {post_id: [] for post_id in EXPECTED_IDS}
     id_by_url = {url: post_id for post_id, url in article_urls.items()}
@@ -394,18 +413,21 @@ def main() -> int:
     blog_page, _ = parse_page(blog_raw)
     blog_links = {target for target, _ in internal_urls(blog_page.links, blog_final)}
     blog_articles = blog_links & article_url_set
-    if blog_articles != article_url_set:
-        blog_page_2_url = blog_url.rstrip("/") + "/page/2/"
-        blog_2_status, blog_2_raw, blog_2_final, _ = request(
-            f"{blog_page_2_url}?audit={int(time.time())}"
+    for page_number in range(2, 6):
+        if blog_articles == article_url_set:
+            break
+        page_url = blog_url.rstrip("/") + f"/page/{page_number}/"
+        page_status, page_raw, page_final, _ = request(
+            f"{page_url}?audit={int(time.time())}"
         )
-        blog_page_2, _ = parse_page(blog_2_raw)
-        if blog_2_status == 200:
-            blog_articles.update(
-                target
-                for target, _ in internal_urls(blog_page_2.links, blog_2_final)
-                if target in article_url_set
-            )
+        if page_status != 200:
+            break
+        page, _ = parse_page(page_raw)
+        blog_articles.update(
+            target
+            for target, _ in internal_urls(page.links, page_final)
+            if target in article_url_set
+        )
     blog_articles = sorted(blog_articles)
     blog_robots = blog_page.robots.lower()
     blog_result = {
@@ -433,7 +455,7 @@ def main() -> int:
     product_sha = hashlib.sha256("\n".join(sorted(product_urls)).encode()).hexdigest()
     post_normalized = {norm(value) for value in post_urls}
     category_normalized = {norm(value) for value in category_sitemap_urls}
-    if post_status != 200 or len(post_urls) != 12:
+    if post_status != 200 or len(post_urls) != 14:
         errors.append(f"post sitemap mismatch: status={post_status} count={len(post_urls)}")
     if not article_url_set.issubset(post_normalized) or blog_url not in post_normalized:
         errors.append("post sitemap is missing editorial URLs")
@@ -447,6 +469,10 @@ def main() -> int:
         errors.append(f"product sitemap mismatch: status={product_status} count={len(product_urls)}")
     if product_sha != EXPECTED_PRODUCT_SITEMAP_SHA:
         errors.append(f"product sitemap SHA drift: {product_sha}")
+    if product_cat_status != 200 or len(product_cat_urls) != 20:
+        errors.append(
+            f"product category sitemap mismatch: status={product_cat_status} count={len(product_cat_urls)}"
+        )
 
     broken_targets: list[dict[str, object]] = []
     for target in sorted(all_contextual_targets):

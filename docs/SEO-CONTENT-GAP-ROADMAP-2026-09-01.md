@@ -425,3 +425,41 @@ The branch is returned to audit-only mode after this batch. The persistent
 checkpoint validates the full 11-article set, paginated Blog archive, four
 editorial archives, internal-link graph, Product Sitemap baseline, and protected
 UI hashes on every later push to this branch.
+
+## Wave 12-13 execution checkpoint
+
+The guarded batch completed on 2026-09-01 through SEO Content Architecture V1
+run `33506278268`. Both authenticated and public foundation audits passed before
+the publisher step, and the publisher's complete Production verifier also
+passed. The targeted freshness check confirmed the live shirt, short-sleeve
+shirt, long-sleeve shirt, sneakers, and casual-sneakers archives; no conflicting
+Gramiss owner was found. Current Persian results continue to emphasize garment
+measurement for shirt sizing and a mix of useful and unsafe universal cleaning
+recipes for white sneakers. Search volume remained `UNKNOWN / NOT USED`, and no
+paid SEO data was used.
+
+- Article 12: post 487, `انتخاب-سایز-پیراهن-مردانه`
+- Article 13: post 488, `تمیز-کردن-کتانی-سفید`
+- Published posts: 13
+- Category counts: fit/size 5, fabric/care 3, style 2, buying 3
+- Post Sitemap: 14 URLs
+- Category Sitemap: 4 URLs
+- Product Sitemap: the exact 47-URL set was preserved; SHA-256 remained
+  `70c4ea579eda29df345086d38a50ad0e681532dd0138f7e7d4d46d541e4526b3`
+- Product Category Sitemap: the exact 20-URL set was preserved; SHA-256 remained
+  `75711e43ad0c892716fa2f7615fc9594d2165d71b150a0eab0722f7335f881c4`
+- All four protected front-page/Home Looks hashes remained byte-identical
+- Both new articles returned HTTP 200, canonical self-reference, index/follow,
+  BlogPosting, and no Product schema
+- Article 04 (post 463) and Article 06 (post 467) now link contextually to
+  Article 12 through explicit Wave 12-13 markers
+- Article 11 (post 483) now links contextually to Article 13 through an explicit
+  Wave 12-13 marker; no forced link was added from Article 10
+- The complete 13-article set is visible across the Blog root and page 2
+- Contextual broken links: zero
+- Rollback was not activated
+
+The branch is returned to audit-only mode after this batch. The persistent
+authenticated and public audits now validate the 13-article set, the three new
+contextual bridges, paginated Blog coverage, editorial counts and sitemaps,
+Product Sitemap integrity, and protected UI hashes on every later push.

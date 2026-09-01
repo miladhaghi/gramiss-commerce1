@@ -4,8 +4,8 @@ host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ
 root=os.environ['THEME_ROOT'].strip('/'); healthy=os.environ.get('HEALTHY_HOME_SHA','')
 ctx=ssl._create_unverified_context(); BASE='https://gramiss.ir'
 EXPECTED_PRODUCT_SHA='70c4ea579eda29df345086d38a50ad0e681532dd0138f7e7d4d46d541e4526b3'
-EXPECTED_IDS=[453,459,460,463,464,467,468,471,472,482,483]
-EXPECTED_CATEGORY_COUNTS={'fit-size-guide':4,'fabric-care':2,'style-guide':2,'buying-guide':3}
+EXPECTED_IDS=[453,459,460,463,464,467,468,471,472,482,483,487,488]
+EXPECTED_CATEGORY_COUNTS={'fit-size-guide':5,'fabric-care':3,'style-guide':2,'buying-guide':3}
 EXPECTED_TITLES={
 453:'تیشرت باکسی چیست و چه تفاوتی با اورسایز دارد؟',
 459:'راهنمای انتخاب سایز تیشرت باکسی مردانه؛ اندازه‌گیری و فیت مناسب',
@@ -18,11 +18,15 @@ EXPECTED_TITLES={
 472:'راهنمای خرید شلوار جین مردانه؛ فیت، قد، پارچه و جزئیات',
 482:'راهنمای انتخاب سایز کتانی مردانه؛ اندازه‌گیری پا برای خرید آنلاین',
 483:'راهنمای خرید کتانی مردانه برای استفاده روزمره؛ سایز، رویه و زیره',
+487:'راهنمای انتخاب سایز پیراهن مردانه؛ سرشانه، سینه، قد و آستین',
+488:'تمیز کردن کتانی سفید بدون آسیب؛ راهنمای رویه، بند و خشک‌کردن',
 }
-EXPECTED_FOCUS={482:'انتخاب سایز کتانی مردانه',483:'راهنمای خرید کتانی مردانه'}
+EXPECTED_FOCUS={482:'انتخاب سایز کتانی مردانه',483:'راهنمای خرید کتانی مردانه',487:'انتخاب سایز پیراهن مردانه',488:'تمیز کردن کتانی سفید'}
 EXPECTED_META={
 482:('انتخاب سایز کتانی مردانه برای خرید آنلاین','برای انتخاب سایز کتانی مردانه، طول و عرض هر دو پا را درست اندازه بگیرید و نتیجه را با جدول همان مدل مقایسه کنید تا خرید آنلاین دقیق‌تری داشته باشید.'),
 483:('راهنمای خرید کتانی مردانه؛ سایز، رویه و زیره','راهنمای خرید کتانی مردانه برای استفاده روزمره؛ کاربرد، سایز، رویه، آستر، کفی، زیره و جزئیات ساخت را بدون تکیه بر ادعاهای مبهم مقایسه کنید.'),
+487:('انتخاب سایز پیراهن مردانه؛ سرشانه، سینه و آستین','برای انتخاب سایز پیراهن مردانه، عرض سرشانه و سینه، قد لباس و طول آستین یک پیراهن مرجع را اندازه بگیرید و با اطلاعات همان مدل مقایسه کنید.'),
+488:('تمیز کردن کتانی سفید بدون آسیب؛ راهنمای مراقبت','برای تمیز کردن کتانی سفید، ابتدا جنس و دستور مراقبت را بررسی کنید؛ گرد خشک، لکه‌گیری کنترل‌شده، بندها و خشک‌کردن را مرحله‌به‌مرحله مدیریت کنید.'),
 }
 
 def call(fn,p,post=False):
@@ -94,7 +98,7 @@ nonce=hashlib.sha256((str(time.time())+hashes['front-page.php']).encode()).hexdi
 probe='gramiss-editorial-foundation-audit-v2-'+nonce+'.php'
 php=r'''<?php
 header('Content-Type: application/json; charset=utf-8');define('WP_USE_THEMES',false);require __DIR__.'/wp-load.php';@unlink(__FILE__);
-$ids=[453,459,460,463,464,467,468,471,472,482,483];$posts=[];
+$ids=[453,459,460,463,464,467,468,471,472,482,483,487,488];$posts=[];
 foreach($ids as $id){$p=get_post($id);$posts[]=$p?['id'=>(int)$p->ID,'status'=>$p->post_status,'title'=>$p->post_title,'url'=>get_permalink($p),'cats'=>wp_get_post_categories($p->ID,['fields'=>'slugs']),'focus'=>get_post_meta($p->ID,'rank_math_focus_keyword',true)]:['id'=>$id,'missing'=>true];}
 $cats=[];foreach(['fit-size-guide','fabric-care','style-guide','buying-guide'] as $slug){$t=get_term_by('slug',$slug,'category');$cats[$slug]=$t?['id'=>(int)$t->term_id,'count'=>(int)$t->count,'url'=>get_term_link($t)]:null;}
 $blog=get_post(22);
@@ -109,7 +113,7 @@ if s!=200:
 else:
     try:state=json.loads(raw.decode('utf-8','replace'))
     except Exception as exc:errors.append('wp state json failed '+str(exc));state={}
-if state.get('published')!=11:errors.append('published post count != 11')
+if state.get('published')!=13:errors.append('published post count != 13')
 if not state.get('blog') or state['blog'].get('title')!='مجله Gramiss':errors.append('blog page drift')
 rows={int(p.get('id',0)):p for p in state.get('posts',[])}
 for pid in EXPECTED_IDS:
@@ -145,6 +149,9 @@ for pid,u in live_urls.items():
     if pid in EXPECTED_META and (h.get('title'),h.get('description'))!=EXPECTED_META[pid]:errors.append('metadata drift '+str(pid))
     if pid==468 and not all(norm(live_urls[x]) in internal for x in (482,483)):errors.append('sneaker cluster bridge missing from 468')
     if pid==453 and norm(BASE+'/product-category/tshirt/') not in internal:errors.append('tshirt commerce bridge missing from 453')
+    if pid==463 and ('data-g1-wave="1213-shirt-size-from-04"' not in body or norm(live_urls[487]) not in internal):errors.append('shirt sizing bridge missing from 463')
+    if pid==467 and ('data-g1-wave="1213-shirt-size-from-06"' not in body or norm(live_urls[487]) not in internal):errors.append('shirt sizing bridge missing from 467')
+    if pid==483 and ('data-g1-wave="1213-sneaker-care-from-11"' not in body or norm(live_urls[488]) not in internal):errors.append('sneaker care bridge missing from 483')
 
 for slug,count in EXPECTED_CATEGORY_COUNTS.items():
     c=state['categories'][slug];u=c['url'];st,r,final,_=get(u+'?t='+str(int(time.time())),150);h=head(r);body=r.decode('utf-8','replace')
@@ -162,17 +169,20 @@ if blog:
     if st!=200 or 'g1-editorial-index' not in body:errors.append('blog archive render')
     if norm(h.get('canonical',''))!=norm(blog):errors.append('blog canonical')
     if 'noindex' in h.get('robots','').lower():errors.append('blog noindex')
-    if EXPECTED_TITLES[482] not in body or EXPECTED_TITLES[483] not in body:errors.append('new articles missing from blog first page')
+    if EXPECTED_TITLES[487] not in body or EXPECTED_TITLES[488] not in body:errors.append('new articles missing from blog first page')
     combined=body
-    if not all(title in combined for title in EXPECTED_TITLES.values()):
-        st2,r2,final2,_=get(blog.rstrip('/')+'/page/2/?t='+str(int(time.time())),150);body2=r2.decode('utf-8','replace')
-        print('BLOG_PAGE_2',st2,final2,'CARDS',sum(1 for t in EXPECTED_TITLES.values() if t in body2))
-        if st2==200:combined+='\n'+body2
+    for page_number in range(2,6):
+        if all(title in combined for title in EXPECTED_TITLES.values()):break
+        page_url=blog.rstrip('/')+'/page/'+str(page_number)+'/'
+        page_status,page_raw,page_final,_=get(page_url+'?t='+str(int(time.time())),150);page_body=page_raw.decode('utf-8','replace')
+        print('BLOG_PAGE',page_number,page_status,page_final,'CARDS',sum(1 for t in EXPECTED_TITLES.values() if t in page_body))
+        if page_status!=200:break
+        combined+='\n'+page_body
     for title in EXPECTED_TITLES.values():
         if title not in combined:errors.append('blog missing card '+title[:25])
 
 ss,posts=sitemap('post-sitemap.xml');print('POST_SITEMAP',ss,len(posts),json.dumps(posts,ensure_ascii=False));pn={norm(x) for x in posts}
-if ss!=200 or len(posts)!=12:errors.append('post sitemap count')
+if ss!=200 or len(posts)!=14:errors.append('post sitemap count')
 for u in live_urls.values():
     if norm(u) not in pn:errors.append('post sitemap missing '+norm(u))
 if blog and norm(blog) not in pn:errors.append('post sitemap missing blog')
