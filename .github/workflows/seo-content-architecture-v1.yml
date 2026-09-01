@@ -19,3 +19,5 @@ jobs:
         run: python3 .ops/editorial-foundation-audit-v2.py
       - name: Cross-check public editorial foundation v3
         run: python3 .ops/editorial-foundation-public-audit-v3.py
+      - name: Publish guarded editorial wave 12-13
+        run: python3 .ops/editorial-wave-12-13.py
