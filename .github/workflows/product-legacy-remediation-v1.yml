@@ -5,9 +5,9 @@ on:
     branches: [ops/product-legacy-remediation-v1]
 
 jobs:
-  remediation-plan-readonly:
+  shortdesc-batch1-facts-readonly:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 8
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
       CPANEL_USER: gramissi
@@ -16,7 +16,7 @@ jobs:
       HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
     steps:
       - uses: actions/checkout@v4
-      - name: Compile remediation planner
-        run: python3 -m py_compile .ops/legacy-product-remediation-plan-v1.py
-      - name: Build legacy remediation plan
-        run: python3 .ops/legacy-product-remediation-plan-v1.py
+      - name: Compile batch 1 facts audit
+        run: python3 -m py_compile .ops/legacy-shortdesc-batch1-facts.py
+      - name: Audit batch 1 verified facts
+        run: python3 .ops/legacy-shortdesc-batch1-facts.py
