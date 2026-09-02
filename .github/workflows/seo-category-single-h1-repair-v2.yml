@@ -1,0 +1,19 @@
+name: SEO Category Single H1 Repair V2
+
+on:
+  push:
+    branches: [ops/seo-content-architecture-v1]
+
+jobs:
+  guarded-repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - uses: actions/checkout@v4
+      - name: Repair product category heading structure v2
+        run: python3 .ops/category-single-h1-repair-v2.py
