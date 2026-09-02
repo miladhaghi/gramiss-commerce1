@@ -1,0 +1,31 @@
+name: SEO Category Money Page Wave 3 V2 Selftest
+
+on:
+  push:
+    branches: [ops/seo-content-architecture-v1]
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile wave 3 sources
+        run: |
+          python3 -m py_compile .ops/category-money-page-content-wave3.py
+          python3 -m py_compile .ops/category-money-page-content-wave3-v2.py
+      - name: Verify semantic patch without production execution
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          src=Path('.ops/category-money-page-content-wave3.py').read_text(encoding='utf-8')
+          old="""        if len(strip_markup(stored)) < 300:\n            errors.append(str(tid) + ' stored copy thin')\n        if strip_markup(copy[tid])[:80] not in strip_markup(stored):\n            errors.append(str(tid) + ' stored copy mismatch')\n"""
+          new="""        stored_text = strip_markup(stored)\n        expected_text = strip_markup(copy[tid])\n        public_text = after['seo_text']\n        if len(stored_text) < 300:\n            errors.append(str(tid) + ' stored copy thin')\n        hm = re.search(r'<h2\\b[^>]*>(.*?)</h2>', copy[tid], re.I | re.S)\n        expected_heading = strip_markup(hm.group(1)) if hm else expected_text[:50]\n        if expected_heading not in stored_text or expected_heading not in public_text:\n            errors.append(str(tid) + ' semantic heading mismatch')\n        expected_links = {norm(html.unescape(u)) for u in re.findall(r'href=[\\\"\\\']([^\\\"\\\']+)', copy[tid], re.I) if 'gramiss.ir' in u}\n        actual_links = {norm(u) for u in after['internal_links']}\n        if not expected_links.issubset(actual_links):\n            errors.append(str(tid) + ' expected links missing')\n"""
+          assert src.count(old)==1, src.count(old)
+          patched=src.replace(old,new,1)
+          compile(patched,'wave3-v2-selftest','exec')
+          assert 'stored copy mismatch' not in patched
+          assert 'semantic heading mismatch' in patched
+          assert 'expected links missing' in patched
+          print('PASS WAVE3 V2 SEMANTIC SELFTEST')
+          PY
