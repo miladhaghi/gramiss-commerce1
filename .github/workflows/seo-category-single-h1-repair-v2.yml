@@ -1,8 +1,7 @@
 name: SEO Category Single H1 Repair V2
 
 on:
-  push:
-    branches: [ops/seo-content-architecture-v1]
+  workflow_dispatch:
 
 jobs:
   guarded-repair:
