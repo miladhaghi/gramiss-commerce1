@@ -16,7 +16,11 @@ BASE = 'https://gramiss.ir'
 def api(fn, params, post=False):
     url = f'https://{HOST}:2083/execute/Fileman/{fn}'
     encoded = urllib.parse.urlencode(params).encode()
-    req = urllib.request.Request(url if post else url + '?' + encoded.decode(), data=encoded if post else None, method='POST' if post else 'GET')
+    req = urllib.request.Request(
+        url if post else url + '?' + encoded.decode(),
+        data=encoded if post else None,
+        method='POST' if post else 'GET',
+    )
     req.add_header('Authorization', f'cpanel {USER}:{TOKEN}')
     if post:
         req.add_header('Content-Type', 'application/x-www-form-urlencoded')
@@ -30,14 +34,25 @@ def api(fn, params, post=False):
 
 def save(name, text):
     return api('save_file_content', {
-        'dir': 'public_html', 'file': name, 'content': text,
-        'from_charset': 'UTF-8', 'to_charset': 'UTF-8', 'fallback': '0',
+        'dir': 'public_html',
+        'file': name,
+        'content': text,
+        'from_charset': 'UTF-8',
+        'to_charset': 'UTF-8',
+        'fallback': '0',
     }, True)
 
 
 def safe_url(url):
     p = urllib.parse.urlsplit(url)
-    return urllib.parse.urlunsplit((p.scheme, p.netloc, urllib.parse.quote(urllib.parse.unquote(p.path), safe='/%:@'), p.query, p.fragment))
+    return urllib.parse.urlunsplit((
+        p.scheme,
+        p.netloc,
+        urllib.parse.quote(urllib.parse.unquote(p.path), safe='/%:@'),
+        p.query,
+        p.fragment,
+    ))
+
 
 nonce = hashlib.sha256(str(time.time()).encode()).hexdigest()[:14]
 probe = 'gramiss-category-native-title-source-v2-' + nonce + '.php'
@@ -74,9 +89,9 @@ foreach ($it as $file) {
   foreach ($needles as $needle) {
     $offset = 0;
     $parts = [];
-    while (($pos = stripos($text, $needle, $offset)) !== false && count($parts) < 4) {
-      $start = max(0, $pos - 360);
-      $parts[] = substr($text, $start, 900);
+    while (($pos = stripos($text, $needle, $offset)) !== false && count($parts) < 3) {
+      $start = max(0, $pos - 300);
+      $parts[] = substr($text, $start, 760);
       $offset = $pos + strlen($needle);
     }
     if ($parts) $hits[$needle] = $parts;
@@ -91,15 +106,14 @@ foreach ($it as $file) {
     ];
   }
 }
-// Also report the standard WooCommerce archive template actually available from the plugin.
 $wc = defined('WC_ABSPATH') ? WC_ABSPATH . 'templates/archive-product.php' : '';
 $wcrow = null;
 if ($wc && is_file($wc)) {
   $text = file_get_contents($wc);
-  $wcrow = ['path'=>$wc,'sha256'=>hash_file('sha256',$wc),'size'=>filesize($wc)];
+  $wcrow = ['path'=>$wc,'sha256'=>hash_file('sha256',$wc),'size'=>filesize($wc),'hits'=>[]];
   foreach (['woocommerce_show_page_title','page-title','woocommerce_page_title'] as $needle) {
     $pos = stripos($text,$needle);
-    if ($pos !== false) $wcrow['hits'][$needle] = substr($text,max(0,$pos-300),900);
+    if ($pos !== false) $wcrow['hits'][$needle] = substr($text,max(0,$pos-280),760);
   }
 }
 echo wp_json_encode([
@@ -110,4 +124,27 @@ echo wp_json_encode([
   'wc_archive'=>$wcrow,
 ], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 ?>'''
-save($probe ?? probe, php) if False else None
+
+save(probe, php)
+req = urllib.request.Request(
+    safe_url(BASE + '/' + probe + '?t=' + str(int(time.time()))),
+    headers={
+        'User-Agent': 'GramissCategoryNativeTitleSourceV2/1.0',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+    },
+)
+with urllib.request.urlopen(req, context=CTX, timeout=240) as response:
+    raw = response.read().decode('utf-8', 'replace')
+    print('HTTP', response.status)
+state = json.loads(raw)
+print('THEME_STATE', json.dumps({
+    'theme': state.get('theme'),
+    'stylesheet': state.get('stylesheet'),
+    'template': state.get('template'),
+}, ensure_ascii=False, sort_keys=True))
+for row in state.get('matches', []):
+    print('PHP_SOURCE_MATCH', json.dumps(row, ensure_ascii=False, sort_keys=True))
+print('WC_ARCHIVE', json.dumps(state.get('wc_archive'), ensure_ascii=False, sort_keys=True))
+print('MATCH_COUNT', len(state.get('matches', [])))
+print('PASS CATEGORY NATIVE TITLE SOURCE AUDIT V2 READ ONLY')
