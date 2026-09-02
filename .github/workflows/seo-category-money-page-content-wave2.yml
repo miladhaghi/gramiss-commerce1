@@ -1,0 +1,21 @@
+name: SEO Category Money Page Content Wave 2
+
+on:
+  push:
+    branches: [ops/seo-content-architecture-v1]
+
+jobs:
+  guarded-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile wave 2 publisher
+        run: python3 -m py_compile .ops/category-money-page-content-wave2.py
+      - name: Publish category money page content wave 2
+        run: python3 .ops/category-money-page-content-wave2.py

@@ -1,8 +1,7 @@
 name: SEO Category Money Page Wave 2 Selftest
 
 on:
-  push:
-    branches: [ops/seo-content-architecture-v1]
+  workflow_dispatch:
 
 jobs:
   selftest:
