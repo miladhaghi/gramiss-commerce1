@@ -17,7 +17,7 @@ jobs:
 
   production-readonly-audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
       CPANEL_USER: gramissi
@@ -28,3 +28,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: Audit final editorial foundation v7
         run: python3 .ops/editorial-foundation-audit-v7.py
+      - name: Audit product category money pages v1
+        run: python3 .ops/category-money-page-audit-v1.py
