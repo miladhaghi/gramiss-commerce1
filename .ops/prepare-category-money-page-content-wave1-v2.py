@@ -14,27 +14,24 @@ if blob_sha != EXPECTED_BLOB_SHA:
 
 text = raw.decode('utf-8')
 
-# Harden a PHP API call: use the queried term ID explicitly.
 old = "term_description( $term, 'product_cat' )"
 new = "term_description( $term->term_id, 'product_cat' )"
 if text.count(old) != 1:
     raise SystemExit(f'FAIL term_description patch count={text.count(old)}')
 text = text.replace(old, new, 1)
 
-# Keep mutation verification portable if mbstring is unavailable.
 old = "mb_strlen(wp_strip_all_tags($fresh->description))"
 new = "(function_exists('mb_strlen') ? mb_strlen(wp_strip_all_tags($fresh->description), 'UTF-8') : strlen(wp_strip_all_tags($fresh->description)))"
 if text.count(old) != 1:
     raise SystemExit(f'FAIL mb_strlen patch count={text.count(old)}')
 text = text.replace(old, new, 1)
 
-# Replace the unsafe JSON-to-PHP rollback generator with base64 transport.
 pattern = re.compile(r"def restore_terms\(pre\):.*?\n\n\nsitemap_urls =", re.S)
 match = pattern.search(text)
 if not match:
     raise SystemExit('FAIL restore_terms block not found')
 
-replacement = r'''def restore_terms(pre):
+replacement = r"""def restore_terms(pre):
     import base64
     terms = pre.get('terms', {})
     payload = {
@@ -75,7 +72,7 @@ echo wp_json_encode($out,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
         raise RuntimeError('restore terms failed ' + ' | '.join(errors))
 
 
-sitemap_urls ='''
+sitemap_urls ="""
 
 text = text[:match.start()] + replacement + text[match.end():]
 
