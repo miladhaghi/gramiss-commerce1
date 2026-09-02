@@ -1,0 +1,21 @@
+name: SEO Category Money Page Wave 1 Selftest
+
+on:
+  push:
+    branches: [ops/seo-content-architecture-v1]
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare hardened publisher
+        run: python3 .ops/prepare-category-money-page-content-wave1-v2.py
+      - name: Compile hardened publisher
+        run: python3 -m py_compile .ops/category-money-page-content-wave1.generated-v2.py
+      - name: Assert rollback hardening
+        run: |
+          grep -q "base64_decode(\$encoded, true)" .ops/category-money-page-content-wave1.generated-v2.py
+          grep -q "term_description( \$term->term_id, 'product_cat' )" .ops/category-money-page-content-wave1.generated-v2.py
+          ! grep -q "json.dumps(payload, ensure_ascii=False).replace" .ops/category-money-page-content-wave1.generated-v2.py
