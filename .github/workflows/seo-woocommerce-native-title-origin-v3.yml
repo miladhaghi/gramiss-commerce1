@@ -1,0 +1,18 @@
+name: SEO WooCommerce Native Category Title Origin V3
+
+on:
+  push:
+    branches: [ops/seo-content-architecture-v1]
+
+jobs:
+  origin-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit installed WooCommerce native category title origin
+        run: python3 .ops/woocommerce-native-category-title-origin-v3.py
