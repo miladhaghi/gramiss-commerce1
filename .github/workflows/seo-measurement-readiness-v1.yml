@@ -1,0 +1,20 @@
+name: SEO Measurement Readiness V1
+
+on:
+  push:
+    branches: [ops/seo-content-architecture-v1]
+
+jobs:
+  readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile measurement readiness audit
+        run: python3 -m py_compile .ops/search-console-readiness-audit-v1.py
+      - name: Inspect Rank Math measurement readiness
+        run: python3 .ops/search-console-readiness-audit-v1.py
