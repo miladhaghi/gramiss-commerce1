@@ -1,0 +1,22 @@
+name: SEO Category Money Page Wave 3 Selftest
+
+on:
+  push:
+    branches: [ops/seo-content-architecture-v1]
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile wave 3 publisher
+        run: python3 -m py_compile .ops/category-money-page-content-wave3.py
+      - name: Assert wave 3 guards
+        run: |
+          grep -q "TARGET_IDS = \[35, 32, 217, 59, 57, 56, 66, 68, 41\]" .ops/category-money-page-content-wave3.py
+          grep -q "PHP_SHA = '4f518fdbc1fdf84c2b4efb065af1129345d56fe121b2a67e8ab78a7e9719c21b'" .ops/category-money-page-content-wave3.py
+          grep -q "CSS_SHA = 'b20eba9bedbe2dc0f1115b4b63dd7deff1eaf6cb9dcfb17801d0e803eb8a21e2'" .ops/category-money-page-content-wave3.py
+          grep -q "base64_decode" .ops/category-money-page-content-wave3.py
+          grep -q "مشخصات یا برچسب مراقبت همان محصول" .ops/category-money-page-content-wave3.py
+          ! grep -q "def write_theme" .ops/category-money-page-content-wave3.py
