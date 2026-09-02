@@ -15,6 +15,15 @@ jobs:
           python3 .ops/validate-product-intake-v1.py --self-test
           python3 .ops/product-prepublish-gate-v1.py --self-test
 
+  measurement-tool-selftests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate measurement tools
+        run: |
+          python3 -m py_compile .ops/search-console-readiness-audit-v1.py .ops/search-console-export-analyzer-v1.py
+          python3 .ops/search-console-export-analyzer-v1.py --self-test
+
   production-readonly-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 12
