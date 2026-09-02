@@ -30,3 +30,5 @@ jobs:
         run: python3 .ops/editorial-foundation-audit-v7.py
       - name: Audit product category money pages v1
         run: python3 .ops/category-money-page-audit-v1.py
+      - name: Diagnose product category H1 origin v1
+        run: python3 .ops/category-h1-origin-diagnostic-v1.py
