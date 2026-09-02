@@ -19,14 +19,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate measurement tools
+      - name: Validate measurement and GSC activation tools
         run: |
-          python3 -m py_compile .ops/search-console-readiness-audit-v1.py .ops/search-console-export-analyzer-v1.py
+          python3 -m py_compile \
+            .ops/search-console-readiness-audit-v1.py \
+            .ops/search-console-export-analyzer-v1.py \
+            .ops/gsc-activation-preflight-v1.py \
+            .ops/gsc-verification-file-publisher-v1.py
           python3 .ops/search-console-export-analyzer-v1.py --self-test
+          python3 .ops/gsc-verification-file-publisher-v1.py --self-test
 
   production-readonly-audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
       CPANEL_USER: gramissi
@@ -44,3 +49,5 @@ jobs:
           grep -F 'CATEGORY_AUDIT_SUMMARY {"P0": 0, "P1": 0, "P2": 0, "PASS": 20, "total": 20}' /tmp/category-money-page-final.log
           grep -F 'SAFETY_ERRORS []' /tmp/category-money-page-final.log
           grep -F 'PASS CATEGORY MONEY PAGE AUDIT V1 READ ONLY' /tmp/category-money-page-final.log
+      - name: GSC activation preflight
+        run: python3 .ops/gsc-activation-preflight-v1.py
