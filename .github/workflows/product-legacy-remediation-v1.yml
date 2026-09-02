@@ -5,7 +5,7 @@ on:
     branches: [ops/product-legacy-remediation-v1]
 
 jobs:
-  shirts-batch8-preflight-readonly:
+  shirts-batch8-publish:
     runs-on: ubuntu-latest
     timeout-minutes: 24
     env:
@@ -16,11 +16,7 @@ jobs:
       HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
     steps:
       - uses: actions/checkout@v4
-      - name: Compile batch 8 facts and checkpoint
-        run: |
-          python3 -m py_compile .ops/legacy-shirts-batch8-facts.py
-          python3 -m py_compile .ops/legacy-product-remediation-audit-v7.py
-      - name: Reconfirm 30-product checkpoint
-        run: python3 .ops/legacy-product-remediation-audit-v7.py
-      - name: Audit shirts batch 8 facts
-        run: python3 .ops/legacy-shirts-batch8-facts.py
+      - name: Compile publisher
+        run: python3 -m py_compile .ops/legacy-shirts-batch8-publish.py
+      - name: Publish and verify shirts short-description batch 8
+        run: python3 .ops/legacy-shirts-batch8-publish.py
