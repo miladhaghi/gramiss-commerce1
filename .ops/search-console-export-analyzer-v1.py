@@ -52,7 +52,7 @@ def analyze(path,top=20):
     print(json.dumps(result,ensure_ascii=False,indent=2));return result
 
 def selftest():
-    text='Query,Clicks,Impressions,CTR,Position\nboxy tee,8,400,2%,7.2\nbaggy pants,2,300,0.67%,14\nlinen shirt,20,500,4%,3.1\nwhite sneakers,1,250,0.4%,27\n'
+    text='Query,Clicks,Impressions,CTR,Position\nboxy tee,8,400,2%,7.2\nbaggy pants,2,300,0.67%,14\nlinen shirt,20,500,4%,3.1\nwhite sneakers,1,1200,0.08%,27\n'
     with tempfile.NamedTemporaryFile('w',suffix='.csv',encoding='utf-8',delete=False) as f:f.write(text);p=f.name
     r=analyze(p,5);assert r['summary']['rows']==4;assert any(x['key']=='boxy tee' for x in r['striking_distance']);assert any(x['key']=='white sneakers' for x in r['high_impression_lower_rank']);print('PASS SEARCH CONSOLE EXPORT ANALYZER V1 SELFTEST')
 
