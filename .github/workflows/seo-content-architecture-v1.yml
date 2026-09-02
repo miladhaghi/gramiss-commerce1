@@ -32,3 +32,5 @@ jobs:
         run: python3 .ops/category-money-page-audit-v1.py
       - name: Diagnose product category H1 origin v1
         run: python3 .ops/category-h1-origin-diagnostic-v1.py
+      - name: Audit product category template origin v1
+        run: python3 .ops/category-template-origin-audit-v1.py
