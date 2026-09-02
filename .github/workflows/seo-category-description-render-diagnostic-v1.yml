@@ -1,8 +1,7 @@
 name: SEO Category Description Render Diagnostic V1
 
 on:
-  push:
-    branches: [ops/seo-content-architecture-v1]
+  workflow_dispatch:
 
 jobs:
   diagnostic:
