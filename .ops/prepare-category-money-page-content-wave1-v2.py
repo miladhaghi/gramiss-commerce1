@@ -3,18 +3,18 @@ import re
 
 SRC = pathlib.Path('.ops/category-money-page-content-wave1.py')
 OUT = pathlib.Path('.ops/category-money-page-content-wave1.generated-v2.py')
-EXPECTED_SHA = '96c0f536894f4242b0083c9a6673b9700bb9ac18'
+EXPECTED_BLOB_SHA = '96c0f536894f4242b0083c9a6673b9700bb9ac18'
 
 import hashlib
 raw = SRC.read_bytes()
-sha = hashlib.sha1(raw).hexdigest()
-if sha != EXPECTED_SHA:
-    raise SystemExit(f'FAIL SOURCE DRIFT expected={EXPECTED_SHA} got={sha}')
+blob_header = b'blob ' + str(len(raw)).encode('ascii') + b'\0'
+blob_sha = hashlib.sha1(blob_header + raw).hexdigest()
+if blob_sha != EXPECTED_BLOB_SHA:
+    raise SystemExit(f'FAIL SOURCE DRIFT expected={EXPECTED_BLOB_SHA} got={blob_sha}')
 
 text = raw.decode('utf-8')
 
-# Harden a PHP API call: term_description() expects a term ID/name-compatible value;
-# use the queried term ID explicitly to avoid object coercion differences.
+# Harden a PHP API call: use the queried term ID explicitly.
 old = "term_description( $term, 'product_cat' )"
 new = "term_description( $term->term_id, 'product_cat' )"
 if text.count(old) != 1:
@@ -28,7 +28,7 @@ if text.count(old) != 1:
     raise SystemExit(f'FAIL mb_strlen patch count={text.count(old)}')
 text = text.replace(old, new, 1)
 
-# Replace the unsafe JSON-to-PHP rollback generator with a base64 transport.
+# Replace the unsafe JSON-to-PHP rollback generator with base64 transport.
 pattern = re.compile(r"def restore_terms\(pre\):.*?\n\n\nsitemap_urls =", re.S)
 match = pattern.search(text)
 if not match:
@@ -79,7 +79,6 @@ sitemap_urls ='''
 
 text = text[:match.start()] + replacement + text[match.end():]
 
-# Static safety assertions before writing the executable generated publisher.
 for forbidden in [
     "json.dumps(payload, ensure_ascii=False).replace",
     "term_description( $term, 'product_cat' )",
