@@ -1,0 +1,21 @@
+name: SEO Category Money Page Wave 2 Selftest
+
+on:
+  push:
+    branches: [ops/seo-content-architecture-v1]
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile wave 2 publisher
+        run: python3 -m py_compile .ops/category-money-page-content-wave2.py
+      - name: Assert wave 2 guards
+        run: |
+          grep -q "TARGET_SLUGS = \['jeans', 'oversized-tshirt', 'graphic-tshirt', 'crewneck-tshirt', 'casual-shirt', 'fitted-cap'\]" .ops/category-money-page-content-wave2.py
+          grep -q "base64_decode(\$encoded,true)" .ops/category-money-page-content-wave2.py
+          grep -q "PHP_SHA = '4f518fdbc1fdf84c2b4efb065af1129345d56fe121b2a67e8ab78a7e9719c21b'" .ops/category-money-page-content-wave2.py
+          grep -q "CSS_SHA = 'b20eba9bedbe2dc0f1115b4b63dd7deff1eaf6cb9dcfb17801d0e803eb8a21e2'" .ops/category-money-page-content-wave2.py
+          ! grep -q "def write_theme" .ops/category-money-page-content-wave2.py
