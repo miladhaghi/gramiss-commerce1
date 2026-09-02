@@ -10,9 +10,12 @@ repls={
 'GramissLegacyShirtsBatch7/1.0':'GramissLegacySneakersBatch9/1.0',
 'gramiss-shirts-b7-':'gramiss-sneakers-b9-',
 "if(!in_array('پیراهن',$cats,true))":"if(!in_array('کتونی',$cats,true))",
+"if($mode==='apply'&&empty($o['errors']))foreach($targets as $sid=>$cfg){$r=wp_update_post(['ID'=>(int)$sid,'post_excerpt'=>$cfg['excerpt']],true);if(is_wp_error($r))$o['errors'][]='update:'.$sid;}":"if($mode==='apply'&&empty($o['errors'])){global $wpdb;foreach($targets as $sid=>$cfg){$r=$wpdb->update($wpdb->posts,['post_excerpt'=>$cfg['excerpt']],['ID'=>(int)$sid],['%s'],['%d']);if($r===false)$o['errors'][]='update:'.$sid;clean_post_cache((int)$sid);}}",
+"if($mode==='rollback')foreach($targets as $sid=>$cfg){$r=wp_update_post(['ID'=>(int)$sid,'post_excerpt'=>array_key_exists($sid,$old)?(string)$old[$sid]:''],true);if(is_wp_error($r))$o['errors'][]='rollback:'.$sid;}":"if($mode==='rollback'){global $wpdb;foreach($targets as $sid=>$cfg){$v=array_key_exists($sid,$old)?(string)$old[$sid]:'';$r=$wpdb->update($wpdb->posts,['post_excerpt'=>$v],['ID'=>(int)$sid],['%s'],['%d']);if($r===false)$o['errors'][]='rollback:'.$sid;clean_post_cache((int)$sid);}}",
 "if out['after'][k]['excerpt']!=c['excerpt']:raise RuntimeError('stored '+k)":"if html.unescape(out['after'][k]['excerpt'])!=c['excerpt']:raise RuntimeError('stored '+k)",
 'PASS LEGACY SHIRTS SHORT DESCRIPTION BATCH 7':'PASS LEGACY SNEAKERS SHORT DESCRIPTION BATCH 9'}
 for old,new in repls.items():
  if old not in s: raise SystemExit('batch9 publisher anchor mismatch: '+old)
  s=s.replace(old,new)
+if 'wp_update_post' in s: raise SystemExit('unsafe wp_update_post remains in batch9 generated publisher')
 exec(compile(s,'.ops/legacy-sneakers-batch9-publish.generated.py','exec'),{'__name__':'__main__'})
