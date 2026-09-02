@@ -5,9 +5,9 @@ on:
     branches: [ops/product-legacy-remediation-v1]
 
 jobs:
-  remediation-checkpoint-v7-readonly:
+  remediation-checkpoint-v8-readonly:
     runs-on: ubuntu-latest
-    timeout-minutes: 24
+    timeout-minutes: 28
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
       CPANEL_USER: gramissi
@@ -16,7 +16,7 @@ jobs:
       HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
     steps:
       - uses: actions/checkout@v4
-      - name: Compile checkpoint audit v7
-        run: python3 -m py_compile .ops/legacy-product-remediation-audit-v7.py
-      - name: Audit 30 remediated products
-        run: python3 .ops/legacy-product-remediation-audit-v7.py
+      - name: Compile checkpoint audit v8
+        run: python3 -m py_compile .ops/legacy-product-remediation-audit-v8.py
+      - name: Audit 33 remediated products
+        run: python3 .ops/legacy-product-remediation-audit-v8.py
