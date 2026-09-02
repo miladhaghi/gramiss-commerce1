@@ -1,0 +1,18 @@
+name: SEO Category Description Render Diagnostic V1
+
+on:
+  push:
+    branches: [ops/seo-content-architecture-v1]
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect category description render path
+        run: python3 .ops/category-description-render-diagnostic-v1.py
