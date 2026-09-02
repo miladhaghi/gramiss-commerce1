@@ -5,7 +5,7 @@ on:
     branches: [ops/product-legacy-remediation-v1]
 
 jobs:
-  sneakers-batch9-preflight-readonly:
+  sneakers-batch9-publish:
     runs-on: ubuntu-latest
     timeout-minutes: 32
     env:
@@ -16,11 +16,7 @@ jobs:
       HEALTHY_HOME_SHA: 0e5b79e88279812dbb20a7728061cee3ec00c79b6ef1894c3049d42856b795a7
     steps:
       - uses: actions/checkout@v4
-      - name: Compile batch 9 facts and checkpoint
-        run: |
-          python3 -m py_compile .ops/legacy-sneakers-batch9-facts.py
-          python3 -m py_compile .ops/legacy-product-remediation-audit-v8.py
-      - name: Reconfirm 33-product checkpoint
-        run: python3 .ops/legacy-product-remediation-audit-v8.py
-      - name: Audit sneakers batch 9 facts
-        run: python3 .ops/legacy-sneakers-batch9-facts.py
+      - name: Compile publisher
+        run: python3 -m py_compile .ops/legacy-sneakers-batch9-publish.py
+      - name: Publish and verify sneakers short-description batch 9
+        run: python3 .ops/legacy-sneakers-batch9-publish.py
