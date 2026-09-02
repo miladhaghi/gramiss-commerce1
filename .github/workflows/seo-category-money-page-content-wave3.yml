@@ -1,7 +1,8 @@
 name: SEO Category Money Page Content Wave 3
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [ops/seo-content-architecture-v1]
 
 jobs:
   guarded-publish:
@@ -14,7 +15,9 @@ jobs:
       THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
     steps:
       - uses: actions/checkout@v4
-      - name: Compile wave 3 publisher
-        run: python3 -m py_compile .ops/category-money-page-content-wave3.py
-      - name: Publish category money page content wave 3
-        run: python3 .ops/category-money-page-content-wave3.py
+      - name: Compile wave 3 semantic publisher
+        run: |
+          python3 -m py_compile .ops/category-money-page-content-wave3.py
+          python3 -m py_compile .ops/category-money-page-content-wave3-v2.py
+      - name: Publish category money page content wave 3 v2
+        run: python3 .ops/category-money-page-content-wave3-v2.py
