@@ -10,6 +10,7 @@ repls={
 'GramissLegacyShirtsBatch7/1.0':'GramissLegacySneakersBatch9/1.0',
 'gramiss-shirts-b7-':'gramiss-sneakers-b9-',
 "if(!in_array('پیراهن',$cats,true))":"if(!in_array('کتونی',$cats,true))",
+"if out['after'][k]['excerpt']!=c['excerpt']:raise RuntimeError('stored '+k)":"if html.unescape(out['after'][k]['excerpt'])!=c['excerpt']:raise RuntimeError('stored '+k)",
 'PASS LEGACY SHIRTS SHORT DESCRIPTION BATCH 7':'PASS LEGACY SNEAKERS SHORT DESCRIPTION BATCH 9'}
 for old,new in repls.items():
  if old not in s: raise SystemExit('batch9 publisher anchor mismatch: '+old)
