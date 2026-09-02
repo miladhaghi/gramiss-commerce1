@@ -2,7 +2,7 @@
 
 Status: Working source of truth
 Baseline audit: 2026-08-29
-Current checkpoint: 2026-09-01
+Current checkpoint: 2026-09-02
 Scope: WordPress + WooCommerce production at gramiss.ir
 
 ## Business objective
@@ -96,6 +96,39 @@ Required sequence for new inventory:
 6. post-publish Gate PASS.
 
 Legacy catalogue debt does not weaken the requirements for newly entered products.
+
+## 2026-09-02 product remediation checkpoint
+
+Guarded legacy short-description remediation is complete for the current safe/indexable product inventory. The detailed operational record is preserved in `docs/PRODUCT-LEGACY-REMEDIATION-V1-CHECKPOINT.md`.
+
+Current verified state:
+
+- Published products: 48
+- Products with verified short descriptions: 41
+- Remaining empty short descriptions: 6
+- Safe/indexable products still eligible for automated short-description remediation: 0
+- Product Sitemap: 47 URLs, unchanged; SHA `70c4ea579eda29df345086d38a50ad0e681532dd0138f7e7d4d46d541e4526b3`
+- Product category sitemap: 20 URLs, unchanged; SHA `75711e43ad0c892716fa2f7615fc9594d2165d71b150a0eab0722f7335f881c4`
+- Home / Gramiss Looks protected files remained unchanged through the remediation workflow
+- Product `62` and product `68` remain explicit legacy `noindex` products and remain outside the indexable remediation set
+
+The four indexable products that still have empty short descriptions are intentionally blocked by missing authoritative WooCommerce variation data:
+
+- product `97` — missing variation SKUs on `108`, `109`, `110`, `111`, `112`; parent/master SKU also missing
+- product `141` — missing variation SKUs on `144`, `145`, `146`; parent/master SKU also missing
+- product `210` — variation `213` has no price; parent/master SKU also missing
+- product `344` — variation `346` has no price; parent/master SKU also missing
+
+The two other remaining empty-description products are intentionally noindex:
+
+- product `62` — کلاه فیت کپ GIANTS نارنجی
+- product `68` — کلاه فیت کپ BOSTON
+
+Do not manufacture SKU or price data to clear these blockers, and do not add SEO copy to noindex products merely to make the remediation counter reach zero. Revisit these six only when authoritative product data or an intentional indexability decision changes.
+
+The remediation publisher used guarded, reversible, excerpt-only writes. Final verification required HTTP 200, expected meta description, self-canonical, index/follow for remediated products, exactly one Product schema, unchanged sitemap membership/checksums and exact protected UI hashes.
+
+Parent/master SKU debt remains a broader catalog-data issue and was not auto-filled. Variation SKU/price gaps elsewhere in the catalogue remain governed by the Product Entry contract and authoritative-data rule even when a product already has a short description.
 
 ## 2026-09-01 current production product state
 
