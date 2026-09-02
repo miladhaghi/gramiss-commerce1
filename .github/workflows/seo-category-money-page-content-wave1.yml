@@ -1,8 +1,7 @@
 name: SEO Category Money Page Content Wave 1
 
 on:
-  push:
-    branches: [ops/seo-content-architecture-v1]
+  workflow_dispatch:
 
 jobs:
   guarded-publish:
