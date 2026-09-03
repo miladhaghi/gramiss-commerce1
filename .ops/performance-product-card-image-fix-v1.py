@@ -24,7 +24,7 @@ PROTECTED = {
     'assets/css/home-looks.css': '98e73735ac23de72de8350d38dd2170b8ca9f7d0fcb913156908ab701770dab0',
     'assets/js/home-looks.js': '6224befd75a768dea6feea70b40c42c3b54fca190d096db4c89079ccf44b6ec2',
 }
-OLD = "$product->get_image('full',array('loading'=>'lazy','decoding'=>'async'))"
+OLD = "wp_kses_post($product->get_image('full',array('loading'=>'lazy','decoding'=>'async')))"
 NEW = "$product->get_image('gramiss-product-card',array('loading'=>'lazy','decoding'=>'async','sizes'=>'(max-width: 900px) 50vw, (max-width: 1100px) 33vw, 25vw'))"
 
 
@@ -131,6 +131,7 @@ def rendered_verify():
     errors = []
     tags = re.findall(r'<img\b[^>]*>', page, re.I | re.S)
     product_tags = [t for t in tags if 'attachment-gramiss-product-card' in t or 'attachment-full' in t]
+    print('RENDERED_IMAGE_TAGS', json.dumps(product_tags[:6], ensure_ascii=False))
     if len(product_tags) < 6:
         errors.append('too few rendered product image tags')
     for i, tag in enumerate(product_tags[:6]):
@@ -167,7 +168,7 @@ def main():
     if old_sha != HEADER_EXPECTED_SHA:
         raise SystemExit('REFUSE header SHA mismatch')
     if old.count(OLD) != 1:
-        raise SystemExit('REFUSE old image call count != 1')
+        raise SystemExit('REFUSE old image wrapper count != 1')
     if NEW in old:
         raise SystemExit('REFUSE new call already present')
     new = old.replace(OLD, NEW, 1)
