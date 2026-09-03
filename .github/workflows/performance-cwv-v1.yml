@@ -1,28 +1,10 @@
 name: Performance CWV V1
 
 on:
-  push:
-    branches: [ops/performance-cwv-v1]
+  workflow_dispatch:
 
 jobs:
-  lighthouse-post-purge-readonly:
+  safety-hold:
     runs-on: ubuntu-latest
-    timeout-minutes: 24
     steps:
-      - uses: actions/checkout@v4
-      - name: Compile post-purge verifier
-        run: python3 -m py_compile .ops/performance-after-image-fix-v1.py
-      - name: Confirm Lighthouse
-        run: npx -y lighthouse@12.2.1 --version
-      - name: Run mobile Lighthouse verification after cache purge
-        env:
-          PERF_OUT: /tmp/gramiss-perf-after-purge
-        run: python3 .ops/performance-after-image-fix-v1.py
-      - name: Upload post-purge reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gramiss-performance-after-purge-v1
-          path: /tmp/gramiss-perf-after-purge
-          if-no-files-found: warn
-          retention-days: 14
+      - run: echo "Performance V1 image fix verified; automatic runs disabled."
