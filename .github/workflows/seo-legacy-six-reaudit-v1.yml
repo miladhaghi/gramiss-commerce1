@@ -1,0 +1,20 @@
+name: SEO Legacy Six Reaudit V1
+
+on:
+  push:
+    branches: [ops/seo-legacy-six-reaudit-v1]
+
+jobs:
+  reaudit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile re-audit
+        run: python3 -m py_compile .ops/seo-legacy-six-reaudit-v1.py
+      - name: Run read-only legacy six re-audit
+        run: python3 .ops/seo-legacy-six-reaudit-v1.py
