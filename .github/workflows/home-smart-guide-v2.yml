@@ -5,16 +5,16 @@ on:
     branches: [ops/home-smart-guide-v2]
 
 jobs:
-  inspect-live:
+  deploy-smart-guide:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
       CPANEL_USER: gramissi
       CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-      - name: Compile Smart Guide inspector
-        run: python3 -m py_compile .ops/home-smart-guide-inspect-v2.py
-      - name: Inspect live Smart Guide read only
-        run: python3 .ops/home-smart-guide-inspect-v2.py
+      - name: Compile guarded Smart Guide deploy
+        run: python3 -m py_compile .ops/home-smart-guide-deploy-v2.py
+      - name: Deploy Smart Guide V2 with rollback guards
+        run: python3 .ops/home-smart-guide-deploy-v2.py
