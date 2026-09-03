@@ -5,7 +5,7 @@ on:
     branches: [ops/performance-cwv-v1]
 
 jobs:
-  live-image-source-diagnostic:
+  apply-pdp-image-request-fix:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
@@ -14,7 +14,7 @@ jobs:
       CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-      - name: Compile live image source scanner
-        run: python3 -m py_compile .ops/performance-product-card-source-scan-v1.py
-      - name: Scan live theme image sources read only
-        run: python3 .ops/performance-product-card-source-scan-v1.py
+      - name: Compile guarded PDP image request fix
+        run: python3 -m py_compile .ops/performance-pdp-image-request-fix-v1.py
+      - name: Apply guarded PDP image request fix
+        run: python3 .ops/performance-pdp-image-request-fix-v1.py
