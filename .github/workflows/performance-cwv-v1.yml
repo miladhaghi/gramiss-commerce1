@@ -5,16 +5,16 @@ on:
     branches: [ops/performance-cwv-v1]
 
 jobs:
-  product-card-image-source-readonly:
+  product-image-size-facts-readonly:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 10
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
       CPANEL_USER: gramissi
       CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-      - name: Compile source scanner
-        run: python3 -m py_compile .ops/performance-product-card-source-scan-v1.py
-      - name: Scan live theme source and rendered archive image markup
-        run: python3 .ops/performance-product-card-source-scan-v1.py
+      - name: Compile image size facts probe
+        run: python3 -m py_compile .ops/performance-product-image-size-facts-v1.py
+      - name: Audit available WordPress image sizes for product cards
+        run: python3 .ops/performance-product-image-size-facts-v1.py
