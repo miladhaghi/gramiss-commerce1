@@ -5,24 +5,16 @@ on:
     branches: [ops/performance-cwv-v1]
 
 jobs:
-  pdp-baseline-readonly:
+  live-image-source-diagnostic:
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    timeout-minutes: 12
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-      - name: Compile PDP baseline audit
-        run: python3 -m py_compile .ops/performance-pdp-baseline-v1.py
-      - name: Confirm Lighthouse
-        run: npx -y lighthouse@12.2.1 --version
-      - name: Run real PDP Lighthouse baseline
-        env:
-          PERF_OUT: /tmp/gramiss-pdp-perf
-        run: python3 .ops/performance-pdp-baseline-v1.py
-      - name: Upload PDP reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gramiss-real-pdp-performance-v1
-          path: /tmp/gramiss-pdp-perf
-          if-no-files-found: warn
-          retention-days: 14
+      - name: Compile live image source scanner
+        run: python3 -m py_compile .ops/performance-product-card-source-scan-v1.py
+      - name: Scan live theme image sources read only
+        run: python3 .ops/performance-product-card-source-scan-v1.py
