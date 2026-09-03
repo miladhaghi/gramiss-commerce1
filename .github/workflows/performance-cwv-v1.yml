@@ -5,24 +5,12 @@ on:
     branches: [ops/performance-cwv-v1]
 
 jobs:
-  lighthouse-after-image-fix-readonly:
+  cache-variant-readonly:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Compile targeted verifier
-        run: python3 -m py_compile .ops/performance-after-image-fix-v1.py
-      - name: Confirm Lighthouse
-        run: npx -y lighthouse@12.2.1 --version
-      - name: Run targeted before-after Lighthouse verification
-        env:
-          PERF_OUT: /tmp/gramiss-perf-after
-        run: python3 .ops/performance-after-image-fix-v1.py
-      - name: Upload targeted reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gramiss-performance-after-image-fix-v1
-          path: /tmp/gramiss-perf-after
-          if-no-files-found: warn
-          retention-days: 14
+      - name: Compile cache probe
+        run: python3 -m py_compile .ops/performance-cache-variant-probe-v1.py
+      - name: Probe archive cache variants
+        run: python3 .ops/performance-cache-variant-probe-v1.py
