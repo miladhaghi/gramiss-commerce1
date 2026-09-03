@@ -1,10 +1,28 @@
 name: Performance CWV V1
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [ops/performance-cwv-v1]
 
 jobs:
-  safety-hold:
+  pdp-baseline-readonly:
     runs-on: ubuntu-latest
+    timeout-minutes: 18
     steps:
-      - run: echo "Performance V1 image fix verified; automatic runs disabled."
+      - uses: actions/checkout@v4
+      - name: Compile PDP baseline audit
+        run: python3 -m py_compile .ops/performance-pdp-baseline-v1.py
+      - name: Confirm Lighthouse
+        run: npx -y lighthouse@12.2.1 --version
+      - name: Run real PDP Lighthouse baseline
+        env:
+          PERF_OUT: /tmp/gramiss-pdp-perf
+        run: python3 .ops/performance-pdp-baseline-v1.py
+      - name: Upload PDP reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gramiss-real-pdp-performance-v1
+          path: /tmp/gramiss-pdp-perf
+          if-no-files-found: warn
+          retention-days: 14
