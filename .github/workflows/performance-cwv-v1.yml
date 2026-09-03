@@ -5,24 +5,16 @@ on:
     branches: [ops/performance-cwv-v1]
 
 jobs:
-  pdp-after-v13-retirement:
+  pdp-mobile-runtime-scan-v2:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-      - name: Compile PDP Lighthouse audit
-        run: python3 -m py_compile .ops/performance-pdp-after-v1.py
-      - name: Confirm Lighthouse
-        run: npx -y lighthouse@12.2.1 --version
-      - name: Measure live PDP after v1-3 retirement
-        env:
-          PERF_OUT: /tmp/gramiss-pdp-after-v2
-        run: python3 .ops/performance-pdp-after-v1.py
-      - name: Upload PDP reports after v1-3 retirement
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gramiss-pdp-performance-after-v2
-          path: /tmp/gramiss-pdp-after-v2
-          if-no-files-found: warn
-          retention-days: 14
+      - name: Compile expanded PDP runtime scan
+        run: python3 -m py_compile .ops/performance-pdp-runtime-loader-scan-v2.py
+      - name: Inspect live PDP mobile runtimes read only
+        run: python3 .ops/performance-pdp-runtime-loader-scan-v2.py
