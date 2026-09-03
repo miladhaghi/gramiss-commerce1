@@ -5,16 +5,16 @@ on:
     branches: [ops/home-smart-guide-v3]
 
 jobs:
-  deploy-smart-guide-v3:
+  verify-smart-guide-v3:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 10
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
       CPANEL_USER: gramissi
       CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-      - name: Compile guarded Smart Guide V3 deploy
-        run: python3 -m py_compile .ops/home-smart-guide-deploy-v3.py
-      - name: Deploy Smart Guide V3 with rollback guards
-        run: python3 .ops/home-smart-guide-deploy-v3.py
+      - name: Compile Smart Guide V3 verifier
+        run: python3 -m py_compile .ops/home-smart-guide-inspect-v3.py
+      - name: Verify live Smart Guide V3 read only
+        run: python3 .ops/home-smart-guide-inspect-v3.py
