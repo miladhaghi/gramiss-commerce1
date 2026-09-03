@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import json, os, re, ssl, time, urllib.parse, urllib.request, urllib.error
+import hashlib, json, os, re, ssl, time, urllib.parse, urllib.request, urllib.error
 
 HOST=os.environ['CPANEL_HOST']; USER=os.environ['CPANEL_USER']; TOKEN=os.environ['CPANEL_TOKEN']
 BASE='https://gramiss.ir'; CTX=ssl._create_unverified_context(); TARGETS=[97,141,210,344,62,68]
@@ -42,6 +42,13 @@ def norm(url):
     if not url:return ''
     return urllib.parse.unquote(url.split('?',1)[0]).rstrip('/')+'/'
 
+def sitemap_state(path, nonce):
+    status, xml, _=get(BASE+'/'+path+'?t='+nonce,150)
+    urls=sorted(x.replace('&amp;','&') for x in re.findall(r'<loc>(.*?)</loc>',xml,re.I)) if status==200 else []
+    digest=hashlib.sha256('\n'.join(urls).encode()).hexdigest()
+    print('SITEMAP_STATE',path,status,'COUNT',len(urls),'SHA256',digest)
+    return status,urls,digest
+
 nonce=str(int(time.time()))
 probe='gramiss-legacy-six-reaudit-'+nonce+'.php'
 php=r'''<?php
@@ -78,10 +85,9 @@ status,body,_=get(BASE+'/'+probe+'?t='+nonce,300)
 if status!=200:raise SystemExit('PROBE_HTTP_'+str(status))
 rows=json.loads(body)
 
-s_status,sitemap,_=get(BASE+'/product-sitemap.xml?t='+nonce,150)
-sitemap_urls=[x.replace('&amp;','&') for x in re.findall(r'<loc>(.*?)</loc>',sitemap,re.I)] if s_status==200 else []
+s_status,sitemap_urls,product_sha=sitemap_state('product-sitemap.xml',nonce)
+pc_status,pcat_urls,pcat_sha=sitemap_state('product_cat-sitemap.xml',nonce)
 sitemap_set={norm(x) for x in sitemap_urls}
-print('PRODUCT_SITEMAP',s_status,'COUNT',len(sitemap_urls))
 
 passed=0; failed=[]
 for row in rows:
