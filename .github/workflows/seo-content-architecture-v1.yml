@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate measurement and GSC activation tools
+      - name: Validate measurement and GSC tools
         run: |
           python3 -m py_compile \
             .ops/search-console-readiness-audit-v1.py \
@@ -42,12 +42,15 @@ jobs:
       - uses: actions/checkout@v4
       - name: Audit final editorial foundation v7
         run: python3 .ops/editorial-foundation-audit-v7.py
-      - name: Audit final product category money pages
-        run: python3 .ops/category-money-page-audit-v1.py | tee /tmp/category-money-page-final.log
-      - name: Assert 20 of 20 category money pages pass
+      - name: Compile current category money-page guard
+        run: python3 -m py_compile .ops/category-money-page-audit-v2.py
+      - name: Audit all current product category money pages
+        run: python3 .ops/category-money-page-audit-v2.py | tee /tmp/category-money-page-final.log
+      - name: Assert 21 of 21 category money pages pass
         run: |
-          grep -F 'CATEGORY_AUDIT_SUMMARY {"P0": 0, "P1": 0, "P2": 0, "PASS": 20, "total": 20}' /tmp/category-money-page-final.log
+          grep -F 'GRAMISS_CATEGORY_AUDIT_V2_BASELINE product=49 product_cat=21' /tmp/category-money-page-final.log
+          grep -F 'CATEGORY_AUDIT_SUMMARY {"P0": 0, "P1": 0, "P2": 0, "PASS": 21, "total": 21}' /tmp/category-money-page-final.log
           grep -F 'SAFETY_ERRORS []' /tmp/category-money-page-final.log
           grep -F 'PASS CATEGORY MONEY PAGE AUDIT V1 READ ONLY' /tmp/category-money-page-final.log
-      - name: GSC activation preflight
+      - name: GSC crawl and sitemap preflight
         run: python3 .ops/gsc-activation-preflight-v1.py
