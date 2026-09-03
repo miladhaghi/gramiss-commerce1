@@ -1,20 +1,10 @@
 name: Performance CWV V1
 
 on:
-  push:
-    branches: [ops/performance-cwv-v1]
+  workflow_dispatch:
 
 jobs:
-  product-card-image-fix:
+  safety-hold:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
-    env:
-      CPANEL_HOST: cip20.mizbanfadns.net
-      CPANEL_USER: gramissi
-      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Compile guarded image fix
-        run: python3 -m py_compile .ops/performance-product-card-image-fix-v1.py
-      - name: Apply and verify responsive product card image fix
-        run: python3 .ops/performance-product-card-image-fix-v1.py
+      - run: echo "Performance mutations are disabled; workflow is manual-only."
