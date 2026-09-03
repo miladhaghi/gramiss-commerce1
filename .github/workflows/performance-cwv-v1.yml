@@ -14,7 +14,7 @@ jobs:
       CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-      - name: Compile guarded PDP image request fix
-        run: python3 -m py_compile .ops/performance-pdp-image-request-fix-v1.py
-      - name: Apply guarded PDP image request fix
-        run: python3 .ops/performance-pdp-image-request-fix-v1.py
+      - name: Compile hardened PDP image request fix
+        run: python3 -m py_compile .ops/performance-pdp-image-request-fix-v2.py
+      - name: Apply hardened PDP image request fix
+        run: python3 .ops/performance-pdp-image-request-fix-v2.py
