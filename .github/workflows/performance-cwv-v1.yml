@@ -5,16 +5,24 @@ on:
     branches: [ops/performance-cwv-v1]
 
 jobs:
-  apply-pdp-image-request-fix:
+  pdp-postfix-lighthouse:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
-    env:
-      CPANEL_HOST: cip20.mizbanfadns.net
-      CPANEL_USER: gramissi
-      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Compile corrected guarded PDP image request fix
-        run: python3 -m py_compile .ops/performance-pdp-image-request-fix-v5.py
-      - name: Apply corrected guarded PDP image request fix
-        run: python3 .ops/performance-pdp-image-request-fix-v5.py
+      - name: Compile post-fix PDP audit
+        run: python3 -m py_compile .ops/performance-pdp-after-v1.py
+      - name: Confirm Lighthouse
+        run: npx -y lighthouse@12.2.1 --version
+      - name: Run post-fix PDP Lighthouse
+        env:
+          PERF_OUT: /tmp/gramiss-pdp-after
+        run: python3 .ops/performance-pdp-after-v1.py
+      - name: Upload post-fix PDP reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gramiss-pdp-performance-after-v1
+          path: /tmp/gramiss-pdp-after
+          if-no-files-found: warn
+          retention-days: 14
