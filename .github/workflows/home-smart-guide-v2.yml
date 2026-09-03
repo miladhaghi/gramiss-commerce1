@@ -1,0 +1,20 @@
+name: Home Smart Guide V2
+
+on:
+  push:
+    branches: [ops/home-smart-guide-v2]
+
+jobs:
+  inspect-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile Smart Guide inspector
+        run: python3 -m py_compile .ops/home-smart-guide-inspect-v2.py
+      - name: Inspect live Smart Guide read only
+        run: python3 .ops/home-smart-guide-inspect-v2.py
