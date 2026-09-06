@@ -1,0 +1,96 @@
+/* GRAMISS_HOME_HERO_INTERACTION_V8
+ * Desktop-only interaction repair. Mobile rail rules remain unchanged.
+ */
+@media (min-width:821px){
+  .g1-floating-hero{
+    perspective:none;
+  }
+  .g1-floating-hero::before{
+    transform:scale(1.025);
+    will-change:auto;
+  }
+  .g1-floating-hero-aura{
+    transform:none;
+    transition:none;
+  }
+
+  /* Keep the content and both CTAs above every decorative/product layer. */
+  .g1-floating-hero-copy{
+    z-index:50;
+    transform:none;
+    transform-style:flat;
+    will-change:auto;
+    pointer-events:none;
+  }
+  .g1-floating-hero-actions,
+  .g1-floating-hero-actions .g1-btn{
+    position:relative;
+    z-index:2;
+    pointer-events:auto;
+    touch-action:manipulation;
+  }
+
+  .g1-floating-products{
+    transform-style:flat;
+  }
+  .g1-floating-product{
+    --px:0px;
+    --py:0px;
+    --tilt:0deg;
+    --depth-z:0px;
+    pointer-events:none;
+    transform:rotate(var(--rot,0deg));
+    transform-style:flat;
+    transition:none;
+    will-change:auto;
+  }
+  .g1-floating-product::before{
+    transition:opacity .18s ease-out,transform .22s cubic-bezier(.22,.8,.24,1);
+  }
+  .g1-floating-product-media{
+    pointer-events:auto;
+    filter:brightness(var(--object-brightness,1)) saturate(var(--object-saturation,1)) drop-shadow(0 calc(var(--shadow-y,28px) * .72) calc(var(--shadow-blur,28px) * .68) rgba(28,25,23,var(--shadow-opacity,.21)));
+    transform:scale(var(--hover-scale));
+    transition:transform .22s cubic-bezier(.22,.8,.24,1);
+    will-change:auto;
+  }
+
+  /* Clip pointer hit-testing to the rendered garment, not its transparent canvas. */
+  .g1-floating-product.is-cap .g1-floating-product-media{clip-path:inset(2% 0 7% 0)}
+  .g1-floating-product.is-bag .g1-floating-product-media{clip-path:inset(0 27% 0 27%)}
+  .g1-floating-product.is-socks .g1-floating-product-media{clip-path:inset(20% 0 20% 0)}
+  .g1-floating-product.is-tshirt .g1-floating-product-media{clip-path:inset(4% 0 10% 0)}
+  .g1-floating-product.is-jeans .g1-floating-product-media{clip-path:inset(5% 7% 5% 7%)}
+  .g1-floating-product.is-sneakers .g1-floating-product-media{clip-path:inset(11% 0 11% 0)}
+
+  .g1-floating-product-label{
+    transition:opacity .16s ease-out,transform .22s cubic-bezier(.22,.8,.24,1),background .16s ease-out;
+  }
+  .g1-floating-product:hover,
+  .g1-floating-product:focus-visible{
+    --hover-scale:1.038;
+    --depth-z:0px;
+    z-index:35;
+  }
+  .g1-floating-product:hover::before,
+  .g1-floating-product:focus-visible::before{
+    opacity:1;
+    transform:scale(1.13);
+    transition-duration:.18s,.22s;
+  }
+  .g1-floating-product:hover .g1-floating-product-media,
+  .g1-floating-product:focus-visible .g1-floating-product-media{
+    filter:brightness(var(--object-brightness,1)) saturate(var(--object-saturation,1)) drop-shadow(0 calc(var(--shadow-y,28px) * .72) calc(var(--shadow-blur,28px) * .68) rgba(28,25,23,var(--shadow-opacity,.21)));
+    transition-duration:.22s;
+  }
+  .g1-floating-product:hover .g1-floating-product-label,
+  .g1-floating-product:focus-visible .g1-floating-product-label{
+    opacity:1;
+    transform:translate(-50%,0) scale(1);
+    background:rgba(15,17,21,.82);
+    transition-duration:.16s,.22s,.16s;
+  }
+  .g1-floating-products:has(.g1-floating-product:hover) .g1-floating-product:not(:hover){
+    opacity:1;
+  }
+}
