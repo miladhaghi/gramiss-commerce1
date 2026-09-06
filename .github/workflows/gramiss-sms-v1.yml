@@ -5,9 +5,9 @@ on:
     branches: [ops/gramiss-sms-v1]
 
 jobs:
-  deploy-gramiss-sms:
+  verify-gramiss-sms:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 10
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
       CPANEL_USER: gramissi
@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: PHP lint Gramiss SMS plugin
         run: php -l wordpress/plugins/gramiss-sms/gramiss-sms.php
-      - name: Compile guarded deploy
-        run: python3 -m py_compile .ops/deploy-gramiss-sms-v1.py
-      - name: Deploy and activate Gramiss SMS V1
-        run: python3 .ops/deploy-gramiss-sms-v1.py
+      - name: Compile verifier
+        run: python3 -m py_compile .ops/verify-gramiss-sms-v1.py
+      - name: Verify live Gramiss SMS V1 read only
+        run: python3 .ops/verify-gramiss-sms-v1.py
