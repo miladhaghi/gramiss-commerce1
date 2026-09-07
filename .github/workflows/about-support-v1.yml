@@ -5,21 +5,21 @@ on:
     branches: [ops/about-support-v1]
 
 jobs:
-  deploy-about-support:
+  verify-about-support:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 10
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
       CPANEL_USER: gramissi
       CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-      - name: PHP lint new Gramiss sources
+      - name: PHP lint Gramiss information sources
         run: |
           php -l wordpress/plugins/gramiss-site-info/gramiss-site-info.php
           php -l wordpress/theme/gramiss-theme-next/page-about-gramiss.php
           php -l wordpress/theme/gramiss-theme-next/page-contact.php
-      - name: Compile guarded deployer
-        run: python3 -m py_compile .ops/deploy-about-support-v1.py
-      - name: Deploy and verify About Support V1
-        run: python3 .ops/deploy-about-support-v1.py
+      - name: Compile verifier
+        run: python3 -m py_compile .ops/verify-about-support-v1.py
+      - name: Verify live About Support V1 read only
+        run: python3 .ops/verify-about-support-v1.py
