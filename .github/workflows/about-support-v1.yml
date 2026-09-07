@@ -1,11 +1,11 @@
-name: About Support V2 Cache Bust
+name: About Support V3
 
 on:
   push:
     branches: [ops/about-support-v1]
 
 jobs:
-  deploy-about-v2-cache-bust:
+  verify-about-support-v3:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: PHP lint About template
         run: php -l wordpress/theme/gramiss-theme-next/page-about-gramiss.php
-      - name: Compile guarded deployer
-        run: python3 -m py_compile .ops/deploy-about-cache-bust-v3.py
-      - name: Deploy About V2 cache bust only
-        run: python3 .ops/deploy-about-cache-bust-v3.py
+      - name: Compile verify-only guard
+        run: python3 -m py_compile .ops/verify-about-support-v3.py
+      - name: Verify live About Support V3 read only
+        run: python3 .ops/verify-about-support-v3.py
