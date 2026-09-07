@@ -60,8 +60,8 @@ def verify_public():
     else:
         if 'GRAMISS ABOUT V2 START' not in page:
             errors.append('V2 marker missing')
-        if 'id="gramiss-about-v2-css"' not in page:
-            errors.append('About V2 stylesheet not enqueued')
+        if 'about-gramiss-v2.css' not in page:
+            errors.append('About V2 stylesheet URL missing')
         if len(re.findall(r'<h1\b', page, re.I)) != 1:
             errors.append('About H1 count != 1')
         for needle in ['کمتر حدس بزن', 'فقط یک ویترین', 'سه اصل ساده', 'از چیزی که واقعاً نیاز داری شروع کن', 'راهنما، قبل از فروش']:
@@ -90,7 +90,11 @@ def main():
     except Exception:
         existing_v2 = ''
     if existing_v2.strip():
-        raise SystemExit('REFUSE: About V2 CSS already exists on live theme')
+        existing_sha = sha(existing_v2)
+        source_sha = sha(V2_CSS_SOURCE)
+        print('EXISTING_V2_CSS', existing_sha)
+        if existing_sha != source_sha:
+            raise SystemExit('REFUSE: live About V2 CSS exists but differs from approved source')
 
     stamp = time.strftime('%Y%m%d-%H%M%S', time.gmtime())
     mod.save(ABOUT_PATH + '.bak-v2-' + stamp, before[ABOUT_PATH])
