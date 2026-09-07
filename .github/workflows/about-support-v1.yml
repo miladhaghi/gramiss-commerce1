@@ -1,11 +1,11 @@
-name: About Support V2
+name: About Support V2 Cache Bust
 
 on:
   push:
     branches: [ops/about-support-v1]
 
 jobs:
-  verify-about-support-v2:
+  deploy-about-v2-cache-bust:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -14,19 +14,9 @@ jobs:
       CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-      - name: PHP lint Gramiss information sources
-        run: |
-          php -l wordpress/theme/gramiss-theme-next/page-about-gramiss.php
-          php -l wordpress/theme/gramiss-theme-next/page-contact.php
-          php -l wordpress/plugins/gramiss-site-info/gramiss-site-info.php
-      - name: Compile verifiers
-        run: |
-          python3 -m py_compile .ops/verify-about-support-v1.py
-          python3 -m py_compile .ops/inspect-about-cache-v1.py
-          python3 -m py_compile .ops/inspect-about-css-http-v1.py
-      - name: Verify live About Support V2 read only
-        run: python3 .ops/verify-about-support-v1.py
-      - name: Compare plain and cache-busted About page
-        run: python3 .ops/inspect-about-cache-v1.py
-      - name: Verify public About V2 stylesheet response
-        run: python3 .ops/inspect-about-css-http-v1.py
+      - name: PHP lint About template
+        run: php -l wordpress/theme/gramiss-theme-next/page-about-gramiss.php
+      - name: Compile guarded deployer
+        run: python3 -m py_compile .ops/deploy-about-cache-bust-v3.py
+      - name: Deploy About V2 cache bust only
+        run: python3 .ops/deploy-about-cache-bust-v3.py
