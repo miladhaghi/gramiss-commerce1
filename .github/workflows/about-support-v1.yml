@@ -23,7 +23,10 @@ jobs:
         run: |
           python3 -m py_compile .ops/verify-about-support-v1.py
           python3 -m py_compile .ops/inspect-about-cache-v1.py
+          python3 -m py_compile .ops/inspect-about-css-http-v1.py
       - name: Verify live About Support V2 read only
         run: python3 .ops/verify-about-support-v1.py
       - name: Compare plain and cache-busted About page
         run: python3 .ops/inspect-about-cache-v1.py
+      - name: Verify public About V2 stylesheet response
+        run: python3 .ops/inspect-about-css-http-v1.py
