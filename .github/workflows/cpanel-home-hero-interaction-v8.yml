@@ -1,0 +1,249 @@
+name: cPanel Home Hero Interaction V8
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.head_ref == 'ops/home-looks-surgical-v2'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+      LIVE_CSS_SHA: cad2a62eb4720d4c30ad40f701eabbdc3b98384ad3fcea812c47de9139b0ea5
+      LIVE_JS_SHA: 766b3df266530360df486b89799f3b575bbfe63d980a6decbea3f8f078f1dfd7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ops/home-looks-surgical-v2
+
+      - name: Deploy and verify the isolated Hero interaction repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import secrets
+          import ssl
+          import time
+          import urllib.parse
+          import urllib.request
+          from pathlib import Path
+
+          host = os.environ['CPANEL_HOST']
+          user = os.environ['CPANEL_USER']
+          token = os.environ['CPANEL_TOKEN']
+          root = os.environ['THEME_ROOT'].strip('/')
+          expected_live = {
+              'assets/css/interactive-hero.css': os.environ['LIVE_CSS_SHA'],
+              'assets/js/interactive-hero.js': os.environ['LIVE_JS_SHA'],
+          }
+          ctx = ssl._create_unverified_context()
+          stamp = time.strftime('%Y%m%d-%H%M%S', time.gmtime())
+
+          def sha(text):
+              return hashlib.sha256(text.encode('utf-8')).hexdigest()
+
+          def call(function, params, post=False):
+              endpoint = f'https://{host}:2083/execute/Fileman/{function}'
+              encoded = urllib.parse.urlencode(params).encode()
+              last = None
+              for attempt in range(1, 6):
+                  try:
+                      request = urllib.request.Request(
+                          endpoint if post else endpoint + '?' + encoded.decode(),
+                          data=encoded if post else None,
+                          method='POST' if post else 'GET',
+                      )
+                      request.add_header('Authorization', f'cpanel {user}:{token}')
+                      if post:
+                          request.add_header('Content-Type', 'application/x-www-form-urlencoded')
+                      with urllib.request.urlopen(request, context=ctx, timeout=90) as response:
+                          payload = json.loads(response.read().decode('utf-8', 'replace'))
+                      result = payload.get('result') if isinstance(payload.get('result'), dict) else payload
+                      if not isinstance(result, dict) or result.get('status') != 1:
+                          raise RuntimeError(str(result))
+                      return result.get('data')
+                  except Exception as exc:
+                      last = exc
+                      print(f'Attempt {attempt}/5 {function}: {exc}')
+                      if attempt < 5:
+                          time.sleep(attempt * 3)
+              raise last
+
+          def split_path(relative):
+              parent, name = relative.rsplit('/', 1)
+              return root + '/' + parent, name
+
+          def read_live(relative):
+              directory, name = split_path(relative)
+              data = call('get_file_content', {
+                  'dir': directory,
+                  'file': name,
+                  'from_charset': '_DETECT_',
+                  'to_charset': 'utf-8',
+              })
+              if isinstance(data, dict):
+                  for key in ('content', 'file_content', 'data'):
+                      if isinstance(data.get(key), str):
+                          return data[key]
+              if isinstance(data, str):
+                  return data
+              raise RuntimeError('Unexpected content response for ' + relative)
+
+          def save_live(relative, content):
+              directory, name = split_path(relative)
+              call('save_file_content', {
+                  'dir': directory,
+                  'file': name,
+                  'content': content,
+                  'from_charset': 'UTF-8',
+                  'to_charset': 'UTF-8',
+                  'fallback': '0',
+              }, True)
+
+          def public_get(url):
+              request = urllib.request.Request(url, headers={
+                  'User-Agent': 'GramissHeroInteractionV8/1',
+                  'Cache-Control': 'no-cache',
+                  'Pragma': 'no-cache',
+              })
+              with urllib.request.urlopen(request, context=ctx, timeout=90) as response:
+                  return response.status, response.read()
+
+          def purge_cache(label):
+              nonce = secrets.token_hex(24)
+              helper = f'gramiss-hero-cache-{label}-{stamp}.php'
+              code = f'''<?php
+              ini_set('display_errors','0');
+              if (!isset($_GET['k']) || !hash_equals('{nonce}', (string) $_GET['k'])) {{ http_response_code(403); exit; }}
+              require __DIR__.'/wp-load.php';
+              if (function_exists('wp_cache_flush')) wp_cache_flush();
+              if (function_exists('do_action')) do_action('litespeed_purge_all');
+              @unlink(__FILE__);
+              header('Content-Type: application/json; charset=utf-8');
+              echo '{{"ok":true}}';
+              ?>'''
+              call('save_file_content', {
+                  'dir': 'public_html',
+                  'file': helper,
+                  'content': code,
+                  'from_charset': 'UTF-8',
+                  'to_charset': 'UTF-8',
+                  'fallback': '0',
+              }, True)
+              url = 'https://gramiss.ir/' + helper + '?k=' + urllib.parse.quote(nonce)
+              status, body = public_get(url)
+              if status != 200 or b'"ok":true' not in body:
+                  raise RuntimeError('Cache purge helper failed')
+
+          css_path = 'assets/css/interactive-hero.css'
+          js_path = 'assets/js/interactive-hero.js'
+          originals = {css_path: read_live(css_path), js_path: read_live(js_path)}
+
+          for relative, content in originals.items():
+              actual = sha(content)
+              print('LIVE_BASELINE', relative, actual)
+              if actual != expected_live[relative]:
+                  raise SystemExit('ABORT: live Hero baseline changed; nothing was written: ' + relative)
+
+          source = Path('.ops/home-hero')
+          css_override = (source / 'interactive-hero-desktop-v8.css').read_text(encoding='utf-8')
+          new_js = (source / 'interactive-hero-v8.js').read_text(encoding='utf-8')
+          marker = 'GRAMISS_HOME_HERO_INTERACTION_V8'
+          if marker not in css_override or marker not in new_js:
+              raise SystemExit('ABORT: V8 marker missing; nothing was written')
+          if "window.addEventListener('wheel'" in new_js or "window.addEventListener('scroll'" in new_js:
+              raise SystemExit('ABORT: desktop page-scroll listeners returned; nothing was written')
+          if '.style.setProperty(' in new_js:
+              raise SystemExit('ABORT: per-frame CSS variable writes returned; nothing was written')
+
+          patched = {
+              css_path: originals[css_path].rstrip() + '\n\n' + css_override.strip() + '\n',
+              js_path: new_js.rstrip() + '\n',
+          }
+          expected_patched = {relative: sha(content) for relative, content in patched.items()}
+          backups = {
+              css_path: css_path + '.bak-before-hero-v8-' + stamp,
+              js_path: js_path + '.bak-before-hero-v8-' + stamp,
+          }
+          wrote_live = False
+
+          try:
+              for relative, backup in backups.items():
+                  save_live(backup, originals[relative])
+                  if sha(read_live(backup)) != expected_live[relative]:
+                      raise RuntimeError('Backup verification failed: ' + backup)
+                  print('BACKUP_OK', backup)
+
+              save_live(css_path, patched[css_path])
+              wrote_live = True
+              save_live(js_path, patched[js_path])
+
+              for relative, expected in expected_patched.items():
+                  actual = sha(read_live(relative))
+                  if actual != expected:
+                      raise RuntimeError('Live write verification failed: ' + relative)
+                  print('LIVE_WRITE_OK', relative, actual)
+
+              purge_cache('deploy')
+
+              base = 'https://gramiss.ir/wp-content/themes/gramiss-theme-next/'
+              for relative, expected in expected_patched.items():
+                  status, body = public_get(base + relative + '?hero_v8=' + stamp)
+                  actual = hashlib.sha256(body).hexdigest()
+                  if status != 200 or actual != expected or marker.encode() not in body:
+                      raise RuntimeError('Public asset verification failed: ' + relative)
+                  print('PUBLIC_ASSET_OK', relative, actual)
+
+              status, body = public_get('https://gramiss.ir/?hero_v8=' + stamp)
+              html = body.decode('utf-8', 'replace')
+              required_markup = [
+                  'data-g1-floating-hero',
+                  'href="https://gramiss.ir/shop/"',
+                  'href="#smart-guide"',
+                  'id="smart-guide"',
+                  '/product-category/hat/',
+                  '/product-category/bag/',
+                  '/product-category/socks/',
+                  '/product-category/tshirt/',
+                  '/product-category/pants/',
+                  '/product-category/sneakers/',
+              ]
+              if status != 200 or any(value not in html for value in required_markup):
+                  raise RuntimeError('Public Home Hero markup verification failed')
+              print('PUBLIC_HOME_MARKUP_OK')
+
+              routes = [
+                  'https://gramiss.ir/shop/',
+                  'https://gramiss.ir/product-category/hat/',
+                  'https://gramiss.ir/product-category/bag/',
+                  'https://gramiss.ir/product-category/socks/',
+                  'https://gramiss.ir/product-category/tshirt/',
+                  'https://gramiss.ir/product-category/pants/',
+                  'https://gramiss.ir/product-category/sneakers/',
+              ]
+              for route in routes:
+                  route_status, _ = public_get(route + '?hero_v8_route=' + stamp)
+                  if route_status != 200:
+                      raise RuntimeError('Hero destination failed: ' + route)
+                  print('ROUTE_OK', route)
+
+              print('LIVE_HERO_INTERACTION_V8_DEPLOYED_AND_VERIFIED')
+          except Exception:
+              if wrote_live:
+                  print('DEPLOY_FAILED_ROLLING_BACK')
+                  save_live(css_path, originals[css_path])
+                  save_live(js_path, originals[js_path])
+                  for relative, expected in expected_live.items():
+                      if sha(read_live(relative)) != expected:
+                          raise RuntimeError('ROLLBACK FAILED: ' + relative)
+                  purge_cache('rollback')
+                  print('ROLLBACK_VERIFIED')
+              raise
+          PY
