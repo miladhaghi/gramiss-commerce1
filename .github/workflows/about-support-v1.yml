@@ -19,7 +19,11 @@ jobs:
           php -l wordpress/plugins/gramiss-site-info/gramiss-site-info.php
           php -l wordpress/theme/gramiss-theme-next/page-about-gramiss.php
           php -l wordpress/theme/gramiss-theme-next/page-contact.php
-      - name: Compile verifier
-        run: python3 -m py_compile .ops/verify-about-support-v1.py
+      - name: Compile verifier and asset inspector
+        run: |
+          python3 -m py_compile .ops/verify-about-support-v1.py
+          python3 -m py_compile .ops/inspect-about-visual-assets.py
+      - name: Inspect live visual asset references read only
+        run: python3 .ops/inspect-about-visual-assets.py
       - name: Verify live About Support V1 read only
         run: python3 .ops/verify-about-support-v1.py
