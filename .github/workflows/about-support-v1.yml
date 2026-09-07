@@ -5,16 +5,21 @@ on:
     branches: [ops/about-support-v1]
 
 jobs:
-  inspect-live-theme:
+  deploy-about-support:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
       CPANEL_USER: gramissi
       CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-      - name: Compile inspector
-        run: python3 -m py_compile .ops/inspect-about-support-live.py
-      - name: Inspect live header footer and mobile menu
-        run: python3 .ops/inspect-about-support-live.py
+      - name: PHP lint new Gramiss sources
+        run: |
+          php -l wordpress/plugins/gramiss-site-info/gramiss-site-info.php
+          php -l wordpress/theme/gramiss-theme-next/page-about-gramiss.php
+          php -l wordpress/theme/gramiss-theme-next/page-contact.php
+      - name: Compile guarded deployer
+        run: python3 -m py_compile .ops/deploy-about-support-v1.py
+      - name: Deploy and verify About Support V1
+        run: python3 .ops/deploy-about-support-v1.py
