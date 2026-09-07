@@ -4,20 +4,13 @@
  * Description: صفحه درباره Gramiss — نسخه پالایش‌شده و هماهنگ با Home.
  */
 defined( 'ABSPATH' ) || exit;
-
-$about_v2_css = get_stylesheet_directory() . '/assets/css/about-gramiss-v2.css';
-wp_enqueue_style(
-    'gramiss-about-v2',
-    get_stylesheet_directory_uri() . '/assets/css/about-gramiss-v2.css',
-    array(),
-    file_exists( $about_v2_css ) ? (string) filemtime( $about_v2_css ) : '20260907-2'
-);
-
 get_header();
 
 $shop_url    = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : home_url( '/shop/' );
 $support_url = home_url( '/contact/' );
+$about_v2_css_url = get_stylesheet_directory_uri() . '/assets/css/about-gramiss-v2.css?v=20260907-2';
 ?>
+<link id="gramiss-about-v2-css" rel="stylesheet" href="<?php echo esc_url( $about_v2_css_url ); ?>" media="all">
 <!-- GRAMISS ABOUT V2 START -->
 <main id="primary" class="g-info-page g-about-page g-about-v2" dir="rtl">
     <section class="gav2-hero" aria-labelledby="gav2-title">
