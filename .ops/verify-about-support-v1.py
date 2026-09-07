@@ -15,9 +15,10 @@ EXPECTED_THEME = {
     'header.php': '3f0873f2e21904f9392607169bd1f8e72b590bab36afdef409bf0952b32e5cb1',
     'footer.php': 'e4836e538a4ef25d2ff49adceec1ab296fe93dab1fbef2ec7fb1fa1a71923f86',
     'functions.php': '178d68c8af56fb1568874abe5bd704ff0c23b2f0bf6c15882a3367ee9c682524',
-    'page-about-gramiss.php': 'f3ce1ee7fc3604594c7b952d4ada78f5f6eb6b9ff3add965097d40740adcb9e1',
+    'page-about-gramiss.php': 'c44d7e0c5ba455c4d927b01e7e9f2e2bd8c7ea5afe2338923cc10caef97b6567',
     'page-contact.php': '26f35ef92301f0e2c1b99a9f350d29cc78d60e86a3fa36d50dd25b5006054f48',
     'assets/css/about-support-v1.css': 'cf48554bbed0fcdaba96328a5ebb9f0efd55ba097362bf5fcc7506ebe28db433',
+    'assets/css/about-gramiss-v2.css': '05ee0e219aa14183346316a96a4ec8ccef2f706fd1fbecd559aad97deeadb915',
 }
 PROTECTED = {
     'front-page.php': 'e92d85b78f33470171a9b76c40c29b134148a4ef0dfda575004b6e6b6d6a3f00',
@@ -106,14 +107,22 @@ echo wp_json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         raise SystemExit('Desktop primary nav changed')
     if 'mobile-panel-info-links' not in home:
         raise SystemExit('Mobile info links missing')
+    if 'about-gramiss-v2.css' in home:
+        raise SystemExit('About V2 CSS leaked onto Home')
 
-    for route, marker in [('/about-gramiss/', 'GRAMISS ABOUT V1 START'), ('/contact/', 'GRAMISS SUPPORT V1 START')]:
-        page_status, page = mod.get(mod.BASE + route + '?v=' + stamp, 120)
-        print('PAGE', route, page_status, len(page.encode()))
-        if page_status != 200 or marker not in page or len(re.findall(r'<h1\b', page, re.I)) != 1:
-            raise SystemExit('Page verification failed: ' + route)
+    about_status, about_page = mod.get(mod.BASE + '/about-gramiss/?v=' + stamp, 120)
+    print('PAGE /about-gramiss/', about_status, len(about_page.encode()))
+    if about_status != 200 or 'GRAMISS ABOUT V2 START' not in about_page or len(re.findall(r'<h1\b', about_page, re.I)) != 1:
+        raise SystemExit('About V2 page verification failed')
+    if 'about-gramiss-v2.css' not in about_page:
+        raise SystemExit('About V2 stylesheet missing from page')
 
-    print('PASS ABOUT SUPPORT V1 VERIFY')
+    contact_status, contact_page = mod.get(mod.BASE + '/contact/?v=' + stamp, 120)
+    print('PAGE /contact/', contact_status, len(contact_page.encode()))
+    if contact_status != 200 or 'GRAMISS SUPPORT V1 START' not in contact_page or len(re.findall(r'<h1\b', contact_page, re.I)) != 1:
+        raise SystemExit('Contact page verification failed')
+
+    print('PASS ABOUT SUPPORT V2 VERIFY')
 
 if __name__ == '__main__':
     main()
