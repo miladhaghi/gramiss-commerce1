@@ -20,7 +20,7 @@ EXPECTED_LIVE = {
     'header.php': '3f0873f2e21904f9392607169bd1f8e72b590bab36afdef409bf0952b32e5cb1',
     'footer.php': 'e4836e538a4ef25d2ff49adceec1ab296fe93dab1fbef2ec7fb1fa1a71923f86',
     'functions.php': '178d68c8af56fb1568874abe5bd704ff0c23b2f0bf6c15882a3367ee9c682524',
-    'page-about-gramiss.php': 'f3ce1ee7fc3604594c7b952d4ada78f5f6eb6b9ff3add965097d40740adcb9e1',
+    'page-about-gramiss.php': 'ecd7a0ad26767849bfab57009518b391072560fad015adc6be7dec29e4896ab3',
     'assets/css/about-support-v1.css': 'cf48554bbed0fcdaba96328a5ebb9f0efd55ba097362bf5fcc7506ebe28db433',
 }
 PROTECTED = {
