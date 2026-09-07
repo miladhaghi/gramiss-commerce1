@@ -1,29 +1,22 @@
-name: About Support V1
+name: About Gramiss V2
 
 on:
   push:
     branches: [ops/about-support-v1]
 
 jobs:
-  verify-about-support:
+  deploy-about-v2:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     env:
       CPANEL_HOST: cip20.mizbanfadns.net
       CPANEL_USER: gramissi
       CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
     steps:
       - uses: actions/checkout@v4
-      - name: PHP lint Gramiss information sources
-        run: |
-          php -l wordpress/plugins/gramiss-site-info/gramiss-site-info.php
-          php -l wordpress/theme/gramiss-theme-next/page-about-gramiss.php
-          php -l wordpress/theme/gramiss-theme-next/page-contact.php
-      - name: Compile verifier and asset inspector
-        run: |
-          python3 -m py_compile .ops/verify-about-support-v1.py
-          python3 -m py_compile .ops/inspect-about-visual-assets.py
-      - name: Inspect live visual asset references read only
-        run: python3 .ops/inspect-about-visual-assets.py
-      - name: Verify live About Support V1 read only
-        run: python3 .ops/verify-about-support-v1.py
+      - name: PHP lint About Gramiss V2
+        run: php -l wordpress/theme/gramiss-theme-next/page-about-gramiss.php
+      - name: Compile guarded V2 deployer
+        run: python3 -m py_compile .ops/deploy-about-gramiss-v2.py
+      - name: Deploy and verify approved About Gramiss V2
+        run: python3 .ops/deploy-about-gramiss-v2.py
