@@ -13,7 +13,7 @@ jobs:
       CPANEL_USER: gramissi
       CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
       THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
-      LIVE_CSS_SHA: cad2a62eb4720d4c30ad40f701eabbdc3b98384ad3fcea812c47de9139b0ea5
+      LIVE_CSS_SHA: cad2a62eb4720d4c30ad40f701eabbbdc3b98384ad3fcea812c47de9139b0ea5
       LIVE_JS_SHA: 766b3df266530360df486b89799f3b575bbfe63d980a6decbea3f8f078f1dfd7
     steps:
       - uses: actions/checkout@v4
