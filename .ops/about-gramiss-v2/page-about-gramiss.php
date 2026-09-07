@@ -13,7 +13,7 @@ wp_enqueue_style(
     'gramiss-about-v2',
     get_stylesheet_directory_uri() . '/assets/css/about-gramiss-v2.css',
     array(),
-    '2.0.0'
+    '2.1.0'
 );
 
 get_header();
