@@ -47,7 +47,7 @@ $smart_url   = home_url( '/smart-guide/' );
             </div>
 
             <div class="gabout-hero__visual" aria-hidden="true">
-                <img class="gabout-hero__photo" src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/images/about/about-hero-editorial.png' ); ?>" alt="" loading="eager" decoding="async">
+                <img class="gabout-hero__photo" src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/images/about/about-hero-editorial.webp' ); ?>" alt="" loading="eager" decoding="async">
             </div>
         </div>
     </section>
@@ -155,7 +155,7 @@ $smart_url   = home_url( '/smart-guide/' );
                 </a>
             </div>
             <div class="gabout-cta__art" aria-hidden="true">
-                <img class="gabout-cta__photo" src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/images/about/about-cta-editorial.png' ); ?>" alt="" loading="lazy" decoding="async">
+                <img class="gabout-cta__photo" src="<?php echo esc_url( get_stylesheet_directory_uri() . '/assets/images/about/about-cta-editorial.webp' ); ?>" alt="" loading="lazy" decoding="async">
             </div>
         </div>
     </section>
