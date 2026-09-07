@@ -8,7 +8,7 @@ get_header();
 
 $shop_url    = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'shop' ) : home_url( '/shop/' );
 $support_url = home_url( '/contact/' );
-$about_v2_css_url = get_stylesheet_directory_uri() . '/assets/css/about-gramiss-v2.css?v=20260907-2';
+$about_v2_css_url = get_stylesheet_directory_uri() . '/assets/css/about-gramiss-v2.css?v=20260907-3';
 ?>
 <link id="gramiss-about-v2-css" rel="stylesheet" href="<?php echo esc_url( $about_v2_css_url ); ?>" media="all">
 <!-- GRAMISS ABOUT V2 START -->
