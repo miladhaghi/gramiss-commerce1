@@ -1,4 +1,4 @@
-name: cPanel About Gramiss V2
+name: cPanel About Gramiss V3
 
 on:
   pull_request:
@@ -18,12 +18,12 @@ jobs:
         with:
           ref: ops/about-gramiss-v2
 
-      - name: Deploy isolated About Gramiss redesign
+      - name: Deploy approved About Gramiss V3
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import hashlib, json, os, ssl, time, urllib.parse, urllib.request
+          import base64, hashlib, json, os, ssl, time, urllib.parse, urllib.request
           from pathlib import Path
 
           host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']
@@ -33,28 +33,24 @@ jobs:
           def call(fn,params,post=False):
               url=f'https://{host}:2083/execute/Fileman/{fn}'
               data=urllib.parse.urlencode(params).encode()
-              req=urllib.request.Request(url if post else url+'?'+data.decode(), data=data if post else None, method='POST' if post else 'GET')
+              req=urllib.request.Request(url if post else url+'?'+data.decode(),data=data if post else None,method='POST' if post else 'GET')
               req.add_header('Authorization',f'cpanel {user}:{token}')
               if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
               with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
                   obj=json.loads(r.read().decode('utf-8','replace'))
               result=obj.get('result') if isinstance(obj.get('result'),dict) else obj
-              if not isinstance(result,dict) or result.get('status')!=1:
-                  raise RuntimeError(str(result))
+              if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
               return result.get('data')
 
           def read_live(rel):
               parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
               directory=root if not parent else root+'/'+parent
-              try:
-                  d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
-              except Exception:
-                  return None
+              try: d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              except Exception: return None
               if isinstance(d,dict):
                   for k in ('content','file_content','data'):
                       if isinstance(d.get(k),str): return d[k]
-              if isinstance(d,str): return d
-              return None
+              return d if isinstance(d,str) else None
 
           def save_live(rel,content):
               parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
@@ -67,61 +63,64 @@ jobs:
               'assets/css/about-gramiss-v2.css':(staged/'about-gramiss-v2.css').read_text(encoding='utf-8'),
           }
           for rel,content in payload.items():
-              if 'GRAMISS_ABOUT_V2' not in content:
-                  raise SystemExit('ABORT: marker missing from '+rel)
+              if 'GRAMISS_ABOUT_V3' not in content: raise SystemExit('ABORT: V3 marker missing from '+rel)
 
-          # Backup only the exact files this change owns. No header, footer, Home or WooCommerce files are touched.
           for rel,content in payload.items():
               before=read_live(rel)
               if before is not None:
-                  save_live(rel+'.bak-about-v2-'+stamp,before)
+                  save_live(rel+'.bak-about-v3-'+stamp,before)
                   print('BACKUP',rel,hashlib.sha256(before.encode()).hexdigest())
-              else:
-                  print('NEW FILE',rel)
               save_live(rel,content)
               after=read_live(rel)
-              if after != content:
-                  raise SystemExit('LIVE WRITE MISMATCH: '+rel)
-              print('PASS WRITE',rel,hashlib.sha256(content.encode()).hexdigest())
+              if after != content: raise SystemExit('LIVE WRITE MISMATCH: '+rel)
+              print('PASS WRITE',rel)
 
-          # Purge LiteSpeed cache through a one-time self-deleting helper.
-          purge='gramiss-purge-about-v2-'+stamp+'.php'
+          # Write the two approved editorial image assets through a one-time WordPress helper.
+          hero=base64.b64encode((staged/'assets/about-hero-editorial.webp').read_bytes()).decode()
+          cta=base64.b64encode((staged/'assets/about-cta-editorial.webp').read_bytes()).decode()
+          helper='gramiss-about-assets-'+stamp+'.php'
+          php=("<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php';"
+               "$d=WP_CONTENT_DIR.'/themes/gramiss-theme-next/assets/images/about';"
+               "if(!is_dir($d)){wp_mkdir_p($d);}"
+               f"file_put_contents($d.'/about-hero-editorial.webp',base64_decode('{hero}'));"
+               f"file_put_contents($d.'/about-cta-editorial.webp',base64_decode('{cta}'));"
+               "echo 'OK'; @unlink(__FILE__);")
+          call('save_file_content',{'dir':'public_html','file':helper,'content':php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+          req=urllib.request.Request('https://gramiss.ir/'+helper+'?t='+str(int(time.time())),headers={'User-Agent':'GramissAboutDeploy/3','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
+              if r.status!=200 or 'OK' not in r.read().decode('utf-8','replace'): raise SystemExit('Asset helper failed')
+
+          # Purge LiteSpeed cache.
+          purge='gramiss-purge-about-v3-'+stamp+'.php'
           php="<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php'; if(function_exists('do_action')){do_action('litespeed_purge_all');} echo 'OK'; @unlink(__FILE__);"
           call('save_file_content',{'dir':'public_html','file':purge,'content':php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
-          req=urllib.request.Request('https://gramiss.ir/'+purge+'?t='+str(int(time.time())),headers={'User-Agent':'GramissAboutDeploy/2','Cache-Control':'no-cache'})
-          with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
-              print('PURGE',r.status,r.read().decode('utf-8','replace')[:60])
+          req=urllib.request.Request('https://gramiss.ir/'+purge+'?t='+str(int(time.time())),headers={'User-Agent':'GramissAboutDeploy/3','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=90) as r: print('PURGE',r.status)
 
-          # Public verification.
           def public_get(url):
-              req=urllib.request.Request(url,headers={'User-Agent':'GramissAboutVerify/2','Cache-Control':'no-cache','Pragma':'no-cache'})
-              with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
-                  return r.status,r.read()
+              req=urllib.request.Request(url,headers={'User-Agent':'GramissAboutVerify/3','Cache-Control':'no-cache','Pragma':'no-cache'})
+              with urllib.request.urlopen(req,context=ctx,timeout=90) as r: return r.status,r.read()
 
-          q='?gramiss_about_v2='+str(int(time.time()))
-          st,b=public_get('https://gramiss.ir/about-gramiss/'+q)
-          html=b.decode('utf-8','replace')
+          q='?gramiss_about_v3='+str(int(time.time()))
+          st,b=public_get('https://gramiss.ir/about-gramiss/'+q); html=b.decode('utf-8','replace')
           checks={
               'about 200':st==200,
-              'template marker':'GRAMISS_ABOUT_V2' in html or 'data-gramiss-about="v2"' in html,
-              'hero heading':'کمتر حدس بزن' in html and 'بهتر انتخاب کن' in html,
+              'template marker':'GRAMISS_ABOUT_V3' in html or 'data-gramiss-about="v3"' in html,
+              'hero':'کمتر حدس بزن' in html and 'بهتر انتخاب کن' in html,
               'principles':'سه اصل ساده' in html and 'انتخاب آگاهانه' in html,
               'smart guide':'راهنما، قبل از فروش' in html,
               'cta':'از چیزی که واقعاً نیاز داری شروع کن' in html,
           }
           for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
-          if not all(checks.values()):
-              raise SystemExit('Public About verification failed')
+          if not all(checks.values()): raise SystemExit('Public About verification failed')
 
           st_css,b_css=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/css/about-gramiss-v2.css?v='+stamp)
-          if st_css!=200 or b'GRAMISS_ABOUT_V2' not in b_css:
-              raise SystemExit('Public About CSS verification failed')
-          print('PASS: About CSS public')
-
-          # Sanity-check Home remains available. No Home file is modified by this deployment.
-          st_home,b_home=public_get('https://gramiss.ir/?about_sanity='+str(int(time.time())))
-          if st_home!=200:
-              raise SystemExit('Home sanity check failed')
-          print('PASS: Home still 200')
-          print('LIVE ABOUT GRAMISS V2 DEPLOYED')
+          if st_css!=200 or b'GRAMISS_ABOUT_V3' not in b_css: raise SystemExit('CSS verification failed')
+          for name in ('about-hero-editorial.webp','about-cta-editorial.webp'):
+              s,d=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/images/about/'+name+'?v='+stamp)
+              if s!=200 or len(d)<5000 or d[:4]!=b'RIFF': raise SystemExit('Image verification failed: '+name)
+              print('PASS IMAGE',name,len(d))
+          st_home,_=public_get('https://gramiss.ir/?about_sanity='+str(int(time.time())))
+          if st_home!=200: raise SystemExit('Home sanity check failed')
+          print('LIVE ABOUT GRAMISS V3 DEPLOYED')
           PY
