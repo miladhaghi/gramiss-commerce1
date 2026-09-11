@@ -1,1 +1,0 @@
-Gramiss Home Journal V3 deployment assets. Generated and approved in chat on 2026-09-12.
