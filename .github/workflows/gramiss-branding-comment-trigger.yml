@@ -84,6 +84,7 @@ jobs:
           end=src.index("\n          PY",start)
           block=src[start:end]
           block=block.replace('\\"','"')
+          block=block.replace('(<a class="wordmark"[^>]*>)', r'(<a class="wordmark"[\s\S]*?>)')
           lines=[]
           for line in block.splitlines():
               lines.append(line[10:] if line.startswith('          ') else line)
