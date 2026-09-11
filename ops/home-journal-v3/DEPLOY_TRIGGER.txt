@@ -1,1 +1,2 @@
 Trigger guarded Home Journal V3 live deployment after workflow landed on main.
+Synchronize PR after Actions indexed the workflow on the default branch.
