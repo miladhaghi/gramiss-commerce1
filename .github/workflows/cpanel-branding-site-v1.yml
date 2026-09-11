@@ -1,0 +1,152 @@
+name: cPanel Gramiss Branding V1
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.head_ref == 'ops/branding-site-v1'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Deploy official Gramiss logo system
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, html, json, os, re, ssl, time, urllib.parse, urllib.request
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']
+          root=os.environ['THEME_ROOT'].strip('/'); ctx=ssl._create_unverified_context()
+          stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
+
+          SYMBOL_PATH=r'''M400,436 L400,609 L401,610 L401,618 L404,633 L414,662 L423,679 L436,698 L449,713 L467,729 L489,744 L517,757 L536,763 L551,766 L567,767 L568,768 L595,768 L596,767 L613,766 L628,763 L657,753 L677,743 L693,733 L707,722 L734,694 L744,680 L758,654 L760,646 L764,638 L769,615 L769,608 L770,607 L770,437 L742,437 L741,436 L684,436 L683,437 L682,436 L671,436 L670,437 L662,437 L661,436 L511,436 L510,437 L504,437 L565,504 L685,504 L686,505 L686,593 L680,619 L670,640 L658,656 L642,671 L633,677 L619,684 L603,689 L590,690 L589,691 L576,691 L575,690 L567,690 L557,688 L545,684 L531,677 L521,670 L504,653 L496,641 L488,624 L482,600 L482,436ZM125,255 L115,263 L106,268 L93,279 L69,303 L59,315 L39,345 L26,372 L20,389 L12,425 L11,470 L12,471 L14,489 L19,509 L26,529 L39,554 L49,569 L61,584 L78,601 L91,612 L116,629 L138,640 L160,648 L176,652 L181,652 L188,654 L197,654 L198,655 L382,655 L383,652 L383,436 L382,435 L364,435 L363,436 L351,436 L350,435 L311,435 L310,436 L299,435 L299,586 L291,588 L225,588 L224,587 L206,586 L190,582 L168,573 L159,568 L141,555 L120,534 L107,514 L101,502 L93,479 L91,463 L90,462 L90,453 L89,452 L89,437 L90,436 L91,420 L95,403 L102,383 L110,367 L126,344 L151,320 L166,310 L184,301 L201,295 L231,289 L454,289 L453,283 L447,271 L434,253 L414,236 L398,228 L385,224 L374,223 L373,222 L226,222 L225,223 L214,223 L213,224 L197,226 L168,234ZM306,12 L306,206 L375,206 L376,207 L386,208 L386,185 L387,184 L386,90 L388,85 L564,85 L565,86 L580,87 L584,89 L595,91 L619,102 L637,114 L660,137 L676,161 L687,188 L691,207 L691,234 L690,235 L689,246 L684,263 L676,280 L668,293 L657,306 L640,321 L614,336 L600,341 L580,345 L388,345 L387,346 L380,346 L371,348 L360,352 L339,364 L322,380 L316,388 L308,403 L304,417 L305,418 L591,418 L592,417 L612,415 L640,407 L657,400 L672,392 L693,378 L709,365 L734,338 L751,312 L760,293 L767,272 L772,247 L772,240 L773,239 L773,208 L772,207 L771,191 L767,172 L759,148 L745,119 L732,99 L716,79 L690,55 L660,35 L641,26 L615,17 L595,13 L589,13 L588,12 L579,12 L578,11 L310,11Z'''
+          WORDMARK_PATH=r'''M681,23 L677,31 L676,36 L677,47 L682,57 L692,65 L701,68 L759,68 L766,73 L766,79 L762,84 L756,86 L691,86 L675,106 L764,106 L775,102 L785,93 L789,84 L790,73 L786,62 L777,53 L764,48 L706,48 L699,41 L699,37 L705,32 L726,32 L727,31 L736,31 L737,32 L764,32 L766,31 L768,32 L778,20 L783,11 L704,11 L703,12 L698,12 L689,16ZM569,21 L564,29 L562,40 L563,41 L563,48 L566,54 L574,63 L587,68 L643,68 L648,70 L651,73 L651,79 L648,83 L641,86 L576,86 L561,106 L647,106 L655,104 L661,101 L667,96 L673,85 L674,73 L671,63 L663,54 L654,49 L649,48 L593,48 L590,47 L586,43 L585,38 L589,33 L596,31 L612,31 L613,32 L654,31 L668,12 L661,12 L660,11 L591,11 L579,14ZM532,11 L532,20 L531,21 L531,91 L532,92 L532,106 L553,106 L553,12ZM401,12 L401,105 L410,105 L411,106 L420,106 L421,105 L422,106 L423,103 L422,55 L424,51 L450,77 L461,86 L497,50 L498,51 L498,64 L499,65 L499,80 L498,81 L498,103 L499,106 L519,106 L520,105 L520,12 L516,11 L504,12 L461,56 L458,55 L416,11 L415,12 L414,11ZM397,105 L333,11 L325,11 L319,13 L312,24 L302,36 L252,105 L262,105 L263,106 L277,106 L279,105 L326,41 L330,44 L372,105 L377,105 L378,106ZM145,11 L161,31 L166,31 L167,32 L213,31 L214,32 L232,32 L234,33 L237,37 L237,43 L234,47 L229,49 L147,49 L214,105 L219,106 L250,105 L207,70 L208,69 L238,68 L246,65 L256,56 L260,47 L260,33 L256,24 L250,18 L243,14 L231,11ZM19,30 L13,40 L10,52 L11,69 L17,83 L33,99 L39,102 L50,105 L127,105 L128,102 L128,54 L127,49 L68,49 L67,68 L68,69 L69,68 L72,69 L98,69 L99,68 L104,69 L106,72 L106,84 L102,86 L80,86 L79,85 L77,86 L62,86 L61,85 L51,84 L45,81 L36,71 L33,64 L33,52 L37,43 L43,37 L54,32 L59,31 L68,31 L69,32 L73,31 L78,32 L113,31 L128,11 L54,11 L53,12 L48,12 L36,16 L31,19Z'''
+
+          def call(fn,params,post=False):
+              url=f'https://{host}:2083/execute/Fileman/{fn}'
+              data=urllib.parse.urlencode(params).encode()
+              req=urllib.request.Request(url if post else url+'?'+data.decode(),data=data if post else None,method='POST' if post else 'GET')
+              req.add_header('Authorization',f'cpanel {user}:{token}')
+              if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+              with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
+                  obj=json.loads(r.read().decode('utf-8','replace'))
+              result=obj.get('result') if isinstance(obj.get('result'),dict) else obj
+              if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
+              return result.get('data')
+
+          def read_live(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else root+'/'+parent
+              try: d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              except Exception: return None
+              if isinstance(d,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(d.get(k),str): return d[k]
+              return d if isinstance(d,str) else None
+
+          def save_live(rel,content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else root+'/'+parent
+              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+
+          symbol_use='<svg class="gramiss-symbol-svg" viewBox="0 0 785 780" aria-hidden="true" focusable="false"><use href="#gramiss-symbol-shape"></use></svg>'
+          wordmark_use='<svg class="gramiss-wordmark-svg" viewBox="0 0 801 118" aria-hidden="true" focusable="false"><use href="#gramiss-wordmark-shape"></use></svg>'
+          sprite=(f'<svg class="gramiss-brand-sprite" aria-hidden="true" focusable="false" width="0" height="0" '
+                  f'style="position:absolute;width:0;height:0;overflow:hidden" xmlns="http://www.w3.org/2000/svg">'
+                  f'<symbol id="gramiss-symbol-shape" viewBox="0 0 785 780"><path d="{SYMBOL_PATH}" fill="currentColor" fill-rule="evenodd"/></symbol>'
+                  f'<symbol id="gramiss-wordmark-shape" viewBox="0 0 801 118"><path d="{WORDMARK_PATH}" fill="currentColor" fill-rule="evenodd"/></symbol></svg>')
+
+          favicon_svg=f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 785 780"><path d="{SYMBOL_PATH}" fill="#111318" fill-rule="evenodd"/></svg>'
+          favicon_data='data:image/svg+xml,'+urllib.parse.quote(favicon_svg,safe='')
+          shop_symbol_svg=f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 785 780"><path d="{SYMBOL_PATH}" fill="#ffffff" fill-rule="evenodd"/></svg>'
+          shop_symbol_data='data:image/svg+xml,'+urllib.parse.quote(shop_symbol_svg,safe='')
+
+          header=read_live('header.php'); front=read_live('front-page.php'); footer=read_live('footer.php')
+          if not all(isinstance(x,str) for x in (header,front,footer)): raise SystemExit('ABORT: required live theme files unreadable')
+
+          if 'GRAMISS_BRAND_HEADER_V1' not in header:
+              header,n=re.subn(r'(<a class="wordmark"[^>]*>)GRAMISS(</a>)',lambda m:m.group(1)+wordmark_use+m.group(2),header,count=1)
+              if n!=1: raise SystemExit('ABORT: desktop header wordmark target not found')
+              header,n=re.subn(r'(<span class="wordmark">)GRAMISS(</span>)',lambda m:m.group(1)+wordmark_use+m.group(2),header,count=1)
+              if n!=1: raise SystemExit('ABORT: mobile wordmark target not found')
+              body_open='<?php wp_body_open(); ?>'
+              if body_open not in header: raise SystemExit('ABORT: wp_body_open target missing')
+              header=header.replace(body_open,body_open+'\n<!-- GRAMISS_BRAND_HEADER_V1 -->\n'+sprite,1)
+              fav=(f'\n<!-- GRAMISS_BRAND_FAVICON_V1 -->\n<link rel="icon" type="image/svg+xml" href="{html.escape(favicon_data,quote=True)}">\n')
+              if '<?php wp_head(); ?>' not in header: raise SystemExit('ABORT: wp_head target missing')
+              header=header.replace('<?php wp_head(); ?>',fav+'<?php wp_head(); ?>',1)
+              brand_link=('\n<!-- GRAMISS_BRAND_CSS_V1 -->\n<link rel="stylesheet" id="gramiss-brand-system-v1-css" '
+                          'href="<?php echo esc_url( get_template_directory_uri() . \'/assets/css/gramiss-brand-system-v1.css?ver=1.0.0\' ); ?>" media="all">\n')
+              if '</head>' not in header: raise SystemExit('ABORT: head close missing')
+              header=header.replace('</head>',brand_link+'</head>',1)
+
+          if 'GRAMISS_SMART_SYMBOL_V1' not in front:
+              front,n=re.subn(r'(<span class="g1-smart-core"[^>]*>)G(</span>)',lambda m:m.group(1)+'<!-- GRAMISS_SMART_SYMBOL_V1 -->'+symbol_use+m.group(2),front,count=1)
+              if n!=1: raise SystemExit('ABORT: Smart Guide core target not found')
+
+          if 'GRAMISS_FOOTER_LOGO_V1' not in footer:
+              full_logo=('<div class="footer-wordmark gramiss-footer-full-logo" aria-label="Gramiss">'
+                         '<!-- GRAMISS_FOOTER_LOGO_V1 -->'+symbol_use+wordmark_use+'</div>')
+              footer,n=re.subn(r'<div class="footer-wordmark">GRAMISS</div>',full_logo,footer,count=1)
+              if n!=1: raise SystemExit('ABORT: footer wordmark target not found')
+
+          brand_css='''/* GRAMISS_BRAND_SYSTEM_V1 */
+.wordmark{font-size:0!important;letter-spacing:0!important;line-height:0!important;display:inline-flex!important;align-items:center!important;color:#111318!important}
+.wordmark>.gramiss-wordmark-svg{display:block!important;width:164px!important;height:auto!important;max-width:none!important;overflow:visible!important}
+.mobile-panel-head .wordmark>.gramiss-wordmark-svg{width:138px!important}
+#smart-guide .g1-smart-core>.gramiss-symbol-svg{display:block;width:58%;height:58%;color:#101419;overflow:visible}
+.site-footer .gramiss-footer-full-logo{width:106px!important;font-size:0!important;line-height:0!important;letter-spacing:0!important;display:flex!important;flex-direction:column!important;align-items:center!important;gap:4px!important;color:#fff!important;direction:ltr}
+.site-footer .gramiss-footer-full-logo>.gramiss-symbol-svg{display:block;width:100%;height:auto;overflow:visible}
+.site-footer .gramiss-footer-full-logo>.gramiss-wordmark-svg{display:block;width:100%;height:auto;overflow:visible}
+body.gse-shop-ready .gramiss-shop-premium-hero__mark{font-size:0!important;letter-spacing:0!important;color:transparent!important;text-shadow:none!important;width:clamp(128px,12vw,202px)!important;height:clamp(128px,12vw,202px)!important;background-image:url("__SHOP_SYMBOL__")!important;background-repeat:no-repeat!important;background-position:center!important;background-size:contain!important;opacity:.42!important}
+body.gramiss-next-staging .shop-intro::before{content:""!important;width:190px!important;height:190px!important;inset:auto auto 18px 24px!important;background-image:url("__SHOP_SYMBOL__")!important;background-repeat:no-repeat!important;background-position:center!important;background-size:contain!important;opacity:.12!important;color:transparent!important;font-size:0!important}
+@media(max-width:760px){.wordmark>.gramiss-wordmark-svg{width:136px!important}.mobile-panel-head .wordmark>.gramiss-wordmark-svg{width:132px!important}.site-footer .gramiss-footer-full-logo{width:94px!important}body.gse-shop-ready .gramiss-shop-premium-hero__mark{width:116px!important;height:116px!important;left:24px!important;opacity:.32!important}}
+'''.replace('__SHOP_SYMBOL__',shop_symbol_data)
+
+          payload={'header.php':header,'front-page.php':front,'footer.php':footer,'assets/css/gramiss-brand-system-v1.css':brand_css}
+          for rel,content in payload.items():
+              before=read_live(rel)
+              if before is not None and before!=content:
+                  save_live(rel+'.bak-brand-v1-'+stamp,before)
+                  print('BACKUP',rel,hashlib.sha256(before.encode()).hexdigest())
+              save_live(rel,content)
+              after=read_live(rel)
+              if after!=content: raise SystemExit('LIVE WRITE MISMATCH: '+rel)
+              print('PASS WRITE',rel)
+
+          purge='gramiss-purge-brand-v1-'+stamp+'.php'
+          purge_php="<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php'; if(function_exists('do_action')){do_action('litespeed_purge_all');} echo 'OK'; @unlink(__FILE__);"
+          call('save_file_content',{'dir':'public_html','file':purge,'content':purge_php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+          req=urllib.request.Request('https://gramiss.ir/'+purge+'?t='+str(int(time.time())),headers={'User-Agent':'GramissBrandDeploy/1','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
+              if r.status!=200: raise SystemExit('Cache purge failed')
+              print('PURGE',r.status)
+
+          def public_get(url):
+              req=urllib.request.Request(url,headers={'User-Agent':'GramissBrandVerify/1','Cache-Control':'no-cache','Pragma':'no-cache'})
+              with urllib.request.urlopen(req,context=ctx,timeout=90) as r: return r.status,r.read()
+
+          now=str(int(time.time()))
+          for name,url in [('home','https://gramiss.ir/?brand_verify='+now),('shop','https://gramiss.ir/shop/?brand_verify='+now),('contact','https://gramiss.ir/contact/?brand_verify='+now),('about','https://gramiss.ir/about-gramiss/?brand_verify='+now)]:
+              st,b=public_get(url); txt=b.decode('utf-8','replace')
+              if st!=200: raise SystemExit(name+' returned '+str(st))
+              if 'gramiss-brand-system-v1.css' not in txt: raise SystemExit(name+' missing brand stylesheet')
+              if 'gramiss-wordmark-svg' not in txt: raise SystemExit(name+' missing official header wordmark')
+              if 'GRAMISS_FOOTER_LOGO_V1' not in txt: raise SystemExit(name+' missing footer logo')
+              if name=='home' and 'GRAMISS_SMART_SYMBOL_V1' not in txt: raise SystemExit('home missing Smart Guide symbol')
+              print('PASS PUBLIC',name,len(b))
+
+          st,b=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/css/gramiss-brand-system-v1.css?v='+now)
+          if st!=200 or b'GRAMISS_BRAND_SYSTEM_V1' not in b or b'gramiss-shop-premium-hero__mark' not in b:
+              raise SystemExit('Brand CSS public verification failed')
+          print('PASS PUBLIC BRAND CSS',len(b))
+          print('LIVE GRAMISS BRAND SYSTEM V1 DEPLOYED')
+          PY
