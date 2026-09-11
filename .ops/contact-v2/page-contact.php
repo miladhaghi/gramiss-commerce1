@@ -89,7 +89,7 @@ $primary_contact_href = $phone_href ? 'tel:' . $phone_href : 'mailto:' . $suppor
                     <h1 id="gcontact-title">پشتیبانی و تماس،<br>کوتاه و روشن.</h1>
                     <p class="gcontact-intro__lead">برای هر سؤالی درباره سفارش، پرداخت، ارسال یا محصول، ما اینجا هستیم تا به شما کمک کنیم.</p>
                     <div class="gcontact-actions">
-                        <a class="gcontact-btn gcontact-btn--dark" href="<?php echo esc_url( $primary_contact_href ); ?>">
+                        <a class="gcontact-btn gcontact-btn--dark" href="#gcontact-support-choices">
                             <span>تماس با پشتیبانی</span><span aria-hidden="true">←</span>
                         </a>
                         <a class="gcontact-btn gcontact-btn--light" href="#gcontact-faq">مشاهده سؤالات متداول</a>
@@ -159,7 +159,7 @@ $primary_contact_href = $phone_href ? 'tel:' . $phone_href : 'mailto:' . $suppor
                             <h3>پاسخ مورد نظر خود را پیدا نکردید؟</h3>
                             <p>با تیم پشتیبانی ما در ارتباط باشید. ما اینجا هستیم تا راهنمایی‌تان کنیم.</p>
                         </div>
-                        <a class="gcontact-btn gcontact-btn--dark" href="<?php echo esc_url( $primary_contact_href ); ?>">
+                        <a class="gcontact-btn gcontact-btn--dark" href="#gcontact-support-choices">
                             <span>تماس با پشتیبانی</span><span aria-hidden="true">←</span>
                         </a>
                     </aside>
@@ -186,6 +186,45 @@ $primary_contact_href = $phone_href ? 'tel:' . $phone_href : 'mailto:' . $suppor
             </div>
         </div>
     </section>
+
+    <div id="gcontact-support-choices" class="gcontact-support-choices" role="dialog" aria-modal="true" aria-labelledby="gcontact-support-choice-title">
+        <a class="gcontact-support-choices__backdrop" href="#gcontact-title" aria-label="بستن پنجره تماس"></a>
+        <div class="gcontact-support-choices__card">
+            <a class="gcontact-support-choices__close" href="#gcontact-title" aria-label="بستن">×</a>
+            <p class="gcontact-kicker">CONTACT GRAMISS</p>
+            <h2 id="gcontact-support-choice-title">راه تماس را انتخاب کنید</h2>
+            <p class="gcontact-support-choices__lead">از یکی از روش‌های زیر مستقیماً با پشتیبانی گرامیس در ارتباط باشید.</p>
+            <div class="gcontact-support-choices__links">
+                <?php if ( $phone_href ) : ?>
+                    <a class="gcontact-support-choice" href="tel:<?php echo esc_attr( $phone_href ); ?>">
+                        <span>تماس تلفنی</span>
+                        <strong dir="ltr"><?php echo esc_html( $phone_display ); ?></strong>
+                    </a>
+                <?php endif; ?>
+                <a class="gcontact-support-choice" href="mailto:<?php echo esc_attr( $support_email ); ?>">
+                    <span>ارسال ایمیل</span>
+                    <strong dir="ltr"><?php echo esc_html( $support_email ); ?></strong>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .gcontact-support-choices{position:fixed;inset:0;z-index:999999;display:grid;place-items:center;padding:20px;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s ease,visibility .2s ease}
+        .gcontact-support-choices:target{opacity:1;visibility:visible;pointer-events:auto}
+        .gcontact-support-choices__backdrop{position:absolute;inset:0;background:rgba(4,9,14,.62);backdrop-filter:blur(8px)}
+        .gcontact-support-choices__card{position:relative;z-index:1;width:min(460px,100%);padding:30px;border-radius:22px;background:#fbfaf7;box-shadow:0 28px 80px rgba(3,8,13,.28);transform:translateY(14px) scale(.985);transition:transform .2s ease;text-align:right}
+        .gcontact-support-choices:target .gcontact-support-choices__card{transform:none}
+        .gcontact-support-choices__close{position:absolute;left:18px;top:14px;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#f0ece6;border:1px solid rgba(13,16,22,.10);font:400 25px/1 Arial,sans-serif;color:#111!important}
+        .gcontact-support-choices__card h2{font-size:28px;line-height:1.35;font-weight:900;color:#0d1016}
+        .gcontact-support-choices__lead{margin-top:9px!important;color:#747b84;font-size:13px;line-height:1.8}
+        .gcontact-support-choices__links{margin-top:22px;display:grid;gap:10px}
+        .gcontact-support-choice{min-height:72px;padding:14px 16px;border:1px solid rgba(13,16,22,.10);border-radius:15px;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:18px;transition:.18s ease}
+        .gcontact-support-choice:hover{transform:translateY(-1px);border-color:rgba(49,95,155,.30);box-shadow:0 10px 24px rgba(20,24,30,.06)}
+        .gcontact-support-choice span{font-size:14px;font-weight:850;color:#111820}
+        .gcontact-support-choice strong{font-size:14px;color:#315f9b;white-space:nowrap;unicode-bidi:isolate}
+        @media(max-width:560px){.gcontact-support-choices__card{padding:26px 18px 18px;border-radius:18px}.gcontact-support-choices__card h2{font-size:24px}.gcontact-support-choice{align-items:flex-start;flex-direction:column;gap:5px;min-height:0}.gcontact-support-choice strong{font-size:13px}}
+    </style>
 </main>
 
 <?php get_footer();
