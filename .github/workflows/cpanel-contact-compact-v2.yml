@@ -1,0 +1,143 @@
+name: cPanel Contact Compact V2
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    if: startsWith(github.head_ref, 'ops/contact-compact-v2')
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Deploy approved compact Contact page
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re, ssl, time, urllib.parse, urllib.request
+          from pathlib import Path
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']
+          root=os.environ['THEME_ROOT'].strip('/'); ctx=ssl._create_unverified_context()
+          stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
+
+          def call(fn,params,post=False):
+              url=f'https://{host}:2083/execute/Fileman/{fn}'
+              data=urllib.parse.urlencode(params).encode()
+              req=urllib.request.Request(url if post else url+'?'+data.decode(),data=data if post else None,method='POST' if post else 'GET')
+              req.add_header('Authorization',f'cpanel {user}:{token}')
+              if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+              with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
+                  obj=json.loads(r.read().decode('utf-8','replace'))
+              result=obj.get('result') if isinstance(obj.get('result'),dict) else obj
+              if not isinstance(result,dict) or result.get('status')!=1:
+                  raise RuntimeError(str(result))
+              return result.get('data')
+
+          def read_live(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else root+'/'+parent
+              try:
+                  d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              except Exception:
+                  return None
+              if isinstance(d,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(d.get(k),str): return d[k]
+              return d if isinstance(d,str) else None
+
+          def save_live(rel,content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else root+'/'+parent
+              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+
+          def public_get(url):
+              req=urllib.request.Request(url,headers={'User-Agent':'GramissContactDeploy/2','Cache-Control':'no-cache','Pragma':'no-cache'})
+              with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
+                  return r.status,r.read()
+
+          # Preserve the currently published support phone without exposing or hard-coding it in Git.
+          live_template=read_live('page-contact.php') or ''
+          try:
+              _, old_html_bytes=public_get('https://gramiss.ir/contact/?contact_preserve='+str(int(time.time())))
+              old_html=old_html_bytes.decode('utf-8','replace')
+          except Exception:
+              old_html=''
+
+          digit_map=str.maketrans('۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩','01234567890123456789')
+          source=(old_html+'\n'+live_template).translate(digit_map)
+          compact=re.sub(r'[\s\-()]+','',source)
+          phones=re.findall(r'(?<!\d)(09\d{9})(?!\d)',compact)
+          if not phones:
+              raise SystemExit('ABORT: could not preserve current support phone')
+          support_phone=phones[0]
+          print('PASS: existing support phone preserved')
+
+          staged=Path('.ops/contact-v2')
+          page=(staged/'page-contact.php').read_text(encoding='utf-8')
+          css=(staged/'contact-v2.css').read_text(encoding='utf-8')
+          if 'GRAMISS_CONTACT_V2' not in page or 'GRAMISS_CONTACT_V2' not in css:
+              raise SystemExit('ABORT: contact V2 marker missing')
+          if '__SUPPORT_PHONE__' not in page:
+              raise SystemExit('ABORT: support phone placeholder missing')
+          page=page.replace('__SUPPORT_PHONE__',support_phone)
+
+          payload={
+              'page-contact.php':page,
+              'assets/css/contact-v2.css':css,
+          }
+
+          # Back up current Contact template before changing only this page.
+          before=read_live('page-contact.php')
+          if before is not None:
+              save_live('page-contact.php.bak-contact-v2-'+stamp,before)
+              print('BACKUP page-contact.php')
+
+          for rel,content in payload.items():
+              save_live(rel,content)
+              after=read_live(rel)
+              if after != content:
+                  raise SystemExit('LIVE WRITE MISMATCH: '+rel)
+              print('PASS WRITE',rel)
+
+          # Purge LiteSpeed cache with a one-time helper that deletes itself.
+          purge='gramiss-purge-contact-v2-'+stamp+'.php'
+          php="<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php'; if(function_exists('do_action')){do_action('litespeed_purge_all');} echo 'OK'; @unlink(__FILE__);"
+          call('save_file_content',{'dir':'public_html','file':purge,'content':php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+          req=urllib.request.Request('https://gramiss.ir/'+purge+'?t='+str(int(time.time())),headers={'User-Agent':'GramissContactDeploy/2','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
+              if r.status!=200: raise SystemExit('Cache purge failed')
+              print('PURGE',r.status)
+
+          # Verify the public Contact page and CSS, plus a Home sanity check.
+          q='?gramiss_contact_v2='+str(int(time.time()))
+          st,b=public_get('https://gramiss.ir/contact/'+q)
+          html=b.decode('utf-8','replace')
+          checks={
+              'contact 200':st==200,
+              'template marker':'GRAMISS_CONTACT_V2' in html or 'data-gramiss-contact="v2"' in html,
+              'hero':'پشتیبانی و تماس' in html and 'کوتاه و روشن' in html,
+              'routes':'سفارش و پرداخت' in html and 'ارسال و پیگیری' in html and 'محصول و مغایرت' in html,
+              'faq':'پاسخ‌های سریع' in html and 'سفارشم ثبت شده' in html,
+              'phone preserved':support_phone in re.sub(r'[\s\-()]+','',html.translate(digit_map)),
+          }
+          for label,ok in checks.items(): print(('PASS' if ok else 'FAIL')+': '+label)
+          if not all(checks.values()): raise SystemExit('Public Contact verification failed')
+
+          st_css,b_css=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/css/contact-v2.css?v='+stamp)
+          if st_css!=200 or b'GRAMISS_CONTACT_V2' not in b_css:
+              raise SystemExit('CSS verification failed')
+
+          st_home,_=public_get('https://gramiss.ir/?contact_sanity='+str(int(time.time())))
+          if st_home!=200: raise SystemExit('Home sanity check failed')
+          print('LIVE CONTACT V2 DEPLOYED')
+          PY
