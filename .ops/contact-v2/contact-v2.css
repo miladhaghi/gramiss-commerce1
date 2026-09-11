@@ -1,0 +1,119 @@
+/* GRAMISS_CONTACT_V2 */
+.gcontact{
+  --gc-bg:#f5f1eb;
+  --gc-paper:#fbfaf7;
+  --gc-ink:#0d1016;
+  --gc-muted:#747b84;
+  --gc-line:rgba(13,16,22,.11);
+  --gc-blue:#315f9b;
+  --gc-dark:#0b1219;
+  background:var(--gc-bg);
+  color:var(--gc-ink);
+  overflow:hidden;
+}
+.gcontact,.gcontact *{box-sizing:border-box}
+.gcontact a{color:inherit;text-decoration:none}
+.gcontact h1,.gcontact h2,.gcontact h3,.gcontact p{margin:0}
+.gcontact h1,.gcontact h2,.gcontact h3{letter-spacing:-.025em}
+.gcontact-shell{width:min(1420px,calc(100% - 84px));margin-inline:auto}
+.gcontact-kicker{margin-bottom:16px!important;color:var(--gc-blue);font:800 10px/1.2 Arial,sans-serif;letter-spacing:.26em;direction:ltr;text-align:right}
+.gcontact-kicker--panel{color:#6f9bd0;text-align:left}
+.gcontact-kicker--ltr{text-align:left}
+.gcontact-index{color:var(--gc-blue);font:800 10px/1 Arial,sans-serif;letter-spacing:.08em}
+.gcontact-btn{min-height:48px;padding:0 22px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;gap:11px;font-size:14px;font-weight:850;transition:.2s ease}
+.gcontact-btn:hover{transform:translateY(-2px)}
+.gcontact-btn--dark{background:var(--gc-dark);color:#fff!important;box-shadow:0 12px 28px rgba(7,12,18,.09)}
+.gcontact-btn--light{background:rgba(255,255,255,.72);border:1px solid var(--gc-line)}
+
+.gcontact-screen--top{padding:48px 0 50px;background:radial-gradient(circle at 80% 8%,rgba(255,255,255,.95),rgba(247,244,239,.92) 38%,#f2ede6 100%)}
+.gcontact-hero{display:grid;grid-template-columns:.94fr 1.06fr;grid-template-areas:"panel intro";gap:74px;align-items:stretch}
+.gcontact-panel{grid-area:panel;min-height:370px;padding:38px 38px 26px;border-radius:22px;color:#fff;background:radial-gradient(circle at 18% 8%,#182938 0,#0c141d 58%,#091018 100%);box-shadow:0 24px 55px rgba(7,14,20,.14)}
+.gcontact-panel h2{font-size:31px;line-height:1.28;font-weight:850}
+.gcontact-panel__lead{margin-top:10px!important;color:#aeb8c2;font-size:13.5px;line-height:1.8}
+.gcontact-contactlist{margin-top:21px}
+.gcontact-contactrow{min-height:72px;display:grid;grid-template-columns:44px 1fr;gap:14px;align-items:center;border-bottom:1px solid rgba(255,255,255,.11)}
+.gcontact-contactrow:last-child{border-bottom:0}
+.gcontact-contactrow__icon{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.10)}
+.gcontact-contactrow__icon svg{width:20px;height:20px;stroke:#fff;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.gcontact-contactrow__body{display:flex;flex-direction:column;gap:4px;min-width:0}
+.gcontact-contactrow__body small{color:#7fa4cf;font-size:11px}
+.gcontact-contactrow__body strong{font-size:15px;line-height:1.45;font-weight:800;overflow-wrap:anywhere}
+.gcontact-response-note{margin-top:16px;display:flex;align-items:center;gap:9px;color:#b3bec8;font-size:11.5px}
+.gcontact-response-note span{width:23px;height:23px;display:grid;place-items:center}
+.gcontact-response-note svg{width:20px;height:20px;stroke:#c6d1db;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+
+.gcontact-intro{grid-area:intro;display:flex;flex-direction:column;justify-content:center;padding:18px 0}
+.gcontact-intro h1{font-size:clamp(46px,4vw,62px);line-height:1.22;font-weight:900;max-width:720px}
+.gcontact-intro__lead{margin-top:20px!important;max-width:690px;color:var(--gc-muted);font-size:15px;line-height:1.95}
+.gcontact-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:25px}
+.gcontact-intro__micro{margin-top:14px!important;color:#8a9098;font-size:11.5px}
+
+.gcontact-routes{margin-top:28px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px;direction:rtl}
+.gcontact-route{min-height:190px;padding:20px 20px 18px;background:rgba(255,255,255,.79);border:1px solid rgba(13,16,22,.08);border-radius:18px;box-shadow:0 12px 28px rgba(43,35,27,.035);display:flex;flex-direction:column}
+.gcontact-route__top{display:flex;align-items:center;justify-content:space-between;margin-bottom:auto}
+.gcontact-route__icon{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:#f6f3ef;border:1px solid var(--gc-line)}
+.gcontact-route__icon svg{width:22px;height:22px;stroke:#12171d;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.gcontact-route h3{font-size:21px;line-height:1.35;font-weight:850;margin-top:22px}
+.gcontact-route p{margin-top:8px!important;color:var(--gc-muted);font-size:12.5px;line-height:1.8;max-width:360px}
+.gcontact-route>a{margin-top:14px;color:var(--gc-blue);font-size:12px;font-weight:800;display:inline-flex;align-items:center;gap:7px}
+
+.gcontact-screen--faq{padding:36px 0 50px;background:#fbfaf8;border-top:1px solid var(--gc-line)}
+.gcontact-faqbox{padding:30px 32px 32px;border:1px solid rgba(13,16,22,.08);border-radius:20px;background:rgba(255,255,255,.72);box-shadow:0 16px 34px rgba(40,31,22,.025)}
+.gcontact-faqhead{display:flex;align-items:flex-start;justify-content:space-between;gap:28px}
+.gcontact-faqhead h2{font-size:40px;line-height:1.2;font-weight:900}
+.gcontact-faqhead>div>p:last-child{margin-top:8px!important;color:var(--gc-muted);font-size:12px}
+.gcontact-faqhead>a{color:var(--gc-blue);font-size:12px;font-weight:800;display:flex;align-items:center;gap:7px;padding-top:5px}
+.gcontact-faqlayout{margin-top:24px;display:grid;grid-template-columns:300px 1fr;grid-template-areas:"help faq";gap:18px;align-items:stretch;direction:ltr}
+.gcontact-help{grid-area:help;direction:rtl;padding:19px;border-radius:16px;background:linear-gradient(145deg,#f5f1eb 0,#eee9e2 100%);display:flex;flex-direction:column;justify-content:flex-end;min-height:245px}
+.gcontact-help__icon{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.7);border:1px solid var(--gc-line);margin-bottom:auto}
+.gcontact-help__icon svg{width:22px;height:22px;stroke:#131920;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.gcontact-help h3{font-size:15px;line-height:1.55;font-weight:850}
+.gcontact-help p{margin-top:7px!important;color:var(--gc-muted);font-size:11.5px;line-height:1.75}
+.gcontact-help .gcontact-btn{margin-top:14px;width:100%;min-height:44px;font-size:12px}
+.gcontact-accordion{grid-area:faq;direction:rtl;border-top:1px solid var(--gc-line)}
+.gcontact-accordion details{border-bottom:1px solid var(--gc-line)}
+.gcontact-accordion summary{list-style:none;cursor:pointer;min-height:59px;padding:0 8px;display:flex;align-items:center;justify-content:space-between;gap:20px;font-size:15px;font-weight:850}
+.gcontact-accordion summary::-webkit-details-marker{display:none}
+.gcontact-accordion summary b{font:400 24px/1 Arial,sans-serif;transition:.18s ease}
+.gcontact-accordion details[open] summary b{transform:rotate(45deg)}
+.gcontact-accordion details p{padding:0 8px 17px;color:var(--gc-muted);font-size:12px;line-height:1.85;max-width:880px}
+
+@media (max-width:1100px){
+  .gcontact-shell{width:min(100% - 44px,1040px)}
+  .gcontact-hero{gap:36px;grid-template-columns:.95fr 1.05fr}
+  .gcontact-panel{padding:30px;min-height:350px}
+  .gcontact-intro h1{font-size:46px}
+  .gcontact-routes{grid-template-columns:repeat(3,1fr)}
+}
+@media (max-width:860px){
+  .gcontact-shell{width:min(100% - 28px,760px)}
+  .gcontact-screen--top{padding:34px 0 38px}
+  .gcontact-hero{grid-template-columns:1fr;grid-template-areas:"intro" "panel";gap:24px}
+  .gcontact-intro{padding:0}
+  .gcontact-intro h1{font-size:40px}
+  .gcontact-panel{min-height:0}
+  .gcontact-routes{grid-template-columns:1fr}
+  .gcontact-route{min-height:160px}
+  .gcontact-faqlayout{grid-template-columns:1fr;grid-template-areas:"faq" "help";direction:rtl}
+  .gcontact-help{min-height:210px}
+}
+@media (max-width:560px){
+  .gcontact-shell{width:calc(100% - 22px)}
+  .gcontact-intro h1{font-size:34px}
+  .gcontact-intro__lead{font-size:13.5px}
+  .gcontact-actions{display:grid;grid-template-columns:1fr}
+  .gcontact-btn{width:100%}
+  .gcontact-panel{padding:24px 18px;border-radius:18px}
+  .gcontact-panel h2{font-size:27px}
+  .gcontact-contactrow{grid-template-columns:40px 1fr;gap:11px}
+  .gcontact-contactrow__icon{width:38px;height:38px}
+  .gcontact-route{border-radius:16px}
+  .gcontact-screen--faq{padding:28px 0 36px}
+  .gcontact-faqbox{padding:22px 15px;border-radius:17px}
+  .gcontact-faqhead{display:block}
+  .gcontact-faqhead h2{font-size:32px}
+  .gcontact-faqhead>a{margin-top:14px;padding-top:0}
+  .gcontact-faqlayout{margin-top:18px}
+  .gcontact-accordion summary{font-size:13.5px;min-height:56px;padding:0 2px}
+  .gcontact-accordion details p{padding-inline:2px}
+}
