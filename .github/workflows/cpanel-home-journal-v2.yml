@@ -1,0 +1,128 @@
+name: cPanel Home Journal V2
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.head_ref == 'ops/home-journal-v2'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy approved Gramiss Journal redesign
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, hashlib, json, os, re, ssl, time, urllib.parse, urllib.request
+          from pathlib import Path
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']
+          root=os.environ['THEME_ROOT'].strip('/'); ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
+
+          def call(fn, params, post=False):
+              url=f'https://{host}:2083/execute/Fileman/{fn}'
+              data=urllib.parse.urlencode(params).encode()
+              req=urllib.request.Request(url if post else url+'?'+data.decode(), data=data if post else None, method='POST' if post else 'GET')
+              req.add_header('Authorization',f'cpanel {user}:{token}')
+              if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+              with urllib.request.urlopen(req,context=ctx,timeout=90) as r: obj=json.loads(r.read().decode('utf-8','replace'))
+              result=obj.get('result') if isinstance(obj.get('result'),dict) else obj
+              if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
+              return result.get('data')
+
+          def read_live(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else root+'/'+parent
+              d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(d,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(d.get(k),str): return d[k]
+              return d if isinstance(d,str) else None
+
+          def save_live(rel, content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else root+'/'+parent
+              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+
+          front=read_live('front-page.php'); header=read_live('header.php')
+          if not isinstance(front,str) or not isinstance(header,str): raise SystemExit('ABORT: required live files unreadable')
+          if 'GRAMISS_HOME_JOURNAL_V2' in front: raise SystemExit('ABORT: Journal V2 already present')
+
+          old=re.search(r'<section class="g1-section g1-reveal" id="journal">[\s\S]*?</section>',front)
+          if not old: raise SystemExit('ABORT: current Journal section target not found')
+          if front.count('id="journal"') != 1: raise SystemExit('ABORT: Journal target not unique')
+
+          material='data:image/webp;base64,'+base64.b64encode(Path('ops/home-journal-v2/assets/journal-material.webp').read_bytes()).decode()
+          cap='data:image/webp;base64,'+base64.b64encode(Path('ops/home-journal-v2/assets/journal-style-cap.webp').read_bytes()).decode()
+          fit='data:image/webp;base64,'+base64.b64encode(Path('ops/home-journal-v2/assets/journal-fit.webp').read_bytes()).decode()
+
+          markup='''<!-- GRAMISS_HOME_JOURNAL_V2 -->
+<section class="g1-section g1-reveal gj2" id="journal">
+  <header class="gj2-head">
+    <div class="gj2-eyebrow"><span></span><svg class="gj2-mini-symbol" viewBox="0 0 785 780" aria-hidden="true"><use href="#gramiss-symbol-shape"></use></svg><small>GRAMISS JOURNAL</small><span></span></div>
+    <h2>قبل از خرید، بهتر بدان.</h2>
+    <p>دانش کاربردی، انتخاب آگاهانه‌تر و استایلی ماندگارتر.</p>
+  </header>
+  <div class="gj2-grid">
+    <div class="gj2-stack">
+      <article class="gj2-card gj2-small gj2-style">
+        <div class="gj2-copy"><div class="gj2-index"><b>03</b><span></span></div><small>STYLE GUIDE</small><h3>جزئیات کوچک،<br>تفاوت بزرگ.</h3><p>از دوخت گرفته تا دکمه و اکسسوری‌ها؛ جزئیاتی که استایل را متمایز می‌کنند.</p><span class="gj2-read">مطالعه مطلب <b>←</b></span></div>
+        <div class="gj2-media gj2-media-cap"><span class="gj2-logo-patch"><svg viewBox="0 0 785 780" aria-label="Gramiss"><use href="#gramiss-symbol-shape"></use></svg></span></div>
+      </article>
+      <article class="gj2-card gj2-small gj2-fit">
+        <div class="gj2-copy"><div class="gj2-index"><b>02</b><span></span></div><small>FIT GUIDE</small><h3>قواره و سایز<br>یک چیز نیستند.</h3><p>تفاوت اصلی را بفهم تا انتخاب دقیق‌تری داشته باشی.</p><span class="gj2-read">مطالعه مطلب <b>←</b></span></div>
+        <div class="gj2-media gj2-media-fit"></div>
+      </article>
+    </div>
+    <article class="gj2-card gj2-featured">
+      <div class="gj2-copy"><div class="gj2-index"><b>01</b><span></span></div><small>MATERIAL GUIDE</small><h3>چطور کیفیت پارچه را<br>قبل از خرید تشخیص دهیم؟</h3><p>نشانه‌های ساده‌ای که کمک می‌کنند محصولی انتخاب کنی که بعد از استفاده و شست‌وشو ارزشش را حفظ کند.</p><span class="gj2-read gj2-read-featured"><b>←</b> مطالعه مطلب</span></div>
+      <div class="gj2-media gj2-media-material"></div>
+    </article>
+  </div>
+  <div class="gj2-bottom"><span>GRAMISS / JOURNAL</span><a href="#journal">مشاهده همه راهنماها <b>←</b></a><em>استایل آگاهانه، انتخاب ماندگار</em></div>
+</section>'''
+          front=front[:old.start()]+markup+front[old.end():]
+
+          css='''/* GRAMISS_HOME_JOURNAL_V2 */
+#journal.gj2{width:min(calc(100% - 64px),1480px);margin:0 auto;padding:86px 0 82px;position:relative;overflow:visible;background:transparent}
+.gj2-head{text-align:center;margin:0 auto 34px;max-width:900px}.gj2-eyebrow{display:flex;justify-content:center;align-items:center;gap:16px;color:#37699d}.gj2-eyebrow>span{width:42px;height:1px;background:rgba(55,105,157,.42)}.gj2-mini-symbol{width:18px;height:18px;color:#111318;display:block}.gj2-eyebrow small{font:700 10px/1 Inter,Arial,sans-serif;letter-spacing:.32em}.gj2-head h2{margin:18px 0 0;color:#111318;font-size:clamp(42px,5.2vw,72px);font-weight:760;line-height:1.28;letter-spacing:-.045em}.gj2-head p{margin:10px 0 0;color:#797d85;font-size:15px;line-height:2}
+.gj2-grid{display:grid;grid-template-columns:minmax(340px,.82fr) minmax(0,1.58fr);grid-template-areas:'stack feature';gap:18px;align-items:stretch}.gj2-stack{grid-area:stack;display:grid;grid-template-rows:1fr 1fr;gap:16px}.gj2-featured{grid-area:feature}.gj2-card{position:relative;overflow:hidden;border:1px solid rgba(17,19,24,.07);border-radius:24px;background:linear-gradient(135deg,#f7f4ef 0%,#eee8df 100%);box-shadow:0 18px 46px rgba(31,27,22,.055);transition:transform .28s ease,box-shadow .28s ease}.gj2-card:hover{transform:translateY(-3px);box-shadow:0 24px 58px rgba(31,27,22,.09)}.gj2-featured{min-height:584px;display:grid;grid-template-columns:minmax(0,1.02fr) minmax(300px,.98fr);grid-template-areas:'copy media';direction:ltr}.gj2-small{min-height:282px;display:grid;grid-template-columns:minmax(0,1fr) minmax(170px,.92fr);grid-template-areas:'copy media';direction:ltr}.gj2-copy{grid-area:copy;direction:rtl;text-align:right;position:relative;z-index:2;padding:32px 34px}.gj2-featured .gj2-copy{padding:42px 40px;align-self:center}.gj2-index{direction:ltr;display:flex;align-items:center;gap:14px;justify-content:flex-end;color:#4e5968;margin-bottom:24px}.gj2-index b{font:500 28px/1 Georgia,serif}.gj2-index span{width:30px;height:1px;background:#5377a0}.gj2-copy>small{display:block;color:#356da8;font:700 9px/1 Inter,Arial,sans-serif;letter-spacing:.22em;margin-bottom:24px}.gj2-copy h3{margin:0;color:#111318;font-size:clamp(24px,2.35vw,40px);font-weight:720;line-height:1.55;letter-spacing:-.035em}.gj2-featured .gj2-copy h3{font-size:clamp(33px,3.2vw,52px);line-height:1.48}.gj2-copy p{margin:15px 0 0;color:#777b82;font-size:12px;line-height:2;max-width:430px}.gj2-read{display:inline-flex;align-items:center;gap:9px;margin-top:26px;color:#315f8e;font-size:11px;font-weight:700}.gj2-read b{font-size:18px;font-weight:400}.gj2-read-featured{margin-top:34px;padding:0}.gj2-media{grid-area:media;position:relative;min-width:0;background-repeat:no-repeat;background-position:center;background-size:cover;overflow:hidden}.gj2-media::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(247,244,239,.16),transparent 25%);pointer-events:none}.gj2-media-material{background-image:url("'''+material+'''");background-position:center 52%}.gj2-media-cap{background-image:url("'''+cap+'''");background-position:center}.gj2-media-fit{background-image:url("'''+fit+'''");background-position:center}.gj2-media-cap img,.gj2-media-fit img{display:none}.gj2-logo-patch{position:absolute;left:47%;top:56%;transform:translate(-50%,-50%);z-index:3;width:54px;height:48px;border-radius:13px;background:rgba(190,175,157,.94);box-shadow:0 3px 9px rgba(57,47,38,.18),inset 0 0 0 1px rgba(255,255,255,.28);display:grid;place-items:center}.gj2-logo-patch svg{width:31px;height:31px;color:#594c42;filter:drop-shadow(0 1px 0 rgba(255,255,255,.28))}.gj2-bottom{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:24px;margin-top:16px;color:#b0aaa2}.gj2-bottom>span,.gj2-bottom>em{font:500 8px/1 Inter,Arial,sans-serif;letter-spacing:.28em;font-style:normal}.gj2-bottom>em{text-align:left}.gj2-bottom>a{min-height:46px;padding:0 28px;border:1px solid rgba(17,19,24,.14);border-radius:999px;display:inline-flex;align-items:center;gap:10px;justify-content:center;color:#272b31;background:rgba(255,255,255,.72);font-size:11px;font-weight:700;text-decoration:none;transition:.2s ease}.gj2-bottom>a:hover{background:#111318;color:#fff;border-color:#111318}
+@media(max-width:1100px){#journal.gj2{width:min(calc(100% - 40px),1480px);padding:68px 0}.gj2-grid{grid-template-columns:minmax(290px,.8fr) minmax(0,1.35fr)}.gj2-featured{min-height:520px;grid-template-columns:1fr .88fr}.gj2-small{min-height:250px;grid-template-columns:1fr 145px}.gj2-copy{padding:26px 24px}.gj2-featured .gj2-copy{padding:34px 30px}}
+@media(max-width:820px){#journal.gj2{width:min(calc(100% - 28px),1480px);padding:54px 0}.gj2-head{margin-bottom:24px}.gj2-head h2{font-size:clamp(36px,10vw,52px)}.gj2-grid{grid-template-columns:1fr;grid-template-areas:'feature' 'stack';gap:14px}.gj2-featured{min-height:0;grid-template-columns:1fr;grid-template-areas:'media' 'copy'}.gj2-featured .gj2-media{min-height:330px}.gj2-stack{grid-template-columns:1fr 1fr;grid-template-rows:none}.gj2-small{min-height:0;grid-template-columns:1fr;grid-template-areas:'media' 'copy'}.gj2-small .gj2-media{min-height:190px}.gj2-bottom{grid-template-columns:1fr}.gj2-bottom>span,.gj2-bottom>em{display:none}.gj2-bottom>a{justify-self:center}.gj2-logo-patch{width:48px;height:43px}}
+@media(max-width:560px){#journal.gj2{width:calc(100% - 20px);padding:44px 0}.gj2-eyebrow>span{width:26px}.gj2-eyebrow small{font-size:8px}.gj2-head p{font-size:11px}.gj2-featured .gj2-media{min-height:270px}.gj2-stack{grid-template-columns:1fr}.gj2-small .gj2-media{min-height:230px}.gj2-copy,.gj2-featured .gj2-copy{padding:24px 20px}.gj2-copy h3,.gj2-featured .gj2-copy h3{font-size:28px}.gj2-index{margin-bottom:16px}.gj2-copy>small{margin-bottom:16px}.gj2-copy p{font-size:11px}.gj2-logo-patch{left:48%;top:55%}}
+'''
+
+          if 'gramiss-home-journal-v2.css' not in header:
+              link='\n<!-- GRAMISS_HOME_JOURNAL_V2_CSS -->\n<link rel="stylesheet" id="gramiss-home-journal-v2-css" href="<?php echo esc_url( get_template_directory_uri() . \'/assets/css/gramiss-home-journal-v2.css?ver=2.0.0\' ); ?>" media="all">\n'
+              if '</head>' not in header: raise SystemExit('ABORT: header close target missing')
+              header=header.replace('</head>',link+'</head>',1)
+
+          for rel,content in [('front-page.php',front),('header.php',header),('assets/css/gramiss-home-journal-v2.css',css)]:
+              before=read_live(rel)
+              if before is not None and before!=content: save_live(rel+'.bak-journal-v2-'+stamp,before)
+              save_live(rel,content)
+              after=read_live(rel)
+              if after!=content: raise SystemExit('LIVE WRITE MISMATCH: '+rel)
+              print('PASS WRITE',rel,hashlib.sha256(content.encode()).hexdigest()[:16])
+
+          purge='gramiss-purge-journal-v2-'+stamp+'.php'
+          purge_php="<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php'; if(function_exists('do_action')){do_action('litespeed_purge_all');} echo 'OK'; @unlink(__FILE__);"
+          call('save_file_content',{'dir':'public_html','file':purge,'content':purge_php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+          req=urllib.request.Request('https://gramiss.ir/'+purge+'?t='+str(int(time.time())),headers={'User-Agent':'GramissJournalDeploy/2','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
+              if r.status!=200: raise SystemExit('cache purge failed')
+
+          def public_get(url):
+              req=urllib.request.Request(url,headers={'User-Agent':'GramissJournalVerify/2','Cache-Control':'no-cache','Pragma':'no-cache'})
+              with urllib.request.urlopen(req,context=ctx,timeout=90) as r:return r.status,r.read()
+          now=str(int(time.time())); st,b=public_get('https://gramiss.ir/?journal_v2='+now); txt=b.decode('utf-8','replace')
+          if st!=200 or 'GRAMISS_HOME_JOURNAL_V2' not in txt or 'gramiss-home-journal-v2.css' not in txt: raise SystemExit('public Home verification failed')
+          st,b=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/css/gramiss-home-journal-v2.css?v='+now)
+          if st!=200 or b'GRAMISS_HOME_JOURNAL_V2' not in b: raise SystemExit('public Journal CSS verification failed')
+          print('LIVE HOME JOURNAL V2 DEPLOYED')
+          PY
