@@ -17,66 +17,58 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
-      - name: Inspect live branding targets
+      - name: Inspect exact live branding markup
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import json, os, ssl, urllib.parse, urllib.request, re, hashlib
+          import json, os, ssl, urllib.parse, urllib.request, re
           host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
           ctx=ssl._create_unverified_context()
-          def call(fn,params,post=False):
-              url=f'https://{host}:2083/execute/Fileman/{fn}'
-              data=urllib.parse.urlencode(params).encode()
-              req=urllib.request.Request(url if post else url+'?'+data.decode(),data=data if post else None,method='POST' if post else 'GET')
-              req.add_header('Authorization',f'cpanel {user}:{token}')
-              if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
-              with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
-                  obj=json.loads(r.read().decode('utf-8','replace'))
+          def call(fn,params):
+              url=f'https://{host}:2083/execute/Fileman/{fn}?'+urllib.parse.urlencode(params)
+              req=urllib.request.Request(url,headers={'Authorization':f'cpanel {user}:{token}'})
+              with urllib.request.urlopen(req,context=ctx,timeout=90) as r: obj=json.loads(r.read().decode('utf-8','replace'))
               result=obj.get('result') if isinstance(obj.get('result'),dict) else obj
               if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
               return result.get('data')
           def read(rel):
-              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
-              directory=root if not parent else root+'/'+parent
-              try:
-                  d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
-              except Exception as e:
-                  print('MISS',rel,type(e).__name__); return None
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else root+'/'+parent
+              try: d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              except Exception: return None
               if isinstance(d,dict):
                   for k in ('content','file_content','data'):
                       if isinstance(d.get(k),str): return d[k]
               return d if isinstance(d,str) else None
-          def show(rel,text):
-              if not isinstance(text,str): return
-              print('\nFILE',rel,'BYTES',len(text.encode()),'SHA',hashlib.sha256(text.encode()).hexdigest()[:16])
-              needles=['GRAMISS','Gramiss','Smart Guide','SMART GUIDE','smart-guide','smart_guide','guide','footer','site-brand','brand','فروشگاه']
-              seen=[]
-              for needle in needles:
-                  pos=0
-                  while True:
-                      i=text.find(needle,pos)
-                      if i<0: break
-                      if all(abs(i-j)>160 for j in seen):
-                          seen.append(i)
-                          s=max(0,i-220); e=min(len(text),i+320)
-                          sn=text[s:e].replace('\n',' ')
-                          sn=re.sub(r'\s+',' ',sn)
-                          print('CTX',needle,'@',i,':',sn[:620])
-                      pos=i+len(needle)
-                      if len(seen)>=12: break
-                  if len(seen)>=12: break
-          try:
-              listing=call('list_files',{'dir':root})
-              print('ROOT_LIST_TYPE',type(listing).__name__)
-              print('ROOT_LIST',str(listing)[:6000])
-          except Exception as e:
-              print('ROOT_LIST_ERROR',repr(e))
-          try:
-              listing=call('list_files',{'dir':root+'/assets/css'})
-              print('CSS_LIST',str(listing)[:6000])
-          except Exception as e:
-              print('CSS_LIST_ERROR',repr(e))
-          for rel in ['header.php','footer.php','front-page.php','functions.php','woocommerce/archive-product.php','archive-product.php','page-smart-guide.php']:
-              show(rel,read(rel))
+          def ctx(label,text,needle,before=500,after=1000,last=False):
+              if not isinstance(text,str): print('NOFILE',label); return
+              positions=[m.start() for m in re.finditer(re.escape(needle),text)]
+              print('POSITIONS',label,needle,positions[-12:])
+              use=positions[-1:] if last else positions[:4]
+              for i in use:
+                  sn=text[max(0,i-before):min(len(text),i+after)]
+                  sn=re.sub(r'\s+',' ',sn).strip()
+                  print('CTX',label,needle,'@',i,':',sn[:1800])
+          header=read('header.php'); footer=read('footer.php'); front=read('front-page.php'); shop=read('archive-product.php'); style=read('style.css')
+          print('=== HEADER ===')
+          for n in ['GRAMISS','site-brand','site-logo','wordmark','header-brand','logo']:
+              ctx('header',header,n,last=True)
+          print('=== SMART GUIDE ===')
+          for n in ['g1-smart-visual','g1-smart-core','g1-smart-center','g1-smart-orbit','>G<','g1-smart-product-cloud']:
+              ctx('front',front,n,before=700,after=1800,last=False)
+          print('=== SHOP HERO ===')
+          for n in ['shop-intro','shop-hero','shop-title','GRAMISS / CURATED SHOP','CURATED SHOP','shop-watermark']:
+              ctx('shop',shop,n,before=900,after=1800,last=False)
+          print('=== FOOTER ===')
+          for n in ['footer-brand','footer-wordmark','GRAMISS']:
+              ctx('footer',footer,n,before=400,after=1200,last=False)
+          print('=== CSS FILE NAMES ===')
+          for d in [root,root+'/assets/css']:
+              try:
+                  ls=call('list_files',{'dir':d})
+                  if isinstance(ls,list): print('DIR',d,[x.get('file') for x in ls if isinstance(x,dict)])
+              except Exception as e: print('LISTERR',d,repr(e))
+          print('=== STYLE RELEVANT ===')
+          for n in ['site-header','footer-wordmark','g1-smart','shop-intro','site-brand','wordmark']:
+              ctx('style',style,n,before=500,after=1200,last=False)
           PY
