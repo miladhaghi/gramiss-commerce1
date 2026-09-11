@@ -1,0 +1,160 @@
+name: cPanel Home Journal V4 Compact
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ops/home-journal-v4-trigger.txt'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compact Home Journal live section
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, json, os, re, ssl, time, urllib.parse, urllib.request
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']
+          root=os.environ['THEME_ROOT'].strip('/'); ctx=ssl._create_unverified_context(); stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
+
+          def call(fn, params, post=False):
+              url=f'https://{host}:2083/execute/Fileman/{fn}'
+              data=urllib.parse.urlencode(params).encode()
+              req=urllib.request.Request(url if post else url+'?'+data.decode(), data=data if post else None, method='POST' if post else 'GET')
+              req.add_header('Authorization',f'cpanel {user}:{token}')
+              if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+              with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
+                  obj=json.loads(r.read().decode('utf-8','replace'))
+              result=obj.get('result') if isinstance(obj.get('result'),dict) else obj
+              if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
+              return result.get('data')
+
+          def read_live(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else root+'/'+parent
+              d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(d,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(d.get(k),str): return d[k]
+              return d if isinstance(d,str) else None
+
+          def save_live(rel, content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel); directory=root if not parent else root+'/'+parent
+              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+
+          header=read_live('header.php')
+          front=read_live('front-page.php')
+          css=read_live('assets/css/gramiss-home-journal-v2.css')
+          if not all(isinstance(x,str) for x in (header,front,css)): raise SystemExit('ABORT: required live files unreadable')
+          if 'GRAMISS_HOME_JOURNAL_V2' not in front or 'gj2-featured' not in front or 'gj2-stack' not in front: raise SystemExit('ABORT: Journal markup changed')
+          if 'gj2-media-material' not in css or 'gj2-media-fit' not in css or 'gj2-media-cap' not in css: raise SystemExit('ABORT: Journal image CSS missing')
+          if 'gramiss-home-journal-v2.css' not in header: raise SystemExit('ABORT: Journal stylesheet link missing')
+
+          marker_start='/* GRAMISS_HOME_JOURNAL_V4_COMPACT_START */'
+          marker_end='/* GRAMISS_HOME_JOURNAL_V4_COMPACT_END */'
+          css=re.sub(re.escape(marker_start)+r'.*?'+re.escape(marker_end),'',css,flags=re.S).rstrip()+"\n\n"
+          override=r'''/* GRAMISS_HOME_JOURNAL_V4_COMPACT_START */
+#journal.gj2{width:min(calc(100% - 68px),1510px)!important;margin:0 auto!important;padding:18px 0 24px!important;overflow:visible!important}
+.gj2-head{max-width:760px!important;margin:0 auto 14px!important}
+.gj2-eyebrow{gap:11px!important}
+.gj2-eyebrow>span{width:34px!important}
+.gj2-eyebrow small{font-size:8px!important;letter-spacing:.28em!important}
+.gj2-mini-symbol{width:15px!important;height:15px!important}
+.gj2-head h2{margin:8px 0 0!important;font-size:clamp(34px,3.2vw,46px)!important;line-height:1.18!important;letter-spacing:-.035em!important}
+.gj2-head p{margin:4px 0 0!important;font-size:11.5px!important;line-height:1.7!important}
+.gj2-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-template-areas:none!important;gap:14px!important;align-items:stretch!important;direction:ltr!important}
+.gj2-stack{display:contents!important}
+.gj2-featured,.gj2-small{grid-area:auto!important;min-height:0!important;height:390px!important;display:grid!important;grid-template-columns:1fr!important;grid-template-rows:220px 170px!important;grid-template-areas:'media' 'copy'!important;direction:ltr!important}
+.gj2-featured{grid-column:1!important;grid-row:1!important}
+.gj2-stack>.gj2-small:first-child{grid-column:3!important;grid-row:1!important}
+.gj2-stack>.gj2-small:last-child{grid-column:2!important;grid-row:1!important}
+.gj2-card{border-radius:21px!important;box-shadow:0 10px 28px rgba(31,27,22,.04)!important}
+.gj2-media{grid-area:media!important;min-height:0!important;height:220px!important;background-size:cover!important;background-repeat:no-repeat!important;image-rendering:auto!important}
+.gj2-media-material{background-position:center 52%!important}
+.gj2-media-fit{background-position:center 42%!important}
+.gj2-media-cap{background-position:center 56%!important}
+.gj2-featured .gj2-media::after,.gj2-small .gj2-media::after{display:none!important}
+.gj2-copy,.gj2-featured .gj2-copy{grid-area:copy!important;direction:rtl!important;text-align:right!important;padding:15px 20px 16px!important;justify-content:flex-start!important;min-width:0!important}
+.gj2-index{margin:0 0 6px!important;gap:9px!important}
+.gj2-index b{font-size:19px!important}
+.gj2-index span{width:24px!important}
+.gj2-copy>small{font-size:7.5px!important;letter-spacing:.18em!important;margin-bottom:8px!important}
+.gj2-copy h3,.gj2-featured .gj2-copy h3{font-size:clamp(20px,1.55vw,24px)!important;line-height:1.4!important;letter-spacing:-.025em!important;margin:0!important}
+.gj2-copy p,.gj2-featured .gj2-copy p{margin:6px 0 0!important;font-size:10.5px!important;line-height:1.75!important;max-width:none!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important}
+.gj2-read,.gj2-read-featured{margin-top:8px!important;font-size:9.5px!important;gap:6px!important}
+.gj2-read b{font-size:14px!important}
+.gj2-bottom{margin-top:10px!important;gap:14px!important}
+.gj2-bottom>a{min-height:38px!important;padding:0 22px!important;font-size:9.5px!important}
+.gj2-bottom>span,.gj2-bottom>em{font-size:7px!important}
+@media(max-width:1180px){
+  #journal.gj2{width:min(calc(100% - 40px),1510px)!important;padding:16px 0 22px!important}
+  .gj2-featured,.gj2-small{height:366px!important;grid-template-rows:204px 162px!important}
+  .gj2-media{height:204px!important}
+  .gj2-copy,.gj2-featured .gj2-copy{padding:13px 16px 14px!important}
+  .gj2-copy h3,.gj2-featured .gj2-copy h3{font-size:20px!important}
+}
+@media(max-width:900px){
+  #journal.gj2{width:min(calc(100% - 28px),1510px)!important;padding:22px 0 30px!important}
+  .gj2-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .gj2-featured{grid-column:1 / -1!important;height:360px!important;grid-template-rows:210px 150px!important}
+  .gj2-stack>.gj2-small:first-child{grid-column:2!important;grid-row:2!important}
+  .gj2-stack>.gj2-small:last-child{grid-column:1!important;grid-row:2!important}
+  .gj2-small{height:340px!important;grid-template-rows:195px 145px!important}
+  .gj2-featured .gj2-media{height:210px!important}.gj2-small .gj2-media{height:195px!important}
+}
+@media(max-width:650px){
+  #journal.gj2{width:calc(100% - 20px)!important;padding:20px 0 28px!important}
+  .gj2-head{margin-bottom:12px!important}.gj2-head h2{font-size:31px!important}.gj2-head p{font-size:10.5px!important}
+  .gj2-grid{grid-template-columns:1fr!important;gap:12px!important}
+  .gj2-featured,.gj2-small{grid-column:1!important;grid-row:auto!important;height:auto!important;grid-template-rows:210px auto!important}
+  .gj2-stack>.gj2-small:first-child,.gj2-stack>.gj2-small:last-child{grid-column:1!important;grid-row:auto!important}
+  .gj2-media,.gj2-featured .gj2-media,.gj2-small .gj2-media{height:210px!important;min-height:210px!important}
+  .gj2-copy,.gj2-featured .gj2-copy{padding:16px 17px 17px!important}
+  .gj2-copy h3,.gj2-featured .gj2-copy h3{font-size:23px!important}
+  .gj2-bottom{grid-template-columns:1fr!important}.gj2-bottom>span,.gj2-bottom>em{display:none!important}
+}
+/* GRAMISS_HOME_JOURNAL_V4_COMPACT_END */'''
+          css2=css+override+'\n'
+
+          header2=re.sub(r'gramiss-home-journal-v2\.css\?ver=[^\'\"]+', 'gramiss-home-journal-v2.css?ver=4.0.0', header)
+          if header2==header and 'gramiss-home-journal-v2.css?ver=4.0.0' not in header: raise SystemExit('ABORT: cache bust target not found')
+
+          for rel,content in [('header.php',header2),('assets/css/gramiss-home-journal-v2.css',css2)]:
+              before=read_live(rel)
+              if before!=content:
+                  save_live(rel+'.bak-journal-v4-'+stamp,before)
+                  print('BACKUP',rel,hashlib.sha256(before.encode()).hexdigest()[:16])
+              save_live(rel,content)
+              after=read_live(rel)
+              if after!=content: raise SystemExit('LIVE WRITE MISMATCH: '+rel)
+              print('PASS WRITE',rel,hashlib.sha256(content.encode()).hexdigest()[:16])
+
+          purge='gramiss-purge-journal-v4-'+stamp+'.php'
+          purge_php="<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php'; if(function_exists('do_action')){do_action('litespeed_purge_all');} echo 'OK'; @unlink(__FILE__);"
+          call('save_file_content',{'dir':'public_html','file':purge,'content':purge_php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+          req=urllib.request.Request('https://gramiss.ir/'+purge+'?t='+str(int(time.time())),headers={'User-Agent':'GramissJournalDeploy/4','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
+              if r.status!=200: raise SystemExit('cache purge failed')
+              print('PURGE',r.status)
+
+          def public_get(url):
+              req=urllib.request.Request(url,headers={'User-Agent':'GramissJournalVerify/4','Cache-Control':'no-cache','Pragma':'no-cache'})
+              with urllib.request.urlopen(req,context=ctx,timeout=90) as r:return r.status,r.read()
+          now=str(int(time.time()))
+          st,b=public_get('https://gramiss.ir/?journal_v4='+now); txt=b.decode('utf-8','replace')
+          if st!=200 or 'GRAMISS_HOME_JOURNAL_V2' not in txt or 'gramiss-home-journal-v2.css?ver=4.0.0' not in txt: raise SystemExit('public Home verification failed')
+          st,b=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/css/gramiss-home-journal-v2.css?v='+now)
+          if st!=200 or b'GRAMISS_HOME_JOURNAL_V4_COMPACT_START' not in b: raise SystemExit('public Journal CSS verification failed')
+          print('PASS PUBLIC HOME',len(txt))
+          print('PASS PUBLIC CSS',len(b))
+          print('LIVE HOME JOURNAL V4 COMPACT DEPLOYED')
+          PY
