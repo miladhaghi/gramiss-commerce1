@@ -1,0 +1,36 @@
+name: Gramiss Branding Comment Trigger
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  deploy:
+    if: github.event.issue.pull_request && github.event.comment.body == '/deploy-gramiss-brand'
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Run guarded Gramiss branding deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEXTRACT'
+          from pathlib import Path
+          src=Path('.github/workflows/cpanel-branding-site-v1.yml').read_text(encoding='utf-8')
+          marker="          python3 - <<'PY'\n"
+          start=src.index(marker)+len(marker)
+          end=src.index("\n          PY",start)
+          block=src[start:end]
+          lines=[]
+          for line in block.splitlines():
+              lines.append(line[10:] if line.startswith('          ') else line)
+          Path('/tmp/gramiss_brand_deploy.py').write_text('\n'.join(lines)+'\n',encoding='utf-8')
+          PYEXTRACT
+          python3 /tmp/gramiss_brand_deploy.py
