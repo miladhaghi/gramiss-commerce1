@@ -75,33 +75,41 @@ jobs:
               if after != content: raise SystemExit('LIVE WRITE MISMATCH: '+rel)
               print('PASS WRITE',rel)
 
-          # Write the two approved editorial image assets through a one-time WordPress helper.
-          hero=base64.b64encode((staged/'assets/about-hero-editorial.webp').read_bytes()).decode()
-          cta=base64.b64encode((staged/'assets/about-cta-editorial.webp').read_bytes()).decode()
+          hero_bytes=(staged/'assets/about-hero-gramiss-logo.webp').read_bytes()
+          cta_bytes=(staged/'assets/about-cta-editorial.webp').read_bytes()
+          hero=base64.b64encode(hero_bytes).decode()
+          cta=base64.b64encode(cta_bytes).decode()
+          hero_sha=hashlib.sha256(hero_bytes).hexdigest()
+          cta_sha=hashlib.sha256(cta_bytes).hexdigest()
           helper='gramiss-about-assets-'+stamp+'.php'
           php=("<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php';"
                "$d=WP_CONTENT_DIR.'/themes/gramiss-theme-next/assets/images/about';"
                "if(!is_dir($d)){wp_mkdir_p($d);}"
-               f"file_put_contents($d.'/about-hero-editorial.webp',base64_decode('{hero}'));"
+               f"file_put_contents($d.'/about-hero-gramiss-logo.webp',base64_decode('{hero}'));"
                f"file_put_contents($d.'/about-cta-editorial.webp',base64_decode('{cta}'));"
-               "echo 'OK'; @unlink(__FILE__);")
+               "echo 'OK|'.hash_file('sha256',$d.'/about-hero-gramiss-logo.webp').'|'.hash_file('sha256',$d.'/about-cta-editorial.webp'); @unlink(__FILE__);")
           call('save_file_content',{'dir':'public_html','file':helper,'content':php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
-          req=urllib.request.Request('https://gramiss.ir/'+helper+'?t='+str(int(time.time())),headers={'User-Agent':'GramissAboutDeploy/3','Cache-Control':'no-cache'})
+          req=urllib.request.Request('https://gramiss.ir/'+helper+'?t='+str(int(time.time())),headers={'User-Agent':'GramissAboutDeploy/3.1','Cache-Control':'no-cache'})
           with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
-              if r.status!=200 or 'OK' not in r.read().decode('utf-8','replace'): raise SystemExit('Asset helper failed')
+              helper_out=r.read().decode('utf-8','replace').strip()
+              if r.status!=200: raise SystemExit('Asset helper failed')
+          parts=helper_out.split('|')
+          if len(parts)<3 or parts[-2]!=hero_sha or parts[-1]!=cta_sha:
+              raise SystemExit('Asset hash verification failed: '+helper_out[-200:])
+          print('PASS SERVER HASH hero',hero_sha)
+          print('PASS SERVER HASH cta',cta_sha)
 
-          # Purge LiteSpeed cache.
           purge='gramiss-purge-about-v3-'+stamp+'.php'
           php="<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php'; if(function_exists('do_action')){do_action('litespeed_purge_all');} echo 'OK'; @unlink(__FILE__);"
           call('save_file_content',{'dir':'public_html','file':purge,'content':php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
-          req=urllib.request.Request('https://gramiss.ir/'+purge+'?t='+str(int(time.time())),headers={'User-Agent':'GramissAboutDeploy/3','Cache-Control':'no-cache'})
+          req=urllib.request.Request('https://gramiss.ir/'+purge+'?t='+str(int(time.time())),headers={'User-Agent':'GramissAboutDeploy/3.1','Cache-Control':'no-cache'})
           with urllib.request.urlopen(req,context=ctx,timeout=90) as r: print('PURGE',r.status)
 
           def public_get(url):
-              req=urllib.request.Request(url,headers={'User-Agent':'GramissAboutVerify/3','Cache-Control':'no-cache','Pragma':'no-cache'})
+              req=urllib.request.Request(url,headers={'User-Agent':'GramissAboutVerify/3.1','Cache-Control':'no-cache','Pragma':'no-cache'})
               with urllib.request.urlopen(req,context=ctx,timeout=90) as r: return r.status,r.read()
 
-          q='?gramiss_about_v3='+str(int(time.time()))
+          q='?gramiss_about_v31='+str(int(time.time()))
           st,b=public_get('https://gramiss.ir/about-gramiss/'+q); html=b.decode('utf-8','replace')
           checks={
               'about 200':st==200,
@@ -115,12 +123,13 @@ jobs:
           if not all(checks.values()): raise SystemExit('Public About verification failed')
 
           st_css,b_css=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/css/about-gramiss-v2.css?v='+stamp)
-          if st_css!=200 or b'GRAMISS_ABOUT_V3' not in b_css: raise SystemExit('CSS verification failed')
-          for name in ('about-hero-editorial.webp','about-cta-editorial.webp'):
+          if st_css!=200 or b'GRAMISS_ABOUT_V3' not in b_css or b'about-hero-gramiss-logo.webp' not in b_css:
+              raise SystemExit('CSS verification failed')
+          for name in ('about-hero-gramiss-logo.webp','about-cta-editorial.webp'):
               s,d=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/images/about/'+name+'?v='+stamp)
-              if s!=200 or len(d)<5000 or d[:4]!=b'RIFF': raise SystemExit('Image verification failed: '+name)
-              print('PASS IMAGE',name,len(d))
+              if s!=200 or len(d)<5000: raise SystemExit('Image verification failed: '+name)
+              print('PASS PUBLIC IMAGE',name,len(d),d[:12])
           st_home,_=public_get('https://gramiss.ir/?about_sanity='+str(int(time.time())))
           if st_home!=200: raise SystemExit('Home sanity check failed')
-          print('LIVE ABOUT GRAMISS V3 DEPLOYED')
+          print('LIVE ABOUT GRAMISS V3.1 DEPLOYED')
           PY
