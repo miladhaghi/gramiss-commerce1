@@ -83,6 +83,7 @@ jobs:
           start=src.index(marker)+len(marker)
           end=src.index("\n          PY",start)
           block=src[start:end]
+          block=block.replace('\\"','"')
           lines=[]
           for line in block.splitlines():
               lines.append(line[10:] if line.startswith('          ') else line)
