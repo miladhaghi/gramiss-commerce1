@@ -1,1 +1,1 @@
-Trigger live deployment of the approved official Gramiss logo system.
+Trigger live deployment of the approved official Gramiss logo system. Retry after workflow registration on main.
