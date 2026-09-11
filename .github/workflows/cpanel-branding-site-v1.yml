@@ -17,18 +17,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
-      - name: Inspect exact live branding markup
+      - name: Capture final live branding selectors
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import json, os, ssl, urllib.parse, urllib.request, re
           host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']; root=os.environ['THEME_ROOT'].strip('/')
-          sslctx=ssl._create_unverified_context()
+          ctx=ssl._create_unverified_context()
           def call(fn,params):
               url=f'https://{host}:2083/execute/Fileman/{fn}?'+urllib.parse.urlencode(params)
               req=urllib.request.Request(url,headers={'Authorization':f'cpanel {user}:{token}'})
-              with urllib.request.urlopen(req,context=sslctx,timeout=90) as r: obj=json.loads(r.read().decode('utf-8','replace'))
+              with urllib.request.urlopen(req,context=ctx,timeout=90) as r: obj=json.loads(r.read().decode('utf-8','replace'))
               result=obj.get('result') if isinstance(obj.get('result'),dict) else obj
               if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
               return result.get('data')
@@ -40,34 +40,29 @@ jobs:
                   for k in ('content','file_content','data'):
                       if isinstance(d.get(k),str): return d[k]
               return d if isinstance(d,str) else None
-          def show(label,text,needle,before=500,after=1200,last=False):
+          def contexts(label,text,needle,before=650,after=1500,which='all'):
               if not isinstance(text,str): print('NOFILE',label); return
-              positions=[m.start() for m in re.finditer(re.escape(needle),text)]
-              print('POSITIONS',label,needle,positions[-12:])
-              use=positions[-1:] if last else positions[:4]
-              for i in use:
+              pos=[m.start() for m in re.finditer(re.escape(needle),text)]
+              print('POSITIONS',label,needle,pos[-20:])
+              if which=='first': pos=pos[:1]
+              elif which=='last': pos=pos[-1:]
+              else: pos=pos[:6]
+              for i in pos:
                   sn=re.sub(r'\s+',' ',text[max(0,i-before):min(len(text),i+after)]).strip()
-                  print('CTX',label,needle,'@',i,':',sn[:2200])
-          header=read('header.php'); footer=read('footer.php'); front=read('front-page.php'); shop=read('archive-product.php'); style=read('style.css')
-          print('=== HEADER ===')
-          for n in ['GRAMISS','site-brand','site-logo','wordmark','header-brand','logo','class="brand']:
-              show('header',header,n,last=True)
-          print('=== SMART GUIDE ===')
-          for n in ['g1-smart-visual','g1-smart-core','g1-smart-center','g1-smart-orbit','>G<','g1-smart-product-cloud']:
-              show('front',front,n,before=800,after=2200)
-          print('=== SHOP HERO ===')
-          for n in ['shop-intro','shop-hero','shop-title','CURATED SHOP','shop-watermark','shop-intro-mark']:
-              show('shop',shop,n,before=1100,after=2200)
-          print('=== FOOTER ===')
-          for n in ['footer-brand','footer-wordmark','GRAMISS']:
-              show('footer',footer,n,before=500,after=1400)
-          print('=== FILE NAMES ===')
-          for d in [root,root+'/assets/css']:
-              try:
-                  ls=call('list_files',{'dir':d})
-                  if isinstance(ls,list): print('DIR',d,[x.get('file') for x in ls if isinstance(x,dict)])
-              except Exception as e: print('LISTERR',d,repr(e))
-          print('=== STYLE RELEVANT ===')
-          for n in ['site-header','footer-wordmark','g1-smart','shop-intro','site-brand','wordmark','header-inner']:
-              show('style',style,n,before=650,after=1700)
+                  print('CTX',label,needle,'@',i,':',sn[:2600])
+          header=read('header.php')
+          print('=== DESKTOP HEADER WORDMARK ===')
+          contexts('header',header,'wordmark',900,1600,'first')
+          contexts('header',header,'wp_head()',800,600,'first')
+          print('=== SMART CSS ===')
+          for f in ['assets/css/gramiss-1.css','assets/css/gramiss-release.css','assets/css/theme.css']:
+              t=read(f)
+              for n in ['.g1-smart-core','.g1-smart-map','.wordmark','.footer-wordmark']:
+                  contexts(f,t,n,500,1500,'all')
+          print('=== SHOP CSS ===')
+          for f in ['assets/css/shop.css','assets/css/shop-premium.css','assets/css/shop-premium-shell.css','assets/css/shop-runtime-final-fix.css','assets/css/shop-alignment-fix.css','assets/css/shop-sculpted.css','assets/css/shop-editorial.css']:
+              t=read(f)
+              print('FILE',f,'BYTES',len(t.encode()) if isinstance(t,str) else -1)
+              for n in ['.shop-intro','content:"G"',"content:'G'",'content: "G"',"content: 'G'",'::before','::after']:
+                  contexts(f,t,n,450,1400,'all')
           PY
