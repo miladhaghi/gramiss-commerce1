@@ -28,7 +28,7 @@
 .gabout-hero{background:#f7f4ef;border-top:1px solid var(--ga-line);border-bottom:1px solid var(--ga-line)}
 .gabout-hero__grid{min-height:520px;display:grid;grid-template-columns:1fr 1fr;grid-template-areas:"visual copy"}
 .gabout-hero__visual{grid-area:visual;position:relative;overflow:hidden;background:#eee8df}
-.gabout-hero__photo{position:absolute;inset:0;background-image:url("../images/about/about-hero-editorial.webp");background-size:cover;background-position:center center;background-repeat:no-repeat}
+.gabout-hero__photo{position:absolute;inset:0;background-image:url("../images/about/about-hero-gramiss-logo.webp");background-size:cover;background-position:center center;background-repeat:no-repeat}
 .gabout-hero__copy{grid-area:copy;display:flex;flex-direction:column;justify-content:center;padding:58px 7.2% 58px 8%;background:radial-gradient(circle at 80% 18%,#fff 0,rgba(255,255,255,.82) 28%,rgba(249,247,243,.96) 76%)}
 .gabout-hero__copy h1{font-size:clamp(48px,3.75vw,64px);line-height:1.2;font-weight:850;max-width:690px}
 .gabout-lead{margin-top:20px!important;max-width:650px;color:var(--ga-muted);font-size:15px;line-height:1.95}
