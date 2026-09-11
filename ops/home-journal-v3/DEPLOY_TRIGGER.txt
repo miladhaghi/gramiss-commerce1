@@ -1,0 +1,1 @@
+Trigger guarded Home Journal V3 live deployment after workflow landed on main.
