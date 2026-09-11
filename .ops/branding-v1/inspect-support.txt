@@ -1,0 +1,1 @@
+Enable /inspect-gramiss-brand diagnostic command for safe live branding deployment.
