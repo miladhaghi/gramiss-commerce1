@@ -1,0 +1,29 @@
+name: Journal V8 Drive Probe
+on:
+  push:
+    branches: [ops/journal-v8-exact-assets]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe Drive direct downloads
+        shell: bash
+        run: |
+          set -euo pipefail
+          for spec in \
+            'fit:1sD_XGxb_TfpB5TpUZ8J00O1RNXDh-S9S:34782:d6667b54aafa05ebe2a7314622eb224885f9decaa3515a6675e835ff7ce05d5c' \
+            'material:1hKGuykkiRI5JEH-oCQptjUxkMvlpt6Dw:121190:8bc887bb6914d3873aa999d9b5f13b75056a6b92678a0c039ddfc0c7a5d48eee' \
+            'style:1q3oTBHc3s3bL4JQ-nuusssj3w8hCnC4f:136376:4c09b449d70aa40b4e4314166f40fe60ff6027bcb7b5e81c1dbef64b89068e50'
+          do
+            IFS=: read -r name id bytes sha <<< "$spec"
+            url="https://drive.usercontent.google.com/download?id=${id}&export=download&confirm=t"
+            curl -L --fail --silent --show-error --retry 2 "$url" -o "$name.webp"
+            test "$(stat -c%s "$name.webp")" = "$bytes"
+            echo "$sha  $name.webp" | sha256sum -c -
+            python3 - "$name.webp" <<'PY'
+import sys
+b=open(sys.argv[1],'rb').read(12)
+assert b[:4]==b'RIFF' and b[8:12]==b'WEBP', b
+PY
+            echo "PASS $name"
+          done
