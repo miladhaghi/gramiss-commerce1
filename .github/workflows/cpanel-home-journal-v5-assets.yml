@@ -1,0 +1,153 @@
+name: cPanel Home Journal V5 Assets
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ops/home-journal-v5-trigger.txt'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CPANEL_HOST: cip20.mizbanfadns.net
+      CPANEL_USER: gramissi
+      CPANEL_TOKEN: ${{ secrets.CPANEL_TOKEN }}
+      THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy exact uploaded Journal assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, hashlib, json, os, re, ssl, time, urllib.parse, urllib.request
+          from pathlib import Path
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']
+          root=os.environ['THEME_ROOT'].strip('/'); ctx=ssl._create_unverified_context()
+          stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
+
+          def call(fn, params, post=False):
+              url=f'https://{host}:2083/execute/Fileman/{fn}'
+              data=urllib.parse.urlencode(params).encode()
+              req=urllib.request.Request(url if post else url+'?'+data.decode(), data=data if post else None, method='POST' if post else 'GET')
+              req.add_header('Authorization',f'cpanel {user}:{token}')
+              if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+              with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
+                  obj=json.loads(r.read().decode('utf-8','replace'))
+              result=obj.get('result') if isinstance(obj.get('result'),dict) else obj
+              if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
+              return result.get('data')
+
+          def read_live(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else root+'/'+parent
+              d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(d,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(d.get(k),str): return d[k]
+              return d if isinstance(d,str) else None
+
+          def save_live(rel, content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else root+'/'+parent
+              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+
+          header=read_live('header.php')
+          front=read_live('front-page.php')
+          css=read_live('assets/css/gramiss-home-journal-v2.css')
+          if not all(isinstance(x,str) for x in (header,front,css)): raise SystemExit('ABORT: required live files unreadable')
+          if 'GRAMISS_HOME_JOURNAL_V2' not in front or 'gj2-media-material' not in css or 'gj2-media-fit' not in css or 'gj2-media-cap' not in css:
+              raise SystemExit('ABORT: Journal structure changed')
+          if 'gramiss-home-journal-v2.css' not in header: raise SystemExit('ABORT: Journal stylesheet link missing')
+
+          staged=Path('.ops/home-journal-v5/assets')
+          assets={
+              'journal-material-01.webp': staged/'journal-material-01.webp',
+              'journal-fit-02.webp': staged/'journal-fit-02.webp',
+              'journal-style-03.webp': staged/'journal-style-03.webp',
+          }
+          raw={name:path.read_bytes() for name,path in assets.items()}
+          for name,data in raw.items():
+              if len(data)<100000 or data[:4]!=b'RIFF' or data[8:12]!=b'WEBP': raise SystemExit('ABORT: invalid staged image '+name)
+
+          encoded={name:base64.b64encode(data).decode() for name,data in raw.items()}
+          hashes={name:hashlib.sha256(data).hexdigest() for name,data in raw.items()}
+          helper='gramiss-journal-assets-v5-'+stamp+'.php'
+          php="<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php';$d=WP_CONTENT_DIR.'/themes/gramiss-theme-next/assets/images/journal';if(!is_dir($d)){wp_mkdir_p($d);}"
+          for name in assets:
+              php += f"file_put_contents($d.'/{name}',base64_decode('{encoded[name]}'));"
+          php += "echo 'OK'"
+          for name in assets:
+              php += f".'|'.hash_file('sha256',$d.'/{name}')"
+          php += ";@unlink(__FILE__);"
+          call('save_file_content',{'dir':'public_html','file':helper,'content':php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+          req=urllib.request.Request('https://gramiss.ir/'+helper+'?t='+str(int(time.time())),headers={'User-Agent':'GramissJournalAssets/5','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
+              out=r.read().decode('utf-8','replace').strip()
+              if r.status!=200: raise SystemExit('asset helper failed')
+          parts=out.split('|')
+          expected=['OK']+[hashes[name] for name in assets]
+          if parts!=expected: raise SystemExit('asset hash verification failed: '+out[-300:])
+          for name in assets: print('PASS SERVER IMAGE',name,hashes[name],len(raw[name]))
+
+          start='/* GRAMISS_HOME_JOURNAL_V5_ASSETS_START */'
+          end='/* GRAMISS_HOME_JOURNAL_V5_ASSETS_END */'
+          css=re.sub(re.escape(start)+r'.*?'+re.escape(end),'',css,flags=re.S).rstrip()+"\n\n"
+          override=r'''/* GRAMISS_HOME_JOURNAL_V5_ASSETS_START */
+.gj2-media-material{
+  background-image:url('../images/journal/journal-material-01.webp')!important;
+  background-position:center 50%!important;
+}
+.gj2-media-fit{
+  background-image:url('../images/journal/journal-fit-02.webp')!important;
+  background-position:center 29%!important;
+}
+.gj2-media-cap{
+  background-image:url('../images/journal/journal-style-03.webp')!important;
+  background-position:center 58%!important;
+}
+/* GRAMISS_HOME_JOURNAL_V5_ASSETS_END */'''
+          css2=css+override+'\n'
+          header2=re.sub(r'gramiss-home-journal-v2\.css\?ver=[^\'\"]+', 'gramiss-home-journal-v2.css?ver=5.0.0', header)
+          if header2==header and 'gramiss-home-journal-v2.css?ver=5.0.0' not in header: raise SystemExit('ABORT: cache bust target not found')
+
+          for rel,content in [('header.php',header2),('assets/css/gramiss-home-journal-v2.css',css2)]:
+              before=read_live(rel)
+              if before!=content:
+                  save_live(rel+'.bak-journal-v5-'+stamp,before)
+                  print('BACKUP',rel,hashlib.sha256(before.encode()).hexdigest()[:16])
+              save_live(rel,content)
+              after=read_live(rel)
+              if after!=content: raise SystemExit('LIVE WRITE MISMATCH: '+rel)
+              print('PASS WRITE',rel,hashlib.sha256(content.encode()).hexdigest()[:16])
+
+          purge='gramiss-purge-journal-v5-'+stamp+'.php'
+          purge_php="<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php'; if(function_exists('do_action')){do_action('litespeed_purge_all');} echo 'OK'; @unlink(__FILE__);"
+          call('save_file_content',{'dir':'public_html','file':purge,'content':purge_php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+          req=urllib.request.Request('https://gramiss.ir/'+purge+'?t='+str(int(time.time())),headers={'User-Agent':'GramissJournalAssets/5','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
+              if r.status!=200: raise SystemExit('cache purge failed')
+              print('PURGE',r.status)
+
+          def public_get(url):
+              req=urllib.request.Request(url,headers={'User-Agent':'GramissJournalVerify/5','Cache-Control':'no-cache','Pragma':'no-cache'})
+              with urllib.request.urlopen(req,context=ctx,timeout=90) as r:return r.status,r.read()
+
+          now=str(int(time.time()))
+          st,b=public_get('https://gramiss.ir/?journal_v5='+now); html=b.decode('utf-8','replace')
+          if st!=200 or 'GRAMISS_HOME_JOURNAL_V2' not in html or 'gramiss-home-journal-v2.css?ver=5.0.0' not in html:
+              raise SystemExit('public Home verification failed')
+          st,b=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/css/gramiss-home-journal-v2.css?v='+now)
+          if st!=200 or b'GRAMISS_HOME_JOURNAL_V5_ASSETS_START' not in b:
+              raise SystemExit('public Journal CSS verification failed')
+          print('PASS PUBLIC HOME',len(html)); print('PASS PUBLIC CSS',len(b))
+          for name in assets:
+              st,img=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/images/journal/'+name+'?v='+now)
+              if st!=200 or len(img)<100000 or img[:4]!=b'RIFF' or img[8:12]!=b'WEBP': raise SystemExit('public image verification failed: '+name)
+              if hashlib.sha256(img).hexdigest()!=hashes[name]: raise SystemExit('public image hash mismatch: '+name)
+              print('PASS PUBLIC IMAGE',name,len(img),hashes[name][:16])
+          print('LIVE HOME JOURNAL V5 EXACT ASSETS DEPLOYED')
+          PY
