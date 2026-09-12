@@ -1,4 +1,4 @@
-name: cPanel Home Journal V4 Compact
+name: cPanel Home Journal V5 Assets
 
 on:
   push:
@@ -16,8 +16,129 @@ jobs:
       THEME_ROOT: public_html/wp-content/themes/gramiss-theme-next
     steps:
       - uses: actions/checkout@v4
-      - name: Compact Home Journal live section
+
+      - name: Deploy exact uploaded Journal assets
         shell: bash
         run: |
-          echo 'aW1wb3J0IGhhc2hsaWIsIGpzb24sIG9zLCByZSwgc3NsLCB0aW1lLCB1cmxsaWIucGFyc2UsIHVybGxpYi5yZXF1ZXN0Cgpob3N0PW9zLmVudmlyb25bJ0NQQU5FTF9IT1NUJ107IHVzZXI9b3MuZW52aXJvblsnQ1BBTkVMX1VTRVInXTsgdG9rZW49b3MuZW52aXJvblsnQ1BBTkVMX1RPS0VOJ10Kcm9vdD1vcy5lbnZpcm9uWydUSEVNRV9ST09UJ10uc3RyaXAoJy8nKTsgY3R4PXNzbC5fY3JlYXRlX3VudmVyaWZpZWRfY29udGV4dCgpOyBzdGFtcD10aW1lLnN0cmZ0aW1lKCclWSVtJWQtJUglTSVTJyx0aW1lLmdtdGltZSgpKQoKZGVmIGNhbGwoZm4sIHBhcmFtcywgcG9zdD1GYWxzZSk6CiAgICB1cmw9ZidodHRwczovL3tob3N0fToyMDgzL2V4ZWN1dGUvRmlsZW1hbi97Zm59JwogICAgZGF0YT11cmxsaWIucGFyc2UudXJsZW5jb2RlKHBhcmFtcykuZW5jb2RlKCkKICAgIHJlcT11cmxsaWIucmVxdWVzdC5SZXF1ZXN0KHVybCBpZiBwb3N0IGVsc2UgdXJsKyc/JytkYXRhLmRlY29kZSgpLCBkYXRhPWRhdGEgaWYgcG9zdCBlbHNlIE5vbmUsIG1ldGhvZD0nUE9TVCcgaWYgcG9zdCBlbHNlICdHRVQnKQogICAgcmVxLmFkZF9oZWFkZXIoJ0F1dGhvcml6YXRpb24nLGYnY3BhbmVsIHt1c2VyfTp7dG9rZW59JykKICAgIGlmIHBvc3Q6IHJlcS5hZGRfaGVhZGVyKCdDb250ZW50LVR5cGUnLCdhcHBsaWNhdGlvbi94LXd3dy1mb3JtLXVybGVuY29kZWQnKQogICAgd2l0aCB1cmxsaWIucmVxdWVzdC51cmxvcGVuKHJlcSxjb250ZXh0PWN0eCx0aW1lb3V0PTkwKSBhcyByOgogICAgICAgIG9iaj1qc29uLmxvYWRzKHIucmVhZCgpLmRlY29kZSgndXRmLTgnLCdyZXBsYWNlJykpCiAgICByZXN1bHQ9b2JqLmdldCgncmVzdWx0JykgaWYgaXNpbnN0YW5jZShvYmouZ2V0KCdyZXN1bHQnKSxkaWN0KSBlbHNlIG9iagogICAgaWYgbm90IGlzaW5zdGFuY2UocmVzdWx0LGRpY3QpIG9yIHJlc3VsdC5nZXQoJ3N0YXR1cycpIT0xOiByYWlzZSBSdW50aW1lRXJyb3Ioc3RyKHJlc3VsdCkpCiAgICByZXR1cm4gcmVzdWx0LmdldCgnZGF0YScpCgpkZWYgcmVhZF9saXZlKHJlbCk6CiAgICBwYXJlbnQsbmFtZT1yZWwucnNwbGl0KCcvJywxKSBpZiAnLycgaW4gcmVsIGVsc2UgKCcnLHJlbCk7IGRpcmVjdG9yeT1yb290IGlmIG5vdCBwYXJlbnQgZWxzZSByb290KycvJytwYXJlbnQKICAgIGQ9Y2FsbCgnZ2V0X2ZpbGVfY29udGVudCcseydkaXInOmRpcmVjdG9yeSwnZmlsZSc6bmFtZSwnZnJvbV9jaGFyc2V0JzonX0RFVEVDVF8nLCd0b19jaGFyc2V0JzondXRmLTgnfSkKICAgIGlmIGlzaW5zdGFuY2UoZCxkaWN0KToKICAgICAgICBmb3IgayBpbiAoJ2NvbnRlbnQnLCdmaWxlX2NvbnRlbnQnLCdkYXRhJyk6CiAgICAgICAgICAgIGlmIGlzaW5zdGFuY2UoZC5nZXQoayksc3RyKTogcmV0dXJuIGRba10KICAgIHJldHVybiBkIGlmIGlzaW5zdGFuY2UoZCxzdHIpIGVsc2UgTm9uZQoKZGVmIHNhdmVfbGl2ZShyZWwsIGNvbnRlbnQpOgogICAgcGFyZW50LG5hbWU9cmVsLnJzcGxpdCgnLycsMSkgaWYgJy8nIGluIHJlbCBlbHNlICgnJyxyZWwpOyBkaXJlY3Rvcnk9cm9vdCBpZiBub3QgcGFyZW50IGVsc2Ugcm9vdCsnLycrcGFyZW50CiAgICBjYWxsKCdzYXZlX2ZpbGVfY29udGVudCcseydkaXInOmRpcmVjdG9yeSwnZmlsZSc6bmFtZSwnY29udGVudCc6Y29udGVudCwnZnJvbV9jaGFyc2V0JzonVVRGLTgnLCd0b19jaGFyc2V0JzonVVRGLTgnLCdmYWxsYmFjayc6JzAnfSxUcnVlKQoKaGVhZGVyPXJlYWRfbGl2ZSgnaGVhZGVyLnBocCcpCmZyb250PXJlYWRfbGl2ZSgnZnJvbnQtcGFnZS5waHAnKQpjc3M9cmVhZF9saXZlKCdhc3NldHMvY3NzL2dyYW1pc3MtaG9tZS1qb3VybmFsLXYyLmNzcycpCmlmIG5vdCBhbGwoaXNpbnN0YW5jZSh4LHN0cikgZm9yIHggaW4gKGhlYWRlcixmcm9udCxjc3MpKTogcmFpc2UgU3lzdGVtRXhpdCgnQUJPUlQ6IHJlcXVpcmVkIGxpdmUgZmlsZXMgdW5yZWFkYWJsZScpCmlmICdHUkFNSVNTX0hPTUVfSk9VUk5BTF9WMicgbm90IGluIGZyb250IG9yICdnajItZmVhdHVyZWQnIG5vdCBpbiBmcm9udCBvciAnZ2oyLXN0YWNrJyBub3QgaW4gZnJvbnQ6IHJhaXNlIFN5c3RlbUV4aXQoJ0FCT1JUOiBKb3VybmFsIG1hcmt1cCBjaGFuZ2VkJykKaWYgJ2dqMi1tZWRpYS1tYXRlcmlhbCcgbm90IGluIGNzcyBvciAnZ2oyLW1lZGlhLWZpdCcgbm90IGluIGNzcyBvciAnZ2oyLW1lZGlhLWNhcCcgbm90IGluIGNzczogcmFpc2UgU3lzdGVtRXhpdCgnQUJPUlQ6IEpvdXJuYWwgaW1hZ2UgQ1NTIG1pc3NpbmcnKQppZiAnZ3JhbWlzcy1ob21lLWpvdXJuYWwtdjIuY3NzJyBub3QgaW4gaGVhZGVyOiByYWlzZSBTeXN0ZW1FeGl0KCdBQk9SVDogSm91cm5hbCBzdHlsZXNoZWV0IGxpbmsgbWlzc2luZycpCgpzdGFydD0nLyogR1JBTUlTU19IT01FX0pPVVJOQUxfVjRfQ09NUEFDVF9TVEFSVCAqLycKZW5kPScvKiBHUkFNSVNTX0hPTUVfSk9VUk5BTF9WNF9DT01QQUNUX0VORCAqLycKY3NzPXJlLnN1YihyZS5lc2NhcGUoc3RhcnQpK3InLio/JytyZS5lc2NhcGUoZW5kKSwnJyxjc3MsZmxhZ3M9cmUuUykucnN0cmlwKCkrIlxuXG4iCm92ZXJyaWRlID0gcicnJy8qIEdSQU1JU1NfSE9NRV9KT1VSTkFMX1Y0X0NPTVBBQ1RfU1RBUlQgKi8KI2pvdXJuYWwuZ2oye3dpZHRoOm1pbihjYWxjKDEwMCUgLSA2OHB4KSwxNTEwcHgpIWltcG9ydGFudDttYXJnaW46MCBhdXRvIWltcG9ydGFudDtwYWRkaW5nOjE2cHggMCAyMHB4IWltcG9ydGFudDtvdmVyZmxvdzp2aXNpYmxlIWltcG9ydGFudH0KLmdqMi1oZWFke21heC13aWR0aDo3NjBweCFpbXBvcnRhbnQ7bWFyZ2luOjAgYXV0byAxMnB4IWltcG9ydGFudH0KLmdqMi1leWVicm93e2dhcDoxMHB4IWltcG9ydGFudH0KLmdqMi1leWVicm93PnNwYW57d2lkdGg6MzJweCFpbXBvcnRhbnR9Ci5najItZXllYnJvdyBzbWFsbHtmb250LXNpemU6OHB4IWltcG9ydGFudDtsZXR0ZXItc3BhY2luZzouMjhlbSFpbXBvcnRhbnR9Ci5najItbWluaS1zeW1ib2x7d2lkdGg6MTRweCFpbXBvcnRhbnQ7aGVpZ2h0OjE0cHghaW1wb3J0YW50fQouZ2oyLWhlYWQgaDJ7bWFyZ2luOjdweCAwIDAhaW1wb3J0YW50O2ZvbnQtc2l6ZTpjbGFtcCgzM3B4LDN2dyw0NHB4KSFpbXBvcnRhbnQ7bGluZS1oZWlnaHQ6MS4xNSFpbXBvcnRhbnQ7bGV0dGVyLXNwYWNpbmc6LS4wMzVlbSFpbXBvcnRhbnR9Ci5najItaGVhZCBwe21hcmdpbjo0cHggMCAwIWltcG9ydGFudDtmb250LXNpemU6MTFweCFpbXBvcnRhbnQ7bGluZS1oZWlnaHQ6MS42NSFpbXBvcnRhbnR9Ci5najItZ3JpZHtkaXNwbGF5OmdyaWQhaW1wb3J0YW50O2dyaWQtdGVtcGxhdGUtY29sdW1uczpyZXBlYXQoMyxtaW5tYXgoMCwxZnIpKSFpbXBvcnRhbnQ7Z3JpZC10ZW1wbGF0ZS1hcmVhczpub25lIWltcG9ydGFudDtnYXA6MTNweCFpbXBvcnRhbnQ7YWxpZ24taXRlbXM6c3RyZXRjaCFpbXBvcnRhbnQ7ZGlyZWN0aW9uOmx0ciFpbXBvcnRhbnR9Ci5najItc3RhY2t7ZGlzcGxheTpjb250ZW50cyFpbXBvcnRhbnR9Ci5najItZmVhdHVyZWQsLmdqMi1zbWFsbHtncmlkLWFyZWE6YXV0byFpbXBvcnRhbnQ7bWluLWhlaWdodDowIWltcG9ydGFudDtoZWlnaHQ6MzUwcHghaW1wb3J0YW50O2Rpc3BsYXk6Z3JpZCFpbXBvcnRhbnQ7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOjFmciFpbXBvcnRhbnQ7Z3JpZC10ZW1wbGF0ZS1yb3dzOjE5NnB4IDE1NHB4IWltcG9ydGFudDtncmlkLXRlbXBsYXRlLWFyZWFzOidtZWRpYScgJ2NvcHknIWltcG9ydGFudDtkaXJlY3Rpb246bHRyIWltcG9ydGFudH0KLmdqMi1mZWF0dXJlZHtncmlkLWNvbHVtbjoxIWltcG9ydGFudDtncmlkLXJvdzoxIWltcG9ydGFudH0KLmdqMi1zdGFjaz4uZ2oyLXNtYWxsOmZpcnN0LWNoaWxke2dyaWQtY29sdW1uOjMhaW1wb3J0YW50O2dyaWQtcm93OjEhaW1wb3J0YW50fQouZ2oyLXN0YWNrPi5najItc21hbGw6bGFzdC1jaGlsZHtncmlkLWNvbHVtbjoyIWltcG9ydGFudDtncmlkLXJvdzoxIWltcG9ydGFudH0KLmdqMi1jYXJke2JvcmRlci1yYWRpdXM6MjBweCFpbXBvcnRhbnQ7Ym94LXNoYWRvdzowIDEwcHggMjZweCByZ2JhKDMxLDI3LDIyLC4wNCkhaW1wb3J0YW50fQouZ2oyLW1lZGlhe2dyaWQtYXJlYTptZWRpYSFpbXBvcnRhbnQ7bWluLWhlaWdodDowIWltcG9ydGFudDtoZWlnaHQ6MTk2cHghaW1wb3J0YW50O2JhY2tncm91bmQtc2l6ZTpjb3ZlciFpbXBvcnRhbnQ7YmFja2dyb3VuZC1yZXBlYXQ6bm8tcmVwZWF0IWltcG9ydGFudDtpbWFnZS1yZW5kZXJpbmc6YXV0byFpbXBvcnRhbnQ7ZmlsdGVyOm5vbmUhaW1wb3J0YW50fQouZ2oyLW1lZGlhLW1hdGVyaWFse2JhY2tncm91bmQtcG9zaXRpb246Y2VudGVyIDUwJSFpbXBvcnRhbnR9Ci5najItbWVkaWEtZml0e2JhY2tncm91bmQtcG9zaXRpb246Y2VudGVyIDQwJSFpbXBvcnRhbnR9Ci5najItbWVkaWEtY2Fwe2JhY2tncm91bmQtcG9zaXRpb246Y2VudGVyIDU1JSFpbXBvcnRhbnR9Ci5najItZmVhdHVyZWQgLmdqMi1tZWRpYTo6YWZ0ZXIsLmdqMi1zbWFsbCAuZ2oyLW1lZGlhOjphZnRlcntkaXNwbGF5Om5vbmUhaW1wb3J0YW50fQouZ2oyLWNvcHksLmdqMi1mZWF0dXJlZCAuZ2oyLWNvcHl7Z3JpZC1hcmVhOmNvcHkhaW1wb3J0YW50O2RpcmVjdGlvbjpydGwhaW1wb3J0YW50O3RleHQtYWxpZ246cmlnaHQhaW1wb3J0YW50O3BhZGRpbmc6MTNweCAxOHB4IDE0cHghaW1wb3J0YW50O2p1c3RpZnktY29udGVudDpmbGV4LXN0YXJ0IWltcG9ydGFudDttaW4td2lkdGg6MCFpbXBvcnRhbnR9Ci5najItaW5kZXh7bWFyZ2luOjAgMCA1cHghaW1wb3J0YW50O2dhcDo4cHghaW1wb3J0YW50fQouZ2oyLWluZGV4IGJ7Zm9udC1zaXplOjE4cHghaW1wb3J0YW50fQouZ2oyLWluZGV4IHNwYW57d2lkdGg6MjJweCFpbXBvcnRhbnR9Ci5najItY29weT5zbWFsbHtmb250LXNpemU6N3B4IWltcG9ydGFudDtsZXR0ZXItc3BhY2luZzouMThlbSFpbXBvcnRhbnQ7bWFyZ2luLWJvdHRvbTo3cHghaW1wb3J0YW50fQouZ2oyLWNvcHkgaDMsLmdqMi1mZWF0dXJlZCAuZ2oyLWNvcHkgaDN7Zm9udC1zaXplOmNsYW1wKDE5cHgsMS40NXZ3LDIzcHgpIWltcG9ydGFudDtsaW5lLWhlaWdodDoxLjM4IWltcG9ydGFudDtsZXR0ZXItc3BhY2luZzotLjAyZW0haW1wb3J0YW50O21hcmdpbjowIWltcG9ydGFudH0KLmdqMi1jb3B5IHAsLmdqMi1mZWF0dXJlZCAuZ2oyLWNvcHkgcHttYXJnaW46NXB4IDAgMCFpbXBvcnRhbnQ7Zm9udC1zaXplOjEwcHghaW1wb3J0YW50O2xpbmUtaGVpZ2h0OjEuNyFpbXBvcnRhbnQ7bWF4LXdpZHRoOm5vbmUhaW1wb3J0YW50O2Rpc3BsYXk6LXdlYmtpdC1ib3ghaW1wb3J0YW50Oy13ZWJraXQtbGluZS1jbGFtcDoyIWltcG9ydGFudDstd2Via2l0LWJveC1vcmllbnQ6dmVydGljYWwhaW1wb3J0YW50O292ZXJmbG93OmhpZGRlbiFpbXBvcnRhbnR9Ci5najItcmVhZCwuZ2oyLXJlYWQtZmVhdHVyZWR7bWFyZ2luLXRvcDo3cHghaW1wb3J0YW50O2ZvbnQtc2l6ZTo5cHghaW1wb3J0YW50O2dhcDo1cHghaW1wb3J0YW50fQouZ2oyLXJlYWQgYntmb250LXNpemU6MTNweCFpbXBvcnRhbnR9Ci5najItYm90dG9te21hcmdpbi10b3A6OXB4IWltcG9ydGFudDtnYXA6MTJweCFpbXBvcnRhbnR9Ci5najItYm90dG9tPmF7bWluLWhlaWdodDozNnB4IWltcG9ydGFudDtwYWRkaW5nOjAgMjBweCFpbXBvcnRhbnQ7Zm9udC1zaXplOjlweCFpbXBvcnRhbnR9Ci5najItYm90dG9tPnNwYW4sLmdqMi1ib3R0b20+ZW17Zm9udC1zaXplOjdweCFpbXBvcnRhbnR9CkBtZWRpYShtYXgtd2lkdGg6MTE4MHB4KXsKICAjam91cm5hbC5najJ7d2lkdGg6bWluKGNhbGMoMTAwJSAtIDQwcHgpLDE1MTBweCkhaW1wb3J0YW50O3BhZGRpbmc6MTVweCAwIDIwcHghaW1wb3J0YW50fQogIC5najItZmVhdHVyZWQsLmdqMi1zbWFsbHtoZWlnaHQ6MzM2cHghaW1wb3J0YW50O2dyaWQtdGVtcGxhdGUtcm93czoxODZweCAxNTBweCFpbXBvcnRhbnR9CiAgLmdqMi1tZWRpYXtoZWlnaHQ6MTg2cHghaW1wb3J0YW50fQogIC5najItY29weSwuZ2oyLWZlYXR1cmVkIC5najItY29weXtwYWRkaW5nOjEycHggMTVweCAxM3B4IWltcG9ydGFudH0KICAuZ2oyLWNvcHkgaDMsLmdqMi1mZWF0dXJlZCAuZ2oyLWNvcHkgaDN7Zm9udC1zaXplOjE5cHghaW1wb3J0YW50fQp9CkBtZWRpYShtYXgtd2lkdGg6OTAwcHgpewogICNqb3VybmFsLmdqMnt3aWR0aDptaW4oY2FsYygxMDAlIC0gMjhweCksMTUxMHB4KSFpbXBvcnRhbnQ7cGFkZGluZzoyMHB4IDAgMjhweCFpbXBvcnRhbnR9CiAgLmdqMi1ncmlke2dyaWQtdGVtcGxhdGUtY29sdW1uczpyZXBlYXQoMixtaW5tYXgoMCwxZnIpKSFpbXBvcnRhbnR9CiAgLmdqMi1mZWF0dXJlZHtncmlkLWNvbHVtbjoxIC8gLTEhaW1wb3J0YW50O2hlaWdodDozNTBweCFpbXBvcnRhbnQ7Z3JpZC10ZW1wbGF0ZS1yb3dzOjIwMHB4IDE1MHB4IWltcG9ydGFudH0KICAuZ2oyLXN0YWNrPi5najItc21hbGw6Zmlyc3QtY2hpbGR7Z3JpZC1jb2x1bW46MiFpbXBvcnRhbnQ7Z3JpZC1yb3c6MiFpbXBvcnRhbnR9CiAgLmdqMi1zdGFjaz4uZ2oyLXNtYWxsOmxhc3QtY2hpbGR7Z3JpZC1jb2x1bW46MSFpbXBvcnRhbnQ7Z3JpZC1yb3c6MiFpbXBvcnRhbnR9CiAgLmdqMi1zbWFsbHtoZWlnaHQ6MzI2cHghaW1wb3J0YW50O2dyaWQtdGVtcGxhdGUtcm93czoxODRweCAxNDJweCFpbXBvcnRhbnR9CiAgLmdqMi1mZWF0dXJlZCAuZ2oyLW1lZGlhe2hlaWdodDoyMDBweCFpbXBvcnRhbnR9LmdqMi1zbWFsbCAuZ2oyLW1lZGlhe2hlaWdodDoxODRweCFpbXBvcnRhbnR9Cn0KQG1lZGlhKG1heC13aWR0aDo2NTBweCl7CiAgI2pvdXJuYWwuZ2oye3dpZHRoOmNhbGMoMTAwJSAtIDIwcHgpIWltcG9ydGFudDtwYWRkaW5nOjE4cHggMCAyNnB4IWltcG9ydGFudH0KICAuZ2oyLWhlYWR7bWFyZ2luLWJvdHRvbToxMXB4IWltcG9ydGFudH0uZ2oyLWhlYWQgaDJ7Zm9udC1zaXplOjMwcHghaW1wb3J0YW50fS5najItaGVhZCBwe2ZvbnQtc2l6ZToxMHB4IWltcG9ydGFudH0KICAuZ2oyLWdyaWR7Z3JpZC10ZW1wbGF0ZS1jb2x1bW5zOjFmciFpbXBvcnRhbnQ7Z2FwOjExcHghaW1wb3J0YW50fQogIC5najItZmVhdHVyZWQsLmdqMi1zbWFsbHtncmlkLWNvbHVtbjoxIWltcG9ydGFudDtncmlkLXJvdzphdXRvIWltcG9ydGFudDtoZWlnaHQ6YXV0byFpbXBvcnRhbnQ7Z3JpZC10ZW1wbGF0ZS1yb3dzOjIwMHB4IGF1dG8haW1wb3J0YW50fQogIC5najItc3RhY2s+LmdqMi1zbWFsbDpmaXJzdC1jaGlsZCwuZ2oyLXN0YWNrPi5najItc21hbGw6bGFzdC1jaGlsZHtncmlkLWNvbHVtbjoxIWltcG9ydGFudDtncmlkLXJvdzphdXRvIWltcG9ydGFudH0KICAuZ2oyLW1lZGlhLC5najItZmVhdHVyZWQgLmdqMi1tZWRpYSwuZ2oyLXNtYWxsIC5najItbWVkaWF7aGVpZ2h0OjIwMHB4IWltcG9ydGFudDttaW4taGVpZ2h0OjIwMHB4IWltcG9ydGFudH0KICAuZ2oyLWNvcHksLmdqMi1mZWF0dXJlZCAuZ2oyLWNvcHl7cGFkZGluZzoxNXB4IDE2cHggMTZweCFpbXBvcnRhbnR9CiAgLmdqMi1jb3B5IGgzLC5najItZmVhdHVyZWQgLmdqMi1jb3B5IGgze2ZvbnQtc2l6ZToyMnB4IWltcG9ydGFudH0KICAuZ2oyLWJvdHRvbXtncmlkLXRlbXBsYXRlLWNvbHVtbnM6MWZyIWltcG9ydGFudH0uZ2oyLWJvdHRvbT5zcGFuLC5najItYm90dG9tPmVte2Rpc3BsYXk6bm9uZSFpbXBvcnRhbnR9Cn0KLyogR1JBTUlTU19IT01FX0pPVVJOQUxfVjRfQ09NUEFDVF9FTkQgKi8nJycKY3NzMj1jc3Mrb3ZlcnJpZGUrIlxuIgoKaGVhZGVyMj1yZS5zdWIocidncmFtaXNzLWhvbWUtam91cm5hbC12MlwuY3NzXD92ZXI9W15cJ1wiXSsnLCAnZ3JhbWlzcy1ob21lLWpvdXJuYWwtdjIuY3NzP3Zlcj00LjAuMScsIGhlYWRlcikKaWYgaGVhZGVyMj09aGVhZGVyIGFuZCAnZ3JhbWlzcy1ob21lLWpvdXJuYWwtdjIuY3NzP3Zlcj00LjAuMScgbm90IGluIGhlYWRlcjogcmFpc2UgU3lzdGVtRXhpdCgnQUJPUlQ6IGNhY2hlLWJ1c3QgdGFyZ2V0IG5vdCBmb3VuZCcpCgpmb3IgcmVsLGNvbnRlbnQgaW4gWygnaGVhZGVyLnBocCcsaGVhZGVyMiksKCdhc3NldHMvY3NzL2dyYW1pc3MtaG9tZS1qb3VybmFsLXYyLmNzcycsY3NzMildOgogICAgYmVmb3JlPXJlYWRfbGl2ZShyZWwpCiAgICBpZiBiZWZvcmUhPWNvbnRlbnQ6CiAgICAgICAgc2F2ZV9saXZlKHJlbCsnLmJhay1qb3VybmFsLXY0LScrc3RhbXAsYmVmb3JlKQogICAgICAgIHByaW50KCdCQUNLVVAnLHJlbCxoYXNobGliLnNoYTI1NihiZWZvcmUuZW5jb2RlKCkpLmhleGRpZ2VzdCgpWzoxNl0pCiAgICBzYXZlX2xpdmUocmVsLGNvbnRlbnQpCiAgICBhZnRlcj1yZWFkX2xpdmUocmVsKQogICAgaWYgYWZ0ZXIhPWNvbnRlbnQ6IHJhaXNlIFN5c3RlbUV4aXQoJ0xJVkUgV1JJVEUgTUlTTUFUQ0g6ICcrcmVsKQogICAgcHJpbnQoJ1BBU1MgV1JJVEUnLHJlbCxoYXNobGliLnNoYTI1Nihjb250ZW50LmVuY29kZSgpKS5oZXhkaWdlc3QoKVs6MTZdKQoKcHVyZ2U9J2dyYW1pc3MtcHVyZ2Utam91cm5hbC12NC0nK3N0YW1wKycucGhwJwpwdXJnZV9waHA9Ijw/cGhwIGRlZmluZSgnV1BfVVNFX1RIRU1FUycsZmFsc2UpOyByZXF1aXJlIF9fRElSX18uJy93cC1sb2FkLnBocCc7IGlmKGZ1bmN0aW9uX2V4aXN0cygnZG9fYWN0aW9uJykpe2RvX2FjdGlvbignbGl0ZXNwZWVkX3B1cmdlX2FsbCcpO30gZWNobyAnT0snOyBAdW5saW5rKF9fRklMRV9fKTsiCmNhbGwoJ3NhdmVfZmlsZV9jb250ZW50Jyx7J2Rpcic6J3B1YmxpY19odG1sJywnZmlsZSc6cHVyZ2UsJ2NvbnRlbnQnOnB1cmdlX3BocCwnZnJvbV9jaGFyc2V0JzonVVRGLTgnLCd0b19jaGFyc2V0JzonVVRGLTgnLCdmYWxsYmFjayc6JzAnfSxUcnVlKQpyZXE9dXJsbGliLnJlcXVlc3QuUmVxdWVzdCgnaHR0cHM6Ly9ncmFtaXNzLmlyLycrcHVyZ2UrJz90PScrc3RyKGludCh0aW1lLnRpbWUoKSkpLGhlYWRlcnM9eydVc2VyLUFnZW50JzonR3JhbWlzc0pvdXJuYWxEZXBsb3kvNCcsJ0NhY2hlLUNvbnRyb2wnOiduby1jYWNoZSd9KQp3aXRoIHVybGxpYi5yZXF1ZXN0LnVybG9wZW4ocmVxLGNvbnRleHQ9Y3R4LHRpbWVvdXQ9OTApIGFzIHI6CiAgICBpZiByLnN0YXR1cyE9MjAwOiByYWlzZSBTeXN0ZW1FeGl0KCdjYWNoZSBwdXJnZSBmYWlsZWQnKQogICAgcHJpbnQoJ1BVUkdFJyxyLnN0YXR1cykKCmRlZiBwdWJsaWNfZ2V0KHVybCk6CiAgICByZXE9dXJsbGliLnJlcXVlc3QuUmVxdWVzdCh1cmwsaGVhZGVycz17J1VzZXItQWdlbnQnOidHcmFtaXNzSm91cm5hbFZlcmlmeS80JywnQ2FjaGUtQ29udHJvbCc6J25vLWNhY2hlJywnUHJhZ21hJzonbm8tY2FjaGUnfSkKICAgIHdpdGggdXJsbGliLnJlcXVlc3QudXJsb3BlbihyZXEsY29udGV4dD1jdHgsdGltZW91dD05MCkgYXMgcjpyZXR1cm4gci5zdGF0dXMsci5yZWFkKCkKbm93PXN0cihpbnQodGltZS50aW1lKCkpKQpzdCxiPXB1YmxpY19nZXQoJ2h0dHBzOi8vZ3JhbWlzcy5pci8/am91cm5hbF92ND0nK25vdyk7IHR4dD1iLmRlY29kZSgndXRmLTgnLCdyZXBsYWNlJykKaWYgc3QhPTIwMCBvciAnR1JBTUlTU19IT01FX0pPVVJOQUxfVjInIG5vdCBpbiB0eHQgb3IgJ2dyYW1pc3MtaG9tZS1qb3VybmFsLXYyLmNzcz92ZXI9NC4wLjEnIG5vdCBpbiB0eHQ6IHJhaXNlIFN5c3RlbUV4aXQoJ3B1YmxpYyBIb21lIHZlcmlmaWNhdGlvbiBmYWlsZWQnKQpzdCxiPXB1YmxpY19nZXQoJ2h0dHBzOi8vZ3JhbWlzcy5pci93cC1jb250ZW50L3RoZW1lcy9ncmFtaXNzLXRoZW1lLW5leHQvYXNzZXRzL2Nzcy9ncmFtaXNzLWhvbWUtam91cm5hbC12Mi5jc3M/dj0nK25vdykKaWYgc3QhPTIwMCBvciBiJ0dSQU1JU1NfSE9NRV9KT1VSTkFMX1Y0X0NPTVBBQ1RfU1RBUlQnIG5vdCBpbiBiOiByYWlzZSBTeXN0ZW1FeGl0KCdwdWJsaWMgSm91cm5hbCBDU1MgdmVyaWZpY2F0aW9uIGZhaWxlZCcpCnByaW50KCdQQVNTIFBVQkxJQyBIT01FJyxsZW4odHh0KSkKcHJpbnQoJ1BBU1MgUFVCTElDIENTUycsbGVuKGIpKQpwcmludCgnTElWRSBIT01FIEpPVVJOQUwgVjQgQ09NUEFDVCBERVBMT1lFRCcpCg==' | base64 -d > /tmp/journal_v4.py
-          python3 /tmp/journal_v4.py
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, hashlib, json, os, re, ssl, time, urllib.parse, urllib.request
+          from pathlib import Path
+
+          host=os.environ['CPANEL_HOST']; user=os.environ['CPANEL_USER']; token=os.environ['CPANEL_TOKEN']
+          root=os.environ['THEME_ROOT'].strip('/'); ctx=ssl._create_unverified_context()
+          stamp=time.strftime('%Y%m%d-%H%M%S',time.gmtime())
+
+          def call(fn, params, post=False):
+              url=f'https://{host}:2083/execute/Fileman/{fn}'
+              data=urllib.parse.urlencode(params).encode()
+              req=urllib.request.Request(url if post else url+'?'+data.decode(), data=data if post else None, method='POST' if post else 'GET')
+              req.add_header('Authorization',f'cpanel {user}:{token}')
+              if post: req.add_header('Content-Type','application/x-www-form-urlencoded')
+              with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
+                  obj=json.loads(r.read().decode('utf-8','replace'))
+              result=obj.get('result') if isinstance(obj.get('result'),dict) else obj
+              if not isinstance(result,dict) or result.get('status')!=1: raise RuntimeError(str(result))
+              return result.get('data')
+
+          def read_live(rel):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else root+'/'+parent
+              d=call('get_file_content',{'dir':directory,'file':name,'from_charset':'_DETECT_','to_charset':'utf-8'})
+              if isinstance(d,dict):
+                  for k in ('content','file_content','data'):
+                      if isinstance(d.get(k),str): return d[k]
+              return d if isinstance(d,str) else None
+
+          def save_live(rel, content):
+              parent,name=rel.rsplit('/',1) if '/' in rel else ('',rel)
+              directory=root if not parent else root+'/'+parent
+              call('save_file_content',{'dir':directory,'file':name,'content':content,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+
+          header=read_live('header.php')
+          front=read_live('front-page.php')
+          css=read_live('assets/css/gramiss-home-journal-v2.css')
+          if not all(isinstance(x,str) for x in (header,front,css)): raise SystemExit('ABORT: required live files unreadable')
+          if 'GRAMISS_HOME_JOURNAL_V2' not in front or 'gj2-media-material' not in css or 'gj2-media-fit' not in css or 'gj2-media-cap' not in css:
+              raise SystemExit('ABORT: Journal structure changed')
+          if 'gramiss-home-journal-v2.css' not in header: raise SystemExit('ABORT: Journal stylesheet link missing')
+
+          staged=Path('.ops/home-journal-v5/assets')
+          assets={
+              'journal-material-01.webp': staged/'journal-material-01.webp',
+              'journal-fit-02.webp': staged/'journal-fit-02.webp',
+              'journal-style-03.webp': staged/'journal-style-03.webp',
+          }
+          raw={name:path.read_bytes() for name,path in assets.items()}
+          for name,data in raw.items():
+              if len(data)<100000 or data[:4]!=b'RIFF' or data[8:12]!=b'WEBP': raise SystemExit('ABORT: invalid staged image '+name)
+
+          encoded={name:base64.b64encode(data).decode() for name,data in raw.items()}
+          hashes={name:hashlib.sha256(data).hexdigest() for name,data in raw.items()}
+          helper='gramiss-journal-assets-v5-'+stamp+'.php'
+          php="<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php';$d=WP_CONTENT_DIR.'/themes/gramiss-theme-next/assets/images/journal';if(!is_dir($d)){wp_mkdir_p($d);}"
+          for name in assets:
+              php += f"file_put_contents($d.'/{name}',base64_decode('{encoded[name]}'));"
+          php += "echo 'OK'"
+          for name in assets:
+              php += f".'|'.hash_file('sha256',$d.'/{name}')"
+          php += ";@unlink(__FILE__);"
+          call('save_file_content',{'dir':'public_html','file':helper,'content':php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+          req=urllib.request.Request('https://gramiss.ir/'+helper+'?t='+str(int(time.time())),headers={'User-Agent':'GramissJournalAssets/5','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
+              out=r.read().decode('utf-8','replace').strip()
+              if r.status!=200: raise SystemExit('asset helper failed')
+          parts=out.split('|')
+          expected=['OK']+[hashes[name] for name in assets]
+          if parts!=expected: raise SystemExit('asset hash verification failed: '+out[-300:])
+          for name in assets: print('PASS SERVER IMAGE',name,hashes[name],len(raw[name]))
+
+          start='/* GRAMISS_HOME_JOURNAL_V5_ASSETS_START */'
+          end='/* GRAMISS_HOME_JOURNAL_V5_ASSETS_END */'
+          css=re.sub(re.escape(start)+r'.*?'+re.escape(end),'',css,flags=re.S).rstrip()+"\n\n"
+          override=r'''/* GRAMISS_HOME_JOURNAL_V5_ASSETS_START */
+.gj2-media-material{background-image:url('../images/journal/journal-material-01.webp')!important;background-position:center 50%!important}
+.gj2-media-fit{background-image:url('../images/journal/journal-fit-02.webp')!important;background-position:center 29%!important}
+.gj2-media-cap{background-image:url('../images/journal/journal-style-03.webp')!important;background-position:center 58%!important}
+/* GRAMISS_HOME_JOURNAL_V5_ASSETS_END */'''
+          css2=css+override+'\n'
+          header2=re.sub(r'gramiss-home-journal-v2\.css\?ver=[^\'\"]+', 'gramiss-home-journal-v2.css?ver=5.0.0', header)
+          if header2==header and 'gramiss-home-journal-v2.css?ver=5.0.0' not in header: raise SystemExit('ABORT: cache bust target not found')
+
+          for rel,content in [('header.php',header2),('assets/css/gramiss-home-journal-v2.css',css2)]:
+              before=read_live(rel)
+              if before!=content:
+                  save_live(rel+'.bak-journal-v5-'+stamp,before)
+                  print('BACKUP',rel,hashlib.sha256(before.encode()).hexdigest()[:16])
+              save_live(rel,content)
+              after=read_live(rel)
+              if after!=content: raise SystemExit('LIVE WRITE MISMATCH: '+rel)
+              print('PASS WRITE',rel,hashlib.sha256(content.encode()).hexdigest()[:16])
+
+          purge='gramiss-purge-journal-v5-'+stamp+'.php'
+          purge_php="<?php define('WP_USE_THEMES',false); require __DIR__.'/wp-load.php'; if(function_exists('do_action')){do_action('litespeed_purge_all');} echo 'OK'; @unlink(__FILE__);"
+          call('save_file_content',{'dir':'public_html','file':purge,'content':purge_php,'from_charset':'UTF-8','to_charset':'UTF-8','fallback':'0'},True)
+          req=urllib.request.Request('https://gramiss.ir/'+purge+'?t='+str(int(time.time())),headers={'User-Agent':'GramissJournalAssets/5','Cache-Control':'no-cache'})
+          with urllib.request.urlopen(req,context=ctx,timeout=90) as r:
+              if r.status!=200: raise SystemExit('cache purge failed')
+              print('PURGE',r.status)
+
+          def public_get(url):
+              req=urllib.request.Request(url,headers={'User-Agent':'GramissJournalVerify/5','Cache-Control':'no-cache','Pragma':'no-cache'})
+              with urllib.request.urlopen(req,context=ctx,timeout=90) as r:return r.status,r.read()
+
+          now=str(int(time.time()))
+          st,b=public_get('https://gramiss.ir/?journal_v5='+now); html=b.decode('utf-8','replace')
+          if st!=200 or 'GRAMISS_HOME_JOURNAL_V2' not in html or 'gramiss-home-journal-v2.css?ver=5.0.0' not in html:
+              raise SystemExit('public Home verification failed')
+          st,b=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/css/gramiss-home-journal-v2.css?v='+now)
+          if st!=200 or b'GRAMISS_HOME_JOURNAL_V5_ASSETS_START' not in b:
+              raise SystemExit('public Journal CSS verification failed')
+          print('PASS PUBLIC HOME',len(html)); print('PASS PUBLIC CSS',len(b))
+          for name in assets:
+              st,img=public_get('https://gramiss.ir/wp-content/themes/gramiss-theme-next/assets/images/journal/'+name+'?v='+now)
+              if st!=200 or len(img)<100000 or img[:4]!=b'RIFF' or img[8:12]!=b'WEBP': raise SystemExit('public image verification failed: '+name)
+              if hashlib.sha256(img).hexdigest()!=hashes[name]: raise SystemExit('public image hash mismatch: '+name)
+              print('PASS PUBLIC IMAGE',name,len(img),hashes[name][:16])
+          print('LIVE HOME JOURNAL V5 EXACT ASSETS DEPLOYED')
+          PY
