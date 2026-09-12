@@ -96,11 +96,7 @@ jobs:
           start='/* GRAMISS_HOME_JOURNAL_V5_ASSETS_START */'
           end='/* GRAMISS_HOME_JOURNAL_V5_ASSETS_END */'
           css=re.sub(re.escape(start)+r'.*?'+re.escape(end),'',css,flags=re.S).rstrip()+"\n\n"
-          override=r'''/* GRAMISS_HOME_JOURNAL_V5_ASSETS_START */
-.gj2-media-material{background-image:url('../images/journal/journal-material-01.webp')!important;background-position:center 50%!important}
-.gj2-media-fit{background-image:url('../images/journal/journal-fit-02.webp')!important;background-position:center 29%!important}
-.gj2-media-cap{background-image:url('../images/journal/journal-style-03.webp')!important;background-position:center 58%!important}
-/* GRAMISS_HOME_JOURNAL_V5_ASSETS_END */'''
+          override="/* GRAMISS_HOME_JOURNAL_V5_ASSETS_START */\n.gj2-media-material{background-image:url('../images/journal/journal-material-01.webp')!important;background-position:center 50%!important}\n.gj2-media-fit{background-image:url('../images/journal/journal-fit-02.webp')!important;background-position:center 29%!important}\n.gj2-media-cap{background-image:url('../images/journal/journal-style-03.webp')!important;background-position:center 58%!important}\n/* GRAMISS_HOME_JOURNAL_V5_ASSETS_END */"
           css2=css+override+'\n'
           header2=re.sub(r'gramiss-home-journal-v2\.css\?ver=[^\'\"]+', 'gramiss-home-journal-v2.css?ver=5.0.0', header)
           if header2==header and 'gramiss-home-journal-v2.css?ver=5.0.0' not in header: raise SystemExit('ABORT: cache bust target not found')
